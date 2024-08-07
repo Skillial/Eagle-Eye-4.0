@@ -8,9 +8,9 @@
     "triple": "i686-linux-android",
     "llvmTriple": "i686-none-linux-android"
   },
-  "cxxBuildFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\.cxx\\Debug\\2fme5rc4\\x86",
-  "soFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4\\obj\\x86",
-  "soRepublishFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\cmake\\debug\\obj\\x86",
+  "cxxBuildFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\.cxx\\Debug\\2fme5rc4\\x86",
+  "soFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4\\obj\\x86",
+  "soRepublishFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\cmake\\debug\\obj\\x86",
   "abiPlatformVersion": 21,
   "cmake": {
     "effectiveConfiguration": {
@@ -37,13 +37,13 @@
     ],
     "cmakeSettingsConfiguration": "android-gradle-plugin-predetermined-name",
     "module": {
-      "cxxFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\.cxx",
-      "intermediatesBaseFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates",
-      "intermediatesFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\cxx",
+      "cxxFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\.cxx",
+      "intermediatesBaseFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates",
+      "intermediatesFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\cxx",
       "gradleModulePathName": ":openCV",
-      "moduleRootFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV",
-      "moduleBuildFile": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build.gradle",
-      "makeFile": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\libcxx_helper\\CMakeLists.txt",
+      "moduleRootFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV",
+      "moduleBuildFile": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build.gradle",
+      "makeFile": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\libcxx_helper\\CMakeLists.txt",
       "buildSystem": "CMAKE",
       "ndkFolder": "C:\\Users\\user\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125",
       "ndkFolderBeforeSymLinking": "C:\\Users\\user\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125",
@@ -141,7 +141,7 @@
         "SYSTEM": {}
       },
       "project": {
-        "rootBuildGradleFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main",
+        "rootBuildGradleFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0",
         "sdkFolder": "C:\\Users\\user\\AppData\\Local\\Android\\Sdk",
         "isBuildOnlyTargetAbiEnabled": true,
         "ideBuildTargetAbi": "x86,armeabi-v7a,armeabi",
@@ -161,12 +161,12 @@
   "buildSettings": {
     "environmentVariables": []
   },
-  "prefabFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\.cxx\\Debug\\2fme5rc4\\prefab\\x86",
+  "prefabFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\.cxx\\Debug\\2fme5rc4\\prefab\\x86",
   "isActiveAbi": true,
   "fullConfigurationHash": "2fme5rc436c306z58654k1o1j151c49z6e1m6o1047686r2h624a1h676h2h",
   "fullConfigurationHashKey": "# Values used to calculate the hash in this folder name.\n# Should not depend on the absolute path of the project itself.\n#   - AGP: 8.4.1.\n#   - $NDK is the path to NDK 26.1.10909125.\n#   - $PROJECT is the path to the parent folder of the root Gradle build file.\n#   - $ABI is the ABI to be built with. The specific value doesn\u0027t contribute to the value of the hash.\n#   - $HASH is the hash value computed from this text.\n#   - $CMAKE is the path to CMake 3.22.1.\n#   - $NINJA is the path to Ninja.\n-H$PROJECT/openCV/libcxx_helper\n-DCMAKE_SYSTEM_NAME\u003dAndroid\n-DCMAKE_EXPORT_COMPILE_COMMANDS\u003dON\n-DCMAKE_SYSTEM_VERSION\u003d21\n-DANDROID_PLATFORM\u003dandroid-21\n-DANDROID_ABI\u003d$ABI\n-DCMAKE_ANDROID_ARCH_ABI\u003d$ABI\n-DANDROID_NDK\u003d$NDK\n-DCMAKE_ANDROID_NDK\u003d$NDK\n-DCMAKE_TOOLCHAIN_FILE\u003d$NDK/build/cmake/android.toolchain.cmake\n-DCMAKE_MAKE_PROGRAM\u003d$NINJA\n-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003d$PROJECT/openCV/build/intermediates/cxx/Debug/$HASH/obj/$ABI\n-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003d$PROJECT/openCV/build/intermediates/cxx/Debug/$HASH/obj/$ABI\n-DCMAKE_BUILD_TYPE\u003dDebug\n-B$PROJECT/openCV/.cxx/Debug/$HASH/$ABI\n-GNinja\n-DANDROID_STL\u003dc++_shared",
   "configurationArguments": [
-    "-HC:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\libcxx_helper",
+    "-HC:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\libcxx_helper",
     "-DCMAKE_SYSTEM_NAME\u003dAndroid",
     "-DCMAKE_EXPORT_COMPILE_COMMANDS\u003dON",
     "-DCMAKE_SYSTEM_VERSION\u003d21",
@@ -177,13 +177,13 @@
     "-DCMAKE_ANDROID_NDK\u003dC:\\Users\\user\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125",
     "-DCMAKE_TOOLCHAIN_FILE\u003dC:\\Users\\user\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\build\\cmake\\android.toolchain.cmake",
     "-DCMAKE_MAKE_PROGRAM\u003dC:\\Users\\user\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
-    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003dC:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4\\obj\\x86",
-    "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003dC:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4\\obj\\x86",
+    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY\u003dC:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4\\obj\\x86",
+    "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY\u003dC:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4\\obj\\x86",
     "-DCMAKE_BUILD_TYPE\u003dDebug",
-    "-BC:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\.cxx\\Debug\\2fme5rc4\\x86",
+    "-BC:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\.cxx\\Debug\\2fme5rc4\\x86",
     "-GNinja",
     "-DANDROID_STL\u003dc++_shared"
   ],
   "stlLibraryFile": "C:\\Users\\user\\AppData\\Local\\Android\\Sdk\\ndk\\26.1.10909125\\toolchains\\llvm\\prebuilt\\windows-x86_64\\sysroot\\usr\\lib\\i686-linux-android\\libc++_shared.so",
-  "intermediatesParentFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4"
+  "intermediatesParentFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\cxx\\Debug\\2fme5rc4"
 }

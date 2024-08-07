@@ -1,5 +1,5 @@
 {
-  "installationFolder": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\build\\intermediates\\prefab_package\\debug\\prefab",
+  "installationFolder": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\build\\intermediates\\prefab_package\\debug\\prefab",
   "gradlePath": ":openCV",
   "packageInfo": {
     "packageName": "openCV",
@@ -8,7 +8,7 @@
     "modules": [
       {
         "moduleName": "opencv_jni_shared",
-        "moduleHeaders": "C:\\Users\\user\\Desktop\\thesis\\BasicCamera2App-main\\openCV\\native\\jni\\include",
+        "moduleHeaders": "C:\\Users\\user\\Desktop\\thesis\\try\\Eagle-Eye-4.0\\openCV\\native\\jni\\include",
         "moduleExportLibraries": [],
         "abis": []
       }

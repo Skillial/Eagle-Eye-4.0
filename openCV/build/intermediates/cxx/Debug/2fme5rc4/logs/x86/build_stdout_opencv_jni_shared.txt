@@ -1,2 +1,2 @@
-ninja: Entering directory `C:\Users\user\Desktop\thesis\BasicCamera2App-main\openCV\.cxx\Debug\2fme5rc4\x86'
+ninja: Entering directory `C:\Users\user\Desktop\thesis\try\Eagle-Eye-4.0\openCV\.cxx\Debug\2fme5rc4\x86'
 ninja: no work to do.
