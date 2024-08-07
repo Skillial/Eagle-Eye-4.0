@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
 
@@ -52,6 +53,10 @@ class MainActivity : ComponentActivity() {
     lateinit var cameraCaptureSession: CameraCaptureSession
     lateinit var cameraDevice: CameraDevice
     lateinit var imageReader: ImageReader
+    private val burstNum = 7;
+    private val capturedImages = mutableListOf<ByteArray>()
+    private val executor = Executors.newFixedThreadPool(burstNum)
+
 
     private val permissionsRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         permissions.entries.forEach {
@@ -136,6 +141,7 @@ class MainActivity : ComponentActivity() {
         // Sort the sizes array in descending order and select the first one (highest resolution)
         val highestResolution = sizes?.sortedWith(compareBy { it.width * it.height })?.last()
 
+
         imageReader = if (highestResolution != null) {
             ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 1)
         } else {
@@ -143,61 +149,21 @@ class MainActivity : ComponentActivity() {
             ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
         }
 
-        imageReader.setOnImageAvailableListener(object: ImageReader.OnImageAvailableListener {
-            override fun onImageAvailable(p0: ImageReader?) {
-                var image = p0?.acquireLatestImage()
-                val buffer = image!!.planes[0].buffer
-                var bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
-
-                // Generate a unique filename for each image
-                val filename = "img_${System.currentTimeMillis()}.jpeg"
-                image.close()
 
 
 
 
-                // Convert byte array to Bitmap
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-
-                // Convert Bitmap to OpenCV Mat
-                val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC4)
-                val bitmapBuffer = ByteBuffer.allocate(bitmap.byteCount)
-                bitmap.copyPixelsToBuffer(bitmapBuffer)
-                mat.put(0, 0, bitmapBuffer.array())
-
-                // Perform bicubic interpolation
-                val size = Size(bitmap.width.toDouble() * 6, bitmap.height.toDouble() * 6) // Adjust the size as needed
-                val resizedMat = Mat()
-                Imgproc.resize(mat, resizedMat, size, 0.0, 0.0, Imgproc.INTER_CUBIC)
-
-                // Convert the processed Mat back to Bitmap
-                val resizedBitmap = Bitmap.createBitmap(resizedMat.cols(), resizedMat.rows(), Bitmap.Config.ARGB_8888)
-                val resizedBuffer = ByteBuffer.allocate(resizedBitmap.byteCount)
-                resizedMat.get(0, 0, resizedBuffer.array())
-                resizedBitmap.copyPixelsFromBuffer(resizedBuffer)
-
-                // Convert the processed bitmap back to byte array
-                val stream = ByteArrayOutputStream()
-                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                val processedBytes = stream.toByteArray()
-
-
-
-
-                // Add the image to the MediaStore
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+        imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
+            override fun onImageAvailable(reader: ImageReader?) {
+                reader?.acquireLatestImage()?.use { image ->
+                    val buffer = image.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining())
+                    buffer.get(bytes)
+                    capturedImages.add(bytes)
+                    if (capturedImages.size == burstNum) {
+                        processCapturedImages()
+                    }
                 }
-
-                val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                contentResolver.openOutputStream(uri!!).use {
-                    it?.write(processedBytes)
-                }
-
-                Toast.makeText(this@MainActivity, "Image captured and saved.", Toast.LENGTH_SHORT).show()
             }
         }, handler)
 
@@ -210,23 +176,23 @@ class MainActivity : ComponentActivity() {
         }*/
         findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
+                capturedImages.clear()
                 val captureList = mutableListOf<CaptureRequest>()
-                for (i in 0 until 10) { // Change this to the number of photos you want to capture in the burst
-                    val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-                    captureRequest.addTarget(imageReader.surface)
-                    captureList.add(captureRequest.build())
-                }
-                cameraCaptureSession.captureBurst(captureList, object : CameraCaptureSession.CaptureCallback() {
-                    override fun onCaptureCompleted(
-                        session: CameraCaptureSession,
-                        request: CaptureRequest,
-                        result: TotalCaptureResult
-                    ) {
-                        super.onCaptureCompleted(session, request, result)
-                        // Handle the result of the capture here
-                        Log.d("BurstCapture", "Capture completed")
+                    for (i in 0 until burstNum) {
+                        val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                        captureRequest.addTarget(imageReader.surface)
+                        captureList.add(captureRequest.build())
                     }
-                }, null)
+                    cameraCaptureSession.captureBurst(captureList, object : CameraCaptureSession.CaptureCallback() {
+                        override fun onCaptureCompleted(
+                            session: CameraCaptureSession,
+                            request: CaptureRequest,
+                            result: TotalCaptureResult
+                        ) {
+                            super.onCaptureCompleted(session, request, result)
+
+                        }
+                    }, handler)
             }
         }
     }
@@ -270,6 +236,52 @@ class MainActivity : ComponentActivity() {
             }
         }*/
         setContentView(R.layout.activity_main)
+    }
+
+    private fun processCapturedImages() {
+        capturedImages.forEach { imageBytes ->
+            executor.execute {
+                // Convert byte array to Bitmap
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC4)
+                val bitmapBuffer = ByteBuffer.allocate(bitmap.byteCount)
+                bitmap.copyPixelsToBuffer(bitmapBuffer)
+                mat.put(0, 0, bitmapBuffer.array())
+
+                // Perform bicubic interpolation
+                val size = Size(bitmap.width.toDouble() * 2, bitmap.height.toDouble() * 2) // Adjust the size as needed
+                val resizedMat = Mat()
+                Imgproc.resize(mat, resizedMat, size, 0.0, 0.0, Imgproc.INTER_CUBIC)
+
+                // Convert the processed Mat back to Bitmap
+                val resizedBitmap = Bitmap.createBitmap(resizedMat.cols(), resizedMat.rows(), Bitmap.Config.ARGB_8888)
+                val resizedBuffer = ByteBuffer.allocate(resizedBitmap.byteCount)
+                resizedMat.get(0, 0, resizedBuffer.array())
+                resizedBitmap.copyPixelsFromBuffer(resizedBuffer)
+
+                // Convert the processed bitmap back to byte array
+                val stream = ByteArrayOutputStream()
+                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                val processedBytes = stream.toByteArray()
+
+                // Save the processed image
+                val filename = "img_${System.currentTimeMillis()}.jpeg"
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                }
+
+                val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                contentResolver.openOutputStream(uri!!).use {
+                    it?.write(processedBytes)
+                }
+
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Image processed and saved.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
 }
