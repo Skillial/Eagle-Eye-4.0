@@ -33,6 +33,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import org.opencv.android.OpenCVLoader
+import org.opencv.android.Utils
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Size
@@ -167,23 +168,13 @@ class MainActivity : ComponentActivity() {
                 mat.put(0, 0, bitmapBuffer.array())
 
                 // Perform bicubic interpolation
-                val size = Size(bitmap.width.toDouble() * 6, bitmap.height.toDouble() * 6) // Adjust the size as needed
+                val size = Size(bitmap.width.toDouble() * 8, bitmap.height.toDouble() * 8) // Adjust the size as needed
                 val resizedMat = Mat()
                 Imgproc.resize(mat, resizedMat, size, 0.0, 0.0, Imgproc.INTER_CUBIC)
 
                 // Convert the processed Mat back to Bitmap
                 val resizedBitmap = Bitmap.createBitmap(resizedMat.cols(), resizedMat.rows(), Bitmap.Config.ARGB_8888)
-                val resizedBuffer = ByteBuffer.allocate(resizedBitmap.byteCount)
-                resizedMat.get(0, 0, resizedBuffer.array())
-                resizedBitmap.copyPixelsFromBuffer(resizedBuffer)
-
-                // Convert the processed bitmap back to byte array
-                val stream = ByteArrayOutputStream()
-                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                val processedBytes = stream.toByteArray()
-
-
-
+                Utils.matToBitmap(resizedMat, resizedBitmap)
 
                 // Add the image to the MediaStore
                 val contentValues = ContentValues().apply {
@@ -193,10 +184,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                contentResolver.openOutputStream(uri!!).use {
-                    it?.write(processedBytes)
+                contentResolver.openOutputStream(uri!!)?.use { outputStream ->
+                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                 }
-
                 Toast.makeText(this@MainActivity, "Image captured and saved.", Toast.LENGTH_SHORT).show()
             }
         }, handler)
