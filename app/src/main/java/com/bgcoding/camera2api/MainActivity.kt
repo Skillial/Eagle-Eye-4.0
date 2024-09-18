@@ -60,6 +60,7 @@ class MainActivity : ComponentActivity() {
     lateinit var progressBar: ProgressBar
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
+    lateinit var cameraId: String
 
     private val permissionsRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         permissions.entries.forEach {
@@ -67,7 +68,7 @@ class MainActivity : ComponentActivity() {
                 // Permission was denied, handle this situation
             } else {
                 // Permission was granted, you can now proceed with your operations
-                setCameraPreview()
+                // setCameraPreview()
             }
         }
     }
@@ -94,21 +95,21 @@ class MainActivity : ComponentActivity() {
         when {
             allPermissionsGranted -> {
                 // All permissions already granted
-                setCameraPreview()
+                // setCameraPreview()
             }
             else -> {
                 // Some permissions not granted, request them
                 permissionsRequest.launch(permissions)
             }
         }
+        setCameraPreview()
 
-        textureView = findViewById(R.id.textureView)
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         handlerThread = HandlerThread("video thread")
         handlerThread.start()
         handler = Handler((handlerThread).looper)
 
-        textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+        this.textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(
                 surface: SurfaceTexture,
                 width: Int,
@@ -136,7 +137,7 @@ class MainActivity : ComponentActivity() {
         }
 
 
-        val cameraId = cameraManager.cameraIdList[0]
+        this.cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK) // Dynamically get the rear camera ID
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(ImageFormat.JPEG)
@@ -270,7 +271,7 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("MissingPermission")
     private fun open_camera() {
-        cameraManager.openCamera(cameraManager.cameraIdList[0], object: CameraDevice.StateCallback() {
+        cameraManager.openCamera(cameraId, object: CameraDevice.StateCallback() {
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
 
@@ -308,9 +309,10 @@ class MainActivity : ComponentActivity() {
         }*/
         setContentView(R.layout.activity_main)
         // Initialize UI elements
-        progressBar = findViewById(R.id.progressBar)
-        loadingText = findViewById(R.id.loadingText)
-        loadingBox = findViewById(R.id.loadingBox)
+        this.textureView = findViewById(R.id.textureView)
+        this.progressBar = findViewById(R.id.progressBar)
+        this.loadingText = findViewById(R.id.loadingText)
+        this.loadingBox = findViewById(R.id.loadingBox)
     }
 
     fun playShutterSound() {
@@ -318,4 +320,14 @@ class MainActivity : ComponentActivity() {
         sound.play(MediaActionSound.SHUTTER_CLICK)
     }
 
+    // Get id of front camera
+    fun getCameraId(lensFacing: Int): String {
+        for (cameraId in cameraManager.cameraIdList) {
+            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+            if (characteristics.get(CameraCharacteristics.LENS_FACING) == lensFacing) {
+                return cameraId
+            }
+        }
+        return ""
+    }
 }
