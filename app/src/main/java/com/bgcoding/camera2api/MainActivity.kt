@@ -2,9 +2,7 @@ package com.bgcoding.camera2api
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.bgcoding.camera2api.ui.theme.Camera2ApiTheme
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues
@@ -21,6 +19,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
 import android.media.ImageReader
+import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
@@ -28,7 +27,11 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
 import android.view.TextureView
+import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -38,10 +41,11 @@ import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.nio.ByteBuffer
+import android.media.MediaActionSound
 
 class MainActivity : ComponentActivity() {
 
@@ -53,6 +57,9 @@ class MainActivity : ComponentActivity() {
     lateinit var cameraCaptureSession: CameraCaptureSession
     lateinit var cameraDevice: CameraDevice
     lateinit var imageReader: ImageReader
+    lateinit var progressBar: ProgressBar
+    lateinit var loadingText: TextView
+    lateinit var loadingBox: LinearLayout
 
     private val permissionsRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         permissions.entries.forEach {
@@ -138,7 +145,7 @@ class MainActivity : ComponentActivity() {
         val highestResolution = sizes?.sortedWith(compareBy { it.width * it.height })?.last()
 
         imageReader = if (highestResolution != null) {
-            ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 1)
+            ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
         } else {
             // Fallback to a default resolution if no sizes are available
             ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
@@ -146,7 +153,8 @@ class MainActivity : ComponentActivity() {
 
         imageReader.setOnImageAvailableListener(object: ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(p0: ImageReader?) {
-                var image = p0?.acquireLatestImage()
+                var image = p0?.acquireNextImage()
+
                 val buffer = image!!.planes[0].buffer
                 var bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
@@ -168,7 +176,7 @@ class MainActivity : ComponentActivity() {
                 mat.put(0, 0, bitmapBuffer.array())
 
                 // Perform bicubic interpolation
-                val size = Size(bitmap.width.toDouble() * 8, bitmap.height.toDouble() * 8) // Adjust the size as needed
+                val size = Size(bitmap.width.toDouble() * 3, bitmap.height.toDouble() * 3) // Adjust the size as needed
                 val resizedMat = Mat()
                 Imgproc.resize(mat, resizedMat, size, 0.0, 0.0, Imgproc.INTER_CUBIC)
 
@@ -176,18 +184,41 @@ class MainActivity : ComponentActivity() {
                 val resizedBitmap = Bitmap.createBitmap(resizedMat.cols(), resizedMat.rows(), Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(resizedMat, resizedBitmap)
 
-                // Add the image to the MediaStore
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // API level 29 and above
+                    p0?.discardFreeBuffers()
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                    }
 
-                val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                contentResolver.openOutputStream(uri!!)?.use { outputStream ->
-                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                    contentResolver.openOutputStream(uri!!)?.use { outputStream ->
+                        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    }
+                } else {
+                    // API level 28 and below
+                    val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                    val imageFile = File(picturesDir, "$filename.jpg")
+
+                    try {
+                        FileOutputStream(imageFile).use { outputStream ->
+                            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                        }
+
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                            put(MediaStore.MediaColumns.DATA, imageFile.absolutePath)
+                        }
+
+                        contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
                 }
-                Toast.makeText(this@MainActivity, "Image captured and saved.", Toast.LENGTH_SHORT).show()
             }
         }, handler)
 
@@ -200,12 +231,21 @@ class MainActivity : ComponentActivity() {
         }*/
         findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
+                var totalCaptures = 10
+                var completedCaptures = 0
                 val captureList = mutableListOf<CaptureRequest>()
-                for (i in 0 until 10) { // Change this to the number of photos you want to capture in the burst
+
+                for (i in 0 until totalCaptures) { // Change this to the number of photos you want to capture in the burst
                     val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                     captureRequest.addTarget(imageReader.surface)
                     captureList.add(captureRequest.build())
                 }
+
+                playShutterSound()
+                runOnUiThread {
+                    loadingBox.visibility = View.VISIBLE
+                }
+
                 cameraCaptureSession.captureBurst(captureList, object : CameraCaptureSession.CaptureCallback() {
                     override fun onCaptureCompleted(
                         session: CameraCaptureSession,
@@ -215,6 +255,13 @@ class MainActivity : ComponentActivity() {
                         super.onCaptureCompleted(session, request, result)
                         // Handle the result of the capture here
                         Log.d("BurstCapture", "Capture completed")
+                        completedCaptures++
+                        if (completedCaptures >= totalCaptures) {
+                            runOnUiThread {
+                                loadingBox.visibility = View.GONE
+                            }
+                            Toast.makeText(this@MainActivity, "Images captured and saved.", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }, null)
             }
@@ -260,6 +307,15 @@ class MainActivity : ComponentActivity() {
             }
         }*/
         setContentView(R.layout.activity_main)
+        // Initialize UI elements
+        progressBar = findViewById(R.id.progressBar)
+        loadingText = findViewById(R.id.loadingText)
+        loadingBox = findViewById(R.id.loadingBox)
+    }
+
+    fun playShutterSound() {
+        val sound = MediaActionSound()
+        sound.play(MediaActionSound.SHUTTER_CLICK)
     }
 
 }
