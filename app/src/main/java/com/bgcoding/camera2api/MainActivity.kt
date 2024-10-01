@@ -48,7 +48,7 @@ import java.nio.ByteBuffer
 import android.media.MediaActionSound
 
 class MainActivity : ComponentActivity() {
-
+    private var processedImagesCounter = 0
     lateinit var captureRequest: CaptureRequest.Builder
     lateinit var handler: Handler
     lateinit var handlerThread: HandlerThread
@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
                 mat.put(0, 0, bitmapBuffer.array())
 
                 // Perform bicubic interpolation
-                val size = Size(bitmap.width.toDouble() * 3, bitmap.height.toDouble() * 3) // Adjust the size as needed
+                val size = Size(bitmap.width.toDouble() * 8, bitmap.height.toDouble() * 8) // Adjust the size as needed
                 val resizedMat = Mat()
                 Imgproc.resize(mat, resizedMat, size, 0.0, 0.0, Imgproc.INTER_CUBIC)
 
@@ -220,6 +220,16 @@ class MainActivity : ComponentActivity() {
                         e.printStackTrace()
                     }
                 }
+                processedImagesCounter+=1
+                val currentCount = processedImagesCounter
+
+                // Check if all 10 images are processed
+                if (currentCount == 10) {
+                    runOnUiThread {
+                        loadingBox.visibility = View.GONE
+                    }
+                    Toast.makeText(this@MainActivity, "All 10 images processed and saved.", Toast.LENGTH_SHORT).show()
+                }
             }
         }, handler)
 
@@ -233,7 +243,7 @@ class MainActivity : ComponentActivity() {
         findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
                 var totalCaptures = 10
-                var completedCaptures = 0
+//                var completedCaptures = 0
                 val captureList = mutableListOf<CaptureRequest>()
 
                 for (i in 0 until totalCaptures) { // Change this to the number of photos you want to capture in the burst
@@ -256,13 +266,13 @@ class MainActivity : ComponentActivity() {
                         super.onCaptureCompleted(session, request, result)
                         // Handle the result of the capture here
                         Log.d("BurstCapture", "Capture completed")
-                        completedCaptures++
-                        if (completedCaptures >= totalCaptures) {
-                            runOnUiThread {
-                                loadingBox.visibility = View.GONE
-                            }
-                            Toast.makeText(this@MainActivity, "Images captured and saved.", Toast.LENGTH_SHORT).show()
-                        }
+//                        completedCaptures++
+//                        if (completedCaptures >= totalCaptures) {
+//                            runOnUiThread {
+//                                loadingBox.visibility = View.GONE
+//                            }
+//                            Toast.makeText(this@MainActivity, "Images captured and saved.", Toast.LENGTH_SHORT).show()
+//                        }
                     }
                 }, null)
             }
