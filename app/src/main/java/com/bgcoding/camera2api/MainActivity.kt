@@ -201,7 +201,7 @@ class MainActivity : ComponentActivity() {
                 for (i in quadrants.indices) {
                     Imgcodecs.imwrite(filenames[i], quadrants[i])
                 }
-                val interpolationValue = 10
+                val interpolationValue = 4
                 // Create an empty Mat to store the final merged image
                 val mergedImage = Mat.zeros(height*interpolationValue, width*interpolationValue, CvType.CV_8UC3)
 
