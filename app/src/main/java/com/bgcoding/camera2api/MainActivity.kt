@@ -46,6 +46,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 import android.media.MediaActionSound
+import org.opencv.imgcodecs.Imgcodecs
 
 class MainActivity : ComponentActivity() {
     private var processedImagesCounter = 0
@@ -161,7 +162,7 @@ class MainActivity : ComponentActivity() {
                 buffer.get(bytes)
 
                 // Generate a unique filename for each image
-                val filename = "img_${System.currentTimeMillis()}.jpeg"
+//                val filename = "img_${System.currentTimeMillis()}.jpeg"
                 image.close()
 
 
@@ -171,55 +172,99 @@ class MainActivity : ComponentActivity() {
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
                 // Convert Bitmap to OpenCV Mat
-                val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC4)
-                val bitmapBuffer = ByteBuffer.allocate(bitmap.byteCount)
-                bitmap.copyPixelsToBuffer(bitmapBuffer)
-                mat.put(0, 0, bitmapBuffer.array())
+                val width = bitmap.width
+                val height = bitmap.height
 
-                // Perform bicubic interpolation
-                val size = Size(bitmap.width.toDouble() * 8, bitmap.height.toDouble() * 8) // Adjust the size as needed
-                val resizedMat = Mat()
-                Imgproc.resize(mat, resizedMat, size, 0.0, 0.0, Imgproc.INTER_CUBIC)
+                // Convert Bitmap to OpenCV Mat
+                val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
+                Utils.bitmapToMat(bitmap, mat)
 
-                // Convert the processed Mat back to Bitmap
-                val resizedBitmap = Bitmap.createBitmap(resizedMat.cols(), resizedMat.rows(), Bitmap.Config.ARGB_8888)
-                Utils.matToBitmap(resizedMat, resizedBitmap)
+                val midX = width / 2
+                val midY = height / 2
+                // Create submatrices for each quadrant
+                val quadrants = arrayOf(
+                    mat.submat(0, midY, 0, midX), // Top-left
+                    mat.submat(0, midY, midX, width), // Top-right
+                    mat.submat(midY, height, 0, midX), // Bottom-left
+                    mat.submat(midY, height, midX, width) // Bottom-right
+                )
 
+                // Save the temporary quadrant files
+                val filenames = arrayOf(
+                    getExternalFilesDir(null)?.absolutePath + "/quadrant1.jpg",
+                    getExternalFilesDir(null)?.absolutePath + "/quadrant2.jpg",
+                    getExternalFilesDir(null)?.absolutePath + "/quadrant3.jpg",
+                    getExternalFilesDir(null)?.absolutePath + "/quadrant4.jpg"
+                )
+
+                // Save each quadrant to a file
+                for (i in quadrants.indices) {
+                    Imgcodecs.imwrite(filenames[i], quadrants[i])
+                }
+                val interpolationValue = 10
+                // Create an empty Mat to store the final merged image
+                val mergedImage = Mat.zeros(height*interpolationValue, width*interpolationValue, CvType.CV_8UC3)
+
+                // Process each quadrant, apply bicubic interpolation, and merge them back
+                for (i in 0 until quadrants.size) {
+                    val quadrant = Imgcodecs.imread(filenames[i])
+                    val resizedQuadrant = Mat()
+
+                    // Perform bicubic interpolation on the loaded quadrant
+                    Imgproc.resize(quadrant, resizedQuadrant, Size(quadrant.cols().toDouble() * interpolationValue, quadrant.rows().toDouble() * interpolationValue), 0.0, 0.0, Imgproc.INTER_CUBIC)
+
+                    // Determine the position to place the resized quadrant in the merged image
+                    val rowOffset = if (i < 2) 0 else quadrant.rows()*interpolationValue
+                    val colOffset = if (i % 2 == 0) 0 else quadrant.cols()*interpolationValue
+
+                    // Copy the resized quadrant into the correct position in the merged image
+                    resizedQuadrant.copyTo(mergedImage.submat(rowOffset, rowOffset + resizedQuadrant.rows(), colOffset, colOffset + resizedQuadrant.cols()))
+
+                    // Release resources
+                    quadrant.release()
+                    resizedQuadrant.release()
+                }
+
+// Save the final merged image
+                val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
+                val finalFilePath = getExternalFilesDir(null)?.absolutePath + "/" + finalFilename
+                Imgcodecs.imwrite(finalFilePath, mergedImage)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // API level 29 and above
-                    p0?.discardFreeBuffers()
                     val contentValues = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, finalFilename)
                         put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
                         put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
                     }
 
                     val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
                     contentResolver.openOutputStream(uri!!)?.use { outputStream ->
-                        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                        val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
+                        mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                        mergedBitmap.recycle()
                     }
                 } else {
-                    // API level 28 and below
+                    // API 28 and below, save directly to external storage
                     val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                    val imageFile = File(picturesDir, "$filename.jpg")
+                    val imageFile = File(picturesDir, finalFilename)
 
                     try {
                         FileOutputStream(imageFile).use { outputStream ->
-                            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                            val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
+                            mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                            mergedBitmap.recycle()
                         }
-
-                        val contentValues = ContentValues().apply {
-                            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                            put(MediaStore.MediaColumns.DATA, imageFile.absolutePath)
-                        }
-
-                        contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-
                     } catch (e: IOException) {
                         e.printStackTrace()
                     }
                 }
+// Delete temporary quadrant files
+                for (filename in filenames) {
+                    val file = File(filename)
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                }
+
                 processedImagesCounter+=1
                 val currentCount = processedImagesCounter
 
