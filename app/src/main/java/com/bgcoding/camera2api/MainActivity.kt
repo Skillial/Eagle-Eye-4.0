@@ -48,6 +48,13 @@ import java.nio.ByteBuffer
 import android.media.MediaActionSound
 import org.opencv.imgcodecs.Imgcodecs
 
+
+import android.app.ActivityManager
+import android.media.MediaScannerConnection
+import android.os.Debug
+
+
+
 class MainActivity : ComponentActivity() {
     private var processedImagesCounter = 0
     lateinit var captureRequest: CaptureRequest.Builder
@@ -62,6 +69,18 @@ class MainActivity : ComponentActivity() {
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
     lateinit var cameraId: String
+
+    fun getAppMemoryUsage(): Long {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val memoryInfoArray = arrayOf(Debug.MemoryInfo())
+        Debug.getMemoryInfo(memoryInfoArray[0])
+
+        val usedMemory = memoryInfoArray[0].getTotalPss() * 1024L // in bytes
+        return usedMemory
+    }
 
     private val permissionsRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         permissions.entries.forEach {
@@ -219,10 +238,11 @@ class MainActivity : ComponentActivity() {
 
                     // Copy the resized quadrant into the correct position in the merged image
                     resizedQuadrant.copyTo(mergedImage.submat(rowOffset, rowOffset + resizedQuadrant.rows(), colOffset, colOffset + resizedQuadrant.cols()))
-
                     // Release resources
                     quadrant.release()
                     resizedQuadrant.release()
+
+
                 }
 
 // Save the final merged image
@@ -253,6 +273,14 @@ class MainActivity : ComponentActivity() {
                             mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                             mergedBitmap.recycle()
                         }
+                        // Trigger a media scan to add the image to the gallery
+                        MediaScannerConnection.scanFile(
+                            this@MainActivity,  // Pass the correct context reference
+                            arrayOf(imageFile.absolutePath),
+                            arrayOf("image/jpeg")
+                        ) { path, uri ->
+                            Log.d("MediaScanner", "Image saved to gallery: $path")
+                        }
                     } catch (e: IOException) {
                         e.printStackTrace()
                     }
@@ -264,16 +292,15 @@ class MainActivity : ComponentActivity() {
                         file.delete()
                     }
                 }
-
                 processedImagesCounter+=1
                 val currentCount = processedImagesCounter
 
                 // Check if all 10 images are processed
-                if (currentCount == 10) {
+                if (currentCount == 1) {
                     runOnUiThread {
                         loadingBox.visibility = View.GONE
                     }
-                    Toast.makeText(this@MainActivity, "All 10 images processed and saved.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "images processed and saved.", Toast.LENGTH_SHORT).show()
                 }
             }
         }, handler)
@@ -287,7 +314,7 @@ class MainActivity : ComponentActivity() {
         }*/
         findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
-                var totalCaptures = 10
+                var totalCaptures = 1
 //                var completedCaptures = 0
                 val captureList = mutableListOf<CaptureRequest>()
 
