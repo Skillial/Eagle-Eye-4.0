@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
@@ -46,6 +47,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 import android.media.MediaActionSound
+import android.os.Debug
 
 class MainActivity : ComponentActivity() {
     private var processedImagesCounter = 0
@@ -61,6 +63,19 @@ class MainActivity : ComponentActivity() {
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
     lateinit var cameraId: String
+
+
+    fun getAppMemoryUsage(): Long {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val memoryInfoArray = arrayOf(Debug.MemoryInfo())
+        Debug.getMemoryInfo(memoryInfoArray[0])
+
+        val usedMemory = memoryInfoArray[0].getTotalPss() * 1024L // in bytes
+        return usedMemory
+    }
 
     private val permissionsRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         permissions.entries.forEach {
@@ -154,6 +169,7 @@ class MainActivity : ComponentActivity() {
 
         imageReader.setOnImageAvailableListener(object: ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(p0: ImageReader?) {
+                var startTime = System.currentTimeMillis()
                 var image = p0?.acquireNextImage()
 
                 val buffer = image!!.planes[0].buffer
@@ -184,7 +200,8 @@ class MainActivity : ComponentActivity() {
                 // Convert the processed Mat back to Bitmap
                 val resizedBitmap = Bitmap.createBitmap(resizedMat.cols(), resizedMat.rows(), Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(resizedMat, resizedBitmap)
-
+                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
+                Log.d("Memory test - merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // API level 29 and above
                     p0?.discardFreeBuffers()
@@ -224,7 +241,7 @@ class MainActivity : ComponentActivity() {
                 val currentCount = processedImagesCounter
 
                 // Check if all 10 images are processed
-                if (currentCount == 10) {
+                if (currentCount == 1) {
                     runOnUiThread {
                         loadingBox.visibility = View.GONE
                     }
