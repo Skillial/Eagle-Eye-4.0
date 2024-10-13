@@ -218,37 +218,37 @@ class MainActivity : ComponentActivity() {
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2RGB)
                 Log.d("Time test - orientation/color", "${System.currentTimeMillis()-startTime}")
                 Log.d("Memory test - orientation/color","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                val divisionFactor = 1   // set division factor
+                val divisionFactor = 4  // set division factor
 
                 val quadrantWidth = width / divisionFactor
                 val remainderWidth = width % divisionFactor
                 val quadrantHeight = height / divisionFactor
                 val remainderHeight = height % divisionFactor
 
-                // initialize filenames
-                val filenames = Array(divisionFactor * divisionFactor) { index ->
-                    getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
-                }
-
-                // split image to multiple parts
-                var quadrantCount = 0;
+//                // initialize filenames
+//                val filenames = Array(divisionFactor * divisionFactor) { index ->
+//                    getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
+//                }
+                val quadrants: MutableList<Mat> = mutableListOf()
+// Split image into multiple parts
+                var quadrantCount = 0
                 for (i in 0 until divisionFactor) {
                     for (j in 0 until divisionFactor) {
                         val topLeftX = j * quadrantWidth
-                        val bottomRightX =
-                            (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
+                        val bottomRightX = (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
                         val topLeftY = i * quadrantHeight
-                        val bottomRightY =
-                            (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
+                        val bottomRightY = (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
 
-                        // save image to files
-                        Imgcodecs.imwrite(
-                            filenames[quadrantCount],
-                            mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX)
-                        )
-                        quadrantCount += 1;
+                        // Create submat for the current quadrant
+                        val quadrantMat = mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX)
+
+                        // Add the quadrant to the list
+                        quadrants.add(quadrantMat)
+
+                        quadrantCount += 1
                     }
                 }
+
                 Log.d("Time test - image split", "${System.currentTimeMillis()-startTime}")
                 Log.d("Memory test - image split","${getAppMemoryUsage() / (1024 * 1024)} MB")
                 mat.release()
@@ -256,20 +256,19 @@ class MainActivity : ComponentActivity() {
                 val interpolationValue = 8
 
                 // apply bicubic interpolation to each image
-                for (i in filenames.indices) {
-                    val quadrant = Imgcodecs.imread(filenames[i])
+                for (i in 0 until quadrants.size) {
+                    val quadrant = quadrants[i]
                     val resizedQuadrant = Mat()
 
                     // perform bicubic interpolation
                     Imgproc.resize(
-                        quadrant, resizedQuadrant,
+                        quadrant, quadrants[i],
                         Size(
                             quadrant.cols().toDouble() * interpolationValue,
                             quadrant.rows().toDouble() * interpolationValue
                         ),
                         0.0, 0.0, Imgproc.INTER_CUBIC
                     )
-                    Imgcodecs.imwrite(filenames[i], resizedQuadrant)
                     Log.d("Memory test - per interpolation","${getAppMemoryUsage() / (1024 * 1024)} MB")
                     quadrant.release()
                     resizedQuadrant.release()
@@ -284,8 +283,8 @@ class MainActivity : ComponentActivity() {
                 )
 
                 // calculate image location
-                for (i in filenames.indices) {
-                    val quadrant = Imgcodecs.imread(filenames[i])
+                for (i in 0 until quadrants.size) {
+                    val quadrant = quadrants[i]
                     val row = i / divisionFactor
                     val col = i % divisionFactor
 
@@ -302,10 +301,7 @@ class MainActivity : ComponentActivity() {
                     Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
                     quadrant.release()
 
-                    val file = File(filenames[i])
-                    if (file.exists()) {
-                        file.delete()
-                    }
+
                 }
                 Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
 
