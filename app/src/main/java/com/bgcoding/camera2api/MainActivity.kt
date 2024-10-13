@@ -52,7 +52,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import android.app.ActivityManager
 import android.media.MediaScannerConnection
 import android.os.Debug
-
+import org.opencv.core.Core
 
 
 class MainActivity : ComponentActivity() {
@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
     lateinit var cameraId: String
+    private var sensorOrientation: Int = 0
 
     fun getAppMemoryUsage(): Long {
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -191,13 +192,21 @@ class MainActivity : ComponentActivity() {
                     val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
                     // Convert Bitmap to OpenCV Mat
-                    val width = bitmap.width
-                    val height = bitmap.height
+                    var width = bitmap.width
+                    var height = bitmap.height
 
                     // Convert Bitmap to OpenCV Mat
                     val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
                     Utils.bitmapToMat(bitmap, mat)
-
+                    if (sensorOrientation == 90) {
+                        Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
+                        width = height.also { height = width }
+                    } else if (sensorOrientation == 270) {
+                        Core.rotate(mat, mat, Core.ROTATE_90_COUNTERCLOCKWISE)
+                    } else if (sensorOrientation == 180) {
+                        Core.rotate(mat, mat, Core.ROTATE_180)
+                        width = height.also { height = width }
+                    }
                     val divisionFactor = 3    // You can change this value to divide into more parts
 
                     val quadrantWidth = width / divisionFactor
@@ -383,6 +392,9 @@ class MainActivity : ComponentActivity() {
 
                 var surface = Surface(textureView.surfaceTexture)
                 captureRequest.addTarget(surface)
+
+                val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
 
                 cameraDevice.createCaptureSession(listOf(surface, imageReader.surface), object: CameraCaptureSession.StateCallback() {
                     override fun onConfigured(p0: CameraCaptureSession) {
