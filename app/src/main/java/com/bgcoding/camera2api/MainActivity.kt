@@ -83,16 +83,17 @@ class MainActivity : ComponentActivity() {
         return usedMemory
     }
 
-    private val permissionsRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        permissions.entries.forEach {
-            if (!it.value) {
-                // Permission was denied, handle this situation
-            } else {
-                // Permission was granted, you can now proceed with your operations
-                // setCameraPreview()
+    private val permissionsRequest =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            permissions.entries.forEach {
+                if (!it.value) {
+                    // Permission was denied, handle this situation
+                } else {
+                    // Permission was granted, you can now proceed with your operations
+                    // setCameraPreview()
+                }
             }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
                 // All permissions already granted
                 // setCameraPreview()
             }
+
             else -> {
                 // Some permissions not granted, request them
                 permissionsRequest.launch(permissions)
@@ -158,7 +160,8 @@ class MainActivity : ComponentActivity() {
         }
 
 
-        this.cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK) // Dynamically get the rear camera ID
+        this.cameraId =
+            getCameraId(CameraCharacteristics.LENS_FACING_BACK) // Dynamically get the rear camera ID
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(ImageFormat.JPEG)
@@ -167,13 +170,18 @@ class MainActivity : ComponentActivity() {
         val highestResolution = sizes?.sortedWith(compareBy { it.width * it.height })?.last()
 
         imageReader = if (highestResolution != null) {
-            ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
+            ImageReader.newInstance(
+                highestResolution.width,
+                highestResolution.height,
+                ImageFormat.JPEG,
+                20
+            )
         } else {
             // Fallback to a default resolution if no sizes are available
             ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
         }
 
-        imageReader.setOnImageAvailableListener(object: ImageReader.OnImageAvailableListener {
+        imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(p0: ImageReader?) {
                 var image = p0?.acquireNextImage()
 
@@ -181,119 +189,120 @@ class MainActivity : ComponentActivity() {
                 var bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
 
-                // Generate a unique filename for each image
-//                val filename = "img_${System.currentTimeMillis()}.jpeg"
                 image.close()
 
 
+                // Convert byte array to Bitmap
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                var width = bitmap.width
+                var height = bitmap.height
 
+                // Convert Bitmap to OpenCV Mat
+                val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
+                Utils.bitmapToMat(bitmap, mat)
+                bitmap.recycle()
 
-                    // Convert byte array to Bitmap
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                // change depending on camera orienatation
+                if (sensorOrientation == 90) {
+                    Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
+                    width = height.also { height = width }
+                } else if (sensorOrientation == 270) {
+                    Core.rotate(mat, mat, Core.ROTATE_90_COUNTERCLOCKWISE)
+                } else if (sensorOrientation == 180) {
+                    Core.rotate(mat, mat, Core.ROTATE_180)
+                    width = height.also { height = width }
+                }
 
-                    var width = bitmap.width
-                    var height = bitmap.height
-
-                    // Convert Bitmap to OpenCV Mat
-                    val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
-                    Utils.bitmapToMat(bitmap, mat)
-                    bitmap.recycle()
-
-                    if (sensorOrientation == 90) {
-                        Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
-                        width = height.also { height = width }
-                    } else if (sensorOrientation == 270) {
-                        Core.rotate(mat, mat, Core.ROTATE_90_COUNTERCLOCKWISE)
-                    } else if (sensorOrientation == 180) {
-                        Core.rotate(mat, mat, Core.ROTATE_180)
-                        width = height.also { height = width }
-                    }
-
+                // change color space
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2RGB)
 
-                    val divisionFactor = 3    // You can change this value to divide into more parts
+                val divisionFactor = 3    // set division factor
 
-                    val quadrantWidth = width / divisionFactor
-                    val remainderWidth = width % divisionFactor
-                    val quadrantHeight = height / divisionFactor
-                    val remainderHeight = height % divisionFactor
+                val quadrantWidth = width / divisionFactor
+                val remainderWidth = width % divisionFactor
+                val quadrantHeight = height / divisionFactor
+                val remainderHeight = height % divisionFactor
 
-                    // initialize filenames
-                    val filenames = Array(divisionFactor * divisionFactor) { index ->
-                        getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
-                    }
+                // initialize filenames
+                val filenames = Array(divisionFactor * divisionFactor) { index ->
+                    getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
+                }
 
-                    // Create submatrices for each section based on the division factor
-                    var quadrantCount =0;
-                    for (i in 0 until divisionFactor) {
-                        for (j in 0 until divisionFactor) {
-                            // Calculate the top-left and bottom-right coordinates for each quadrant
+                // split image to multiple parts
+                var quadrantCount = 0;
+                for (i in 0 until divisionFactor) {
+                    for (j in 0 until divisionFactor) {
+                        val topLeftX = j * quadrantWidth
+                        val bottomRightX =
+                            (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
+                        val topLeftY = i * quadrantHeight
+                        val bottomRightY =
+                            (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
 
-                            val topLeftX = j * quadrantWidth
-                            val bottomRightX = (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
-                            val topLeftY = i * quadrantHeight
-                            val bottomRightY = (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
-
-                            // Add submat to the list
-                            Imgcodecs.imwrite(filenames[quadrantCount],mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX))
-                            quadrantCount+=1;
-                        }
-                    }
-                    mat.release()
-
-                    val interpolationValue = 8
-
-                    // Process each quadrant, apply bicubic interpolation, and merge them back
-                    for (i in 0 until filenames.size) {
-                        val quadrant = Imgcodecs.imread(filenames[i])
-                        val resizedQuadrant = Mat()
-
-                        // Perform bicubic interpolation on the loaded quadrant
-                        Imgproc.resize(
-                            quadrant, resizedQuadrant,
-                            Size(
-                                quadrant.cols().toDouble() * interpolationValue,
-                                quadrant.rows().toDouble() * interpolationValue
-                            ),
-                            0.0, 0.0, Imgproc.INTER_CUBIC
+                        // save image to files
+                        Imgcodecs.imwrite(
+                            filenames[quadrantCount],
+                            mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX)
                         )
-                        Imgcodecs.imwrite(filenames[i],resizedQuadrant)
-                        quadrant.release()
-                        resizedQuadrant.release()
+                        quadrantCount += 1;
                     }
+                }
+                mat.release()
 
-                    // Create an empty Mat to store the final merged image
-                    val mergedImage = Mat.zeros(height * interpolationValue, width * interpolationValue, CvType.CV_8UC3)
+                val interpolationValue = 8
 
-                    // Calculate the row and column offset based on the division factor
-                    for (i in 0 until filenames.size) {
-                        val quadrant = Imgcodecs.imread(filenames[i])
-                        val row = i / divisionFactor
-                        val col = i % divisionFactor
+                // apply bicubic interpolation to each image
+                for (i in filenames.indices) {
+                    val quadrant = Imgcodecs.imread(filenames[i])
+                    val resizedQuadrant = Mat()
 
-                        val rowOffset = row * quadrantHeight * interpolationValue
-                        val colOffset = col * quadrantWidth * interpolationValue
-                        // Copy the resized quadrant into the correct position in the merged image
-                        quadrant.copyTo(
-                            mergedImage.submat(
-                                rowOffset, rowOffset + quadrant.rows(),
-                                colOffset, colOffset + quadrant.cols()
-                            )
+                    // perform bicubic interpolation
+                    Imgproc.resize(
+                        quadrant, resizedQuadrant,
+                        Size(
+                            quadrant.cols().toDouble() * interpolationValue,
+                            quadrant.rows().toDouble() * interpolationValue
+                        ),
+                        0.0, 0.0, Imgproc.INTER_CUBIC
+                    )
+                    Imgcodecs.imwrite(filenames[i], resizedQuadrant)
+                    quadrant.release()
+                    resizedQuadrant.release()
+                }
+
+                // create an empty Mat to store the final merged image
+                val mergedImage = Mat.zeros(
+                    height * interpolationValue,
+                    width * interpolationValue,
+                    CvType.CV_8UC3
+                )
+
+                // calculate image location
+                for (i in 0 until filenames.size) {
+                    val quadrant = Imgcodecs.imread(filenames[i])
+                    val row = i / divisionFactor
+                    val col = i % divisionFactor
+
+                    val rowOffset = row * quadrantHeight * interpolationValue
+                    val colOffset = col * quadrantWidth * interpolationValue
+                    // Copy the resized quadrant into the correct position in the merged image
+                    quadrant.copyTo(
+                        mergedImage.submat(
+                            rowOffset, rowOffset + quadrant.rows(),
+                            colOffset, colOffset + quadrant.cols()
                         )
-                        // Release resources
-                        quadrant.release()
+                    )
+                    // Release resources
+                    quadrant.release()
 
-                        val file = File(filenames[i])
-                        if (file.exists()) {
-                            file.delete()
-                        }
+                    val file = File(filenames[i])
+                    if (file.exists()) {
+                        file.delete()
                     }
+                }
 
 
-
-
-
-// Save the final merged image
+                // Save the final merged image
                 val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
                 val finalFilePath = getExternalFilesDir(null)?.absolutePath + "/" + finalFilename
                 Imgcodecs.imwrite(finalFilePath, mergedImage)
@@ -304,7 +313,10 @@ class MainActivity : ComponentActivity() {
                         put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
                     }
 
-                    val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                    val uri = contentResolver.insert(
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        contentValues
+                    )
                     contentResolver.openOutputStream(uri!!)?.use { outputStream ->
                         val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
                         mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
@@ -312,7 +324,8 @@ class MainActivity : ComponentActivity() {
                     }
                 } else {
                     // API 28 and below, save directly to external storage
-                    val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                    val picturesDir =
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                     val imageFile = File(picturesDir, finalFilename)
 
                     try {
@@ -335,7 +348,7 @@ class MainActivity : ComponentActivity() {
                 }
                 mergedImage.release()
 
-                processedImagesCounter+=1
+                processedImagesCounter += 1
                 val currentCount = processedImagesCounter
 
                 // Check if all 10 images are processed
@@ -343,7 +356,11 @@ class MainActivity : ComponentActivity() {
                     runOnUiThread {
                         loadingBox.visibility = View.GONE
                     }
-                    Toast.makeText(this@MainActivity, "images processed and saved.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "images processed and saved.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }, handler)
@@ -362,7 +379,8 @@ class MainActivity : ComponentActivity() {
                 val captureList = mutableListOf<CaptureRequest>()
 
                 for (i in 0 until totalCaptures) { // Change this to the number of photos you want to capture in the burst
-                    val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                    val captureRequest =
+                        cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                     captureRequest.addTarget(imageReader.surface)
                     captureList.add(captureRequest.build())
                 }
@@ -372,15 +390,17 @@ class MainActivity : ComponentActivity() {
                     loadingBox.visibility = View.VISIBLE
                 }
 
-                cameraCaptureSession.captureBurst(captureList, object : CameraCaptureSession.CaptureCallback() {
-                    override fun onCaptureCompleted(
-                        session: CameraCaptureSession,
-                        request: CaptureRequest,
-                        result: TotalCaptureResult
-                    ) {
-                        super.onCaptureCompleted(session, request, result)
-                        // Handle the result of the capture here
-                        Log.d("BurstCapture", "Capture completed")
+                cameraCaptureSession.captureBurst(
+                    captureList,
+                    object : CameraCaptureSession.CaptureCallback() {
+                        override fun onCaptureCompleted(
+                            session: CameraCaptureSession,
+                            request: CaptureRequest,
+                            result: TotalCaptureResult
+                        ) {
+                            super.onCaptureCompleted(session, request, result)
+                            // Handle the result of the capture here
+                            Log.d("BurstCapture", "Capture completed")
 //                        completedCaptures++
 //                        if (completedCaptures >= totalCaptures) {
 //                            runOnUiThread {
@@ -388,15 +408,17 @@ class MainActivity : ComponentActivity() {
 //                            }
 //                            Toast.makeText(this@MainActivity, "Images captured and saved.", Toast.LENGTH_SHORT).show()
 //                        }
-                    }
-                }, null)
+                        }
+                    },
+                    null
+                )
             }
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun open_camera() {
-        cameraManager.openCamera(cameraId, object: CameraDevice.StateCallback() {
+        cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
 
@@ -406,18 +428,27 @@ class MainActivity : ComponentActivity() {
                 captureRequest.addTarget(surface)
 
                 val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-                sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
+                sensorOrientation =
+                    characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
 
-                cameraDevice.createCaptureSession(listOf(surface, imageReader.surface), object: CameraCaptureSession.StateCallback() {
-                    override fun onConfigured(p0: CameraCaptureSession) {
-                        cameraCaptureSession = p0
-                        cameraCaptureSession.setRepeatingRequest(captureRequest.build(), null, null)
-                    }
+                cameraDevice.createCaptureSession(
+                    listOf(surface, imageReader.surface),
+                    object : CameraCaptureSession.StateCallback() {
+                        override fun onConfigured(p0: CameraCaptureSession) {
+                            cameraCaptureSession = p0
+                            cameraCaptureSession.setRepeatingRequest(
+                                captureRequest.build(),
+                                null,
+                                null
+                            )
+                        }
 
-                    override fun onConfigureFailed(p0: CameraCaptureSession) {
+                        override fun onConfigureFailed(p0: CameraCaptureSession) {
 
-                    }
-                }, handler)
+                        }
+                    },
+                    handler
+                )
             }
 
             override fun onDisconnected(p0: CameraDevice) {
