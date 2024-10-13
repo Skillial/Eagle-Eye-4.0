@@ -187,63 +187,85 @@ class MainActivity : ComponentActivity() {
 
 
 
-                // Convert byte array to Bitmap
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    // Convert byte array to Bitmap
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                // Convert Bitmap to OpenCV Mat
-                val width = bitmap.width
-                val height = bitmap.height
+                    // Convert Bitmap to OpenCV Mat
+                    val width = bitmap.width
+                    val height = bitmap.height
 
-                // Convert Bitmap to OpenCV Mat
-                val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
-                Utils.bitmapToMat(bitmap, mat)
+                    // Convert Bitmap to OpenCV Mat
+                    val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC3)
+                    Utils.bitmapToMat(bitmap, mat)
 
-                val midX = width / 2
-                val midY = height / 2
-                // Create submatrices for each quadrant
-                val quadrants = arrayOf(
-                    mat.submat(0, midY, 0, midX), // Top-left
-                    mat.submat(0, midY, midX, width), // Top-right
-                    mat.submat(midY, height, 0, midX), // Bottom-left
-                    mat.submat(midY, height, midX, width) // Bottom-right
-                )
+                    val divisionFactor = 3    // You can change this value to divide into more parts
 
-                // Save the temporary quadrant files
-                val filenames = arrayOf(
-                    getExternalFilesDir(null)?.absolutePath + "/quadrant1.jpg",
-                    getExternalFilesDir(null)?.absolutePath + "/quadrant2.jpg",
-                    getExternalFilesDir(null)?.absolutePath + "/quadrant3.jpg",
-                    getExternalFilesDir(null)?.absolutePath + "/quadrant4.jpg"
-                )
+                    val quadrantWidth = width / divisionFactor
+                    val remainderWidth = width % divisionFactor // For handling odd dimensions
+                    val quadrantHeight = height / divisionFactor
+                    val remainderHeight = height % divisionFactor // For handling odd dimensions
 
-                // Save each quadrant to a file
-                for (i in quadrants.indices) {
-                    Imgcodecs.imwrite(filenames[i], quadrants[i])
-                }
-                val interpolationValue = 4
-                // Create an empty Mat to store the final merged image
-                val mergedImage = Mat.zeros(height*interpolationValue, width*interpolationValue, CvType.CV_8UC3)
+    // Create submatrices for each section based on the division factor
+                    val quadrants = mutableListOf<Mat>()
+                    for (i in 0 until divisionFactor) {
+                        for (j in 0 until divisionFactor) {
+                            // Calculate the top-left and bottom-right coordinates for each quadrant
+                            val topLeftX = j * quadrantWidth
+                            val bottomRightX = (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
+                            val topLeftY = i * quadrantHeight
+                            val bottomRightY = (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
 
-                // Process each quadrant, apply bicubic interpolation, and merge them back
-                for (i in 0 until quadrants.size) {
-                    val quadrant = Imgcodecs.imread(filenames[i])
-                    val resizedQuadrant = Mat()
+                            // Add submat to the list
+                            quadrants.add(mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX))
+                        }
+                    }
 
-                    // Perform bicubic interpolation on the loaded quadrant
-                    Imgproc.resize(quadrant, resizedQuadrant, Size(quadrant.cols().toDouble() * interpolationValue, quadrant.rows().toDouble() * interpolationValue), 0.0, 0.0, Imgproc.INTER_CUBIC)
+    // Save the temporary quadrant files
+                    val filenames = Array(divisionFactor * divisionFactor) { index ->
+                        getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
+                    }
 
-                    // Determine the position to place the resized quadrant in the merged image
-                    val rowOffset = if (i < 2) 0 else quadrant.rows()*interpolationValue
-                    val colOffset = if (i % 2 == 0) 0 else quadrant.cols()*interpolationValue
+    // Save each quadrant to a file
+                    for (i in quadrants.indices) {
+                        Imgcodecs.imwrite(filenames[i], quadrants[i])
+                    }
 
-                    // Copy the resized quadrant into the correct position in the merged image
-                    resizedQuadrant.copyTo(mergedImage.submat(rowOffset, rowOffset + resizedQuadrant.rows(), colOffset, colOffset + resizedQuadrant.cols()))
-                    // Release resources
-                    quadrant.release()
-                    resizedQuadrant.release()
+                    val interpolationValue = 4
 
+    // Create an empty Mat to store the final merged image
+                    val mergedImage = Mat.zeros(height * interpolationValue, width * interpolationValue, CvType.CV_8UC3)
 
-                }
+    // Process each quadrant, apply bicubic interpolation, and merge them back
+                    for (i in quadrants.indices) {
+                        val quadrant = Imgcodecs.imread(filenames[i])
+                        val resizedQuadrant = Mat()
+
+                        // Perform bicubic interpolation on the loaded quadrant
+                        Imgproc.resize(
+                            quadrant, resizedQuadrant,
+                            Size(quadrant.cols().toDouble() * interpolationValue, quadrant.rows().toDouble() * interpolationValue),
+                            0.0, 0.0, Imgproc.INTER_CUBIC
+                        )
+
+                        // Calculate the row and column offset based on the division factor
+
+                        val row = i / divisionFactor
+                        val col = i % divisionFactor
+
+                        val rowOffset = row * quadrantHeight * interpolationValue
+                        val colOffset = col * quadrantWidth * interpolationValue
+                        // Copy the resized quadrant into the correct position in the merged image
+                        resizedQuadrant.copyTo(
+                            mergedImage.submat(
+                                rowOffset, rowOffset + resizedQuadrant.rows(),
+                                colOffset, colOffset + resizedQuadrant.cols()
+                            )
+                        )
+                        // Release resources
+                        quadrant.release()
+                        resizedQuadrant.release()
+                    }
+
 
 // Save the final merged image
                 val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
