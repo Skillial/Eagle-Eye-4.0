@@ -202,7 +202,7 @@ class MainActivity : ComponentActivity() {
                 Utils.bitmapToMat(bitmap, mat)
                 bitmap.recycle()
 
-                // change depending on camera orienatation
+                // change depending on camera orientation
                 if (sensorOrientation == 90) {
                     Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
                     width = height.also { height = width }
@@ -278,7 +278,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 // calculate image location
-                for (i in 0 until filenames.size) {
+                for (i in filenames.indices) {
                     val quadrant = Imgcodecs.imread(filenames[i])
                     val row = i / divisionFactor
                     val col = i % divisionFactor
@@ -339,7 +339,7 @@ class MainActivity : ComponentActivity() {
                             this@MainActivity,  // Pass the correct context reference
                             arrayOf(imageFile.absolutePath),
                             arrayOf("image/jpeg")
-                        ) { path, uri ->
+                        ) { path, _ ->
                             Log.d("MediaScanner", "Image saved to gallery: $path")
                         }
                     } catch (e: IOException) {
