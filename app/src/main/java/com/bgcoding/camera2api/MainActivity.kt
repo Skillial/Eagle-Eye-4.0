@@ -225,12 +225,14 @@ class MainActivity : ComponentActivity() {
                 val quadrantHeight = height / divisionFactor
                 val remainderHeight = height % divisionFactor
 
-//                // initialize filenames
-//                val filenames = Array(divisionFactor * divisionFactor) { index ->
-//                    getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
-//                }
-                val quadrants: MutableList<Mat> = mutableListOf()
-// Split image into multiple parts
+                val interpolationValue = 8
+                val mergedImage = Mat.zeros(
+                    height * interpolationValue,
+                    width * interpolationValue,
+                    CvType.CV_8UC3
+                )
+
+                // Split image into multiple parts
                 var quadrantCount = 0
                 for (i in 0 until divisionFactor) {
                     for (j in 0 until divisionFactor) {
@@ -242,69 +244,38 @@ class MainActivity : ComponentActivity() {
                         // Create submat for the current quadrant
                         val quadrantMat = mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX)
 
-                        // Add the quadrant to the list
-                        quadrants.add(quadrantMat)
+                        Imgproc.resize(
+                            quadrantMat, quadrantMat,
+                            Size(
+                                quadrantMat.cols().toDouble() * interpolationValue,
+                                quadrantMat.rows().toDouble() * interpolationValue
+                            ),
+                            0.0, 0.0, Imgproc.INTER_CUBIC
+                        )
+                        Log.d("Time test - per interpolation", "${System.currentTimeMillis()-startTime}")
+                        Log.d("Memory test - per interpolation","${getAppMemoryUsage() / (1024 * 1024)} MB")
+                        val row = quadrantCount / divisionFactor
+                        val col = quadrantCount % divisionFactor
 
+                        val rowOffset = row * quadrantHeight * interpolationValue
+                        val colOffset = col * quadrantWidth * interpolationValue
+                        // Copy the resized quadrant into the correct position in the merged image
+                        quadrantMat.copyTo(
+                            mergedImage.submat(
+                                rowOffset, rowOffset + quadrantMat.rows(),
+                                colOffset, colOffset + quadrantMat.cols()
+                            )
+                        )
+                        Log.d("Time test - per merge", "${System.currentTimeMillis()-startTime}")
+                        Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
+                        // Release resources
+
+                        quadrantMat.release()
                         quadrantCount += 1
                     }
                 }
 
-                Log.d("Time test - image split", "${System.currentTimeMillis()-startTime}")
-                Log.d("Memory test - image split","${getAppMemoryUsage() / (1024 * 1024)} MB")
                 mat.release()
-
-                val interpolationValue = 8
-
-                // apply bicubic interpolation to each image
-                for (i in 0 until quadrants.size) {
-                    val quadrant = quadrants[i]
-                    val resizedQuadrant = Mat()
-
-                    // perform bicubic interpolation
-                    Imgproc.resize(
-                        quadrant, quadrants[i],
-                        Size(
-                            quadrant.cols().toDouble() * interpolationValue,
-                            quadrant.rows().toDouble() * interpolationValue
-                        ),
-                        0.0, 0.0, Imgproc.INTER_CUBIC
-                    )
-                    Log.d("Memory test - per interpolation","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                    quadrant.release()
-                    resizedQuadrant.release()
-                }
-                Log.d("Time test - interpolation", "${System.currentTimeMillis()-startTime}")
-
-                // create an empty Mat to store the final merged image
-                val mergedImage = Mat.zeros(
-                    height * interpolationValue,
-                    width * interpolationValue,
-                    CvType.CV_8UC3
-                )
-
-                // calculate image location
-                for (i in 0 until quadrants.size) {
-                    val quadrant = quadrants[i]
-                    val row = i / divisionFactor
-                    val col = i % divisionFactor
-
-                    val rowOffset = row * quadrantHeight * interpolationValue
-                    val colOffset = col * quadrantWidth * interpolationValue
-                    // Copy the resized quadrant into the correct position in the merged image
-                    quadrant.copyTo(
-                        mergedImage.submat(
-                            rowOffset, rowOffset + quadrant.rows(),
-                            colOffset, colOffset + quadrant.cols()
-                        )
-                    )
-                    // Release resources
-                    Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                    quadrant.release()
-
-
-                }
-                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
-
 
                 // Save the final merged image
                 val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
