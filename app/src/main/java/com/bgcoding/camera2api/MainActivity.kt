@@ -183,6 +183,7 @@ class MainActivity : ComponentActivity() {
 
         imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(p0: ImageReader?) {
+                var startTime = System.currentTimeMillis()
                 var image = p0?.acquireNextImage()
 
                 val buffer = image!!.planes[0].buffer
@@ -215,8 +216,9 @@ class MainActivity : ComponentActivity() {
 
                 // change color space
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2RGB)
-
-                val divisionFactor = 3    // set division factor
+                Log.d("Time test - orientation/color", "${System.currentTimeMillis()-startTime}")
+                Log.d("Memory test - orientation/color","${getAppMemoryUsage() / (1024 * 1024)} MB")
+                val divisionFactor = 1    // set division factor
 
                 val quadrantWidth = width / divisionFactor
                 val remainderWidth = width % divisionFactor
@@ -247,6 +249,8 @@ class MainActivity : ComponentActivity() {
                         quadrantCount += 1;
                     }
                 }
+                Log.d("Time test - image split", "${System.currentTimeMillis()-startTime}")
+                Log.d("Memory test - image split","${getAppMemoryUsage() / (1024 * 1024)} MB")
                 mat.release()
 
                 val interpolationValue = 8
@@ -266,9 +270,11 @@ class MainActivity : ComponentActivity() {
                         0.0, 0.0, Imgproc.INTER_CUBIC
                     )
                     Imgcodecs.imwrite(filenames[i], resizedQuadrant)
+                    Log.d("Memory test - per interpolation","${getAppMemoryUsage() / (1024 * 1024)} MB")
                     quadrant.release()
                     resizedQuadrant.release()
                 }
+                Log.d("Time test - interpolation", "${System.currentTimeMillis()-startTime}")
 
                 // create an empty Mat to store the final merged image
                 val mergedImage = Mat.zeros(
@@ -293,6 +299,7 @@ class MainActivity : ComponentActivity() {
                         )
                     )
                     // Release resources
+                    Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
                     quadrant.release()
 
                     val file = File(filenames[i])
@@ -347,6 +354,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 mergedImage.release()
+                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
 
                 processedImagesCounter += 1
                 val currentCount = processedImagesCounter
