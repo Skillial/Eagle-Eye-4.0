@@ -218,7 +218,7 @@ class MainActivity : ComponentActivity() {
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2RGB)
                 Log.d("Time test - orientation/color", "${System.currentTimeMillis()-startTime}")
                 Log.d("Memory test - orientation/color","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                val divisionFactor = 1    // set division factor
+                val divisionFactor = 1   // set division factor
 
                 val quadrantWidth = width / divisionFactor
                 val remainderWidth = width % divisionFactor
@@ -307,6 +307,7 @@ class MainActivity : ComponentActivity() {
                         file.delete()
                     }
                 }
+                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
 
 
                 // Save the final merged image
@@ -354,7 +355,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 mergedImage.release()
-                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
+                Log.d("Time test - save", "${System.currentTimeMillis()-startTime}")
 
                 processedImagesCounter += 1
                 val currentCount = processedImagesCounter
