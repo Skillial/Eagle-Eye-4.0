@@ -54,6 +54,7 @@ import android.media.MediaScannerConnection
 import android.os.Debug
 import org.opencv.core.Core
 import kotlinx.coroutines.*
+import java.io.FileInputStream
 import kotlin.system.measureTimeMillis
 
 
@@ -353,9 +354,13 @@ class MainActivity : ComponentActivity() {
                         contentValues
                     )
                     contentResolver.openOutputStream(uri!!)?.use { outputStream ->
-                        val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
-                        mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                        mergedBitmap.recycle()
+                        FileInputStream(finalFilePath).use { inputStream ->
+                            val buffer = ByteArray(1024)  // Adjust buffer size if needed
+                            var length: Int
+                            while (inputStream.read(buffer).also { length = it } > 0) {
+                                outputStream.write(buffer, 0, length)
+                            }
+                        }
                     }
                 } else {
                     // API 28 and below, save directly to external storage
