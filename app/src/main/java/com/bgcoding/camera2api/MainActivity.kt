@@ -53,6 +53,8 @@ import android.app.ActivityManager
 import android.media.MediaScannerConnection
 import android.os.Debug
 import org.opencv.core.Core
+import kotlinx.coroutines.*
+import kotlin.system.measureTimeMillis
 
 
 class MainActivity : ComponentActivity() {
@@ -231,7 +233,7 @@ class MainActivity : ComponentActivity() {
 //                }
                 val quadrants: MutableList<Mat> = mutableListOf()
 // Split image into multiple parts
-                var quadrantCount = 0
+
                 for (i in 0 until divisionFactor) {
                     for (j in 0 until divisionFactor) {
                         val topLeftX = j * quadrantWidth
@@ -245,7 +247,6 @@ class MainActivity : ComponentActivity() {
                         // Add the quadrant to the list
                         quadrants.add(quadrantMat)
 
-                        quadrantCount += 1
                     }
                 }
 
@@ -256,24 +257,54 @@ class MainActivity : ComponentActivity() {
                 val interpolationValue = 8
 
                 // apply bicubic interpolation to each image
-                for (i in 0 until quadrants.size) {
-                    val quadrant = quadrants[i]
-                    val resizedQuadrant = Mat()
+                // Get available CPU cores and memory
+                val availableCores = Runtime.getRuntime().availableProcessors()
+                val availableMemory = getAppMemoryUsage() / (1024 * 1024) // Convert to MB
 
-                    // perform bicubic interpolation
-                    Imgproc.resize(
-                        quadrant, quadrants[i],
-                        Size(
-                            quadrant.cols().toDouble() * interpolationValue,
-                            quadrant.rows().toDouble() * interpolationValue
-                        ),
-                        0.0, 0.0, Imgproc.INTER_CUBIC
-                    )
-                    Log.d("Memory test - per interpolation","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                    quadrant.release()
-                    resizedQuadrant.release()
+                // Determine the number of coroutines to use based on available memory
+                val maxCoroutines = if (availableMemory > 200) {
+                    availableCores // Use all available CPU cores
+                } else {
+                    1 // Use only one coroutine if memory is low
                 }
-                Log.d("Time test - interpolation", "${System.currentTimeMillis()-startTime}")
+
+                Log.d("Max Coroutines", "Using $maxCoroutines coroutines based on available memory: $availableMemory MB")
+
+                // Create a coroutine scope to handle the interpolation
+                runBlocking {
+                    val jobs = mutableListOf<Job>()
+
+                    // Process each quadrant in parallel using coroutines
+                    for (i in quadrants.indices) {
+                        // Launch a coroutine for each quadrant
+                        jobs.add(launch {
+
+                            // Perform bicubic interpolation
+                            Imgproc.resize(
+                                quadrants[i], quadrants[i],
+                                Size(
+                                    quadrants[i].cols().toDouble() * interpolationValue,
+                                    quadrants[i].rows().toDouble() * interpolationValue
+                                ),
+                                0.0, 0.0, Imgproc.INTER_CUBIC
+                            )
+                            Log.d("Memory test - per interpolation", "${getAppMemoryUsage() / (1024 * 1024)} MB")
+
+                        })
+
+                        // Control the number of concurrent coroutines
+                        if (jobs.size >= maxCoroutines) {
+                            // Wait for the first batch to finish
+                            jobs.forEach { it.join() }
+                            jobs.clear() // Clear the completed jobs list
+                        }
+                    }
+
+                    // Wait for any remaining coroutines to finish
+                    jobs.forEach { it.join() }
+                }
+
+                Log.d("Time test - interpolation", "${System.currentTimeMillis() - startTime}")
 
                 // create an empty Mat to store the final merged image
                 val mergedImage = Mat.zeros(
