@@ -55,6 +55,8 @@ import android.os.Debug
 import org.opencv.core.Core
 import kotlinx.coroutines.*
 import java.io.FileInputStream
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlin.system.measureTimeMillis
 
 
@@ -186,15 +188,14 @@ class MainActivity : ComponentActivity() {
 
         imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(p0: ImageReader?) {
-                var startTime = System.currentTimeMillis()
-                var image = p0?.acquireNextImage()
+                val startTime = System.currentTimeMillis()
+                val image = p0?.acquireNextImage()
 
                 val buffer = image!!.planes[0].buffer
-                var bytes = ByteArray(buffer.remaining())
+                val bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
 
                 image.close()
-
 
                 // Convert byte array to Bitmap
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
@@ -206,7 +207,7 @@ class MainActivity : ComponentActivity() {
                 Utils.bitmapToMat(bitmap, mat)
                 bitmap.recycle()
 
-                // change depending on camera orientation
+                // Adjust for camera orientation
                 if (sensorOrientation == 90) {
                     Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
                     width = height.also { height = width }
@@ -217,24 +218,42 @@ class MainActivity : ComponentActivity() {
                     width = height.also { height = width }
                 }
 
-                // change color space
+                // Convert to RGB color space
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2RGB)
-                Log.d("Time test - orientation/color", "${System.currentTimeMillis()-startTime}")
-                Log.d("Memory test - orientation/color","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                val divisionFactor = 4  // set division factor
 
+                val divisionFactor = 6 // Set division factor
+                val interpolationValue = 8
                 val quadrantWidth = width / divisionFactor
                 val remainderWidth = width % divisionFactor
                 val quadrantHeight = height / divisionFactor
                 val remainderHeight = height % divisionFactor
 
-//                // initialize filenames
-//                val filenames = Array(divisionFactor * divisionFactor) { index ->
-//                    getExternalFilesDir(null)?.absolutePath + "/quadrant${index + 1}.jpg"
-//                }
-                val quadrants: MutableList<Mat> = mutableListOf()
-// Split image into multiple parts
+                // Create an empty Mat for the final merged image
+                val mergedImage = Mat.zeros(
+                    height * interpolationValue,
+                    width * interpolationValue,
+                    CvType.CV_8UC3
+                )
+                val memory = mutableListOf<Long>()
 
+                // Get the number of available processors (cores)
+//                val availableProcessors = Runtime.getRuntime().availableProcessors() // max-threads
+                val availableProcessors = 1;
+                val availableMemoryMB = getAppMemoryUsage() / (1024 * 1024)
+
+                // Dynamically adjust max threads based on available memory
+                val maxThreads = when {
+                    availableMemoryMB < 300 -> 1 // Use only 1 thread if memory is less than 300 MB
+                    else -> availableProcessors // Use all processors if memory is more than 500 MB
+                }
+//                val availableProcessors = 10
+                // Create a semaphore to limit the number of concurrent jobs
+                val semaphore = Semaphore(maxThreads)
+
+
+                val jobs = mutableListOf<Job>()
+
+                // Split image into quadrants and process them with coroutines
                 for (i in 0 until divisionFactor) {
                     for (j in 0 until divisionFactor) {
                         val topLeftX = j * quadrantWidth
@@ -242,101 +261,51 @@ class MainActivity : ComponentActivity() {
                         val topLeftY = i * quadrantHeight
                         val bottomRightY = (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
 
-                        // Create submat for the current quadrant
+                        // Create a submat for the current quadrant
                         val quadrantMat = mat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX)
 
-                        // Add the quadrant to the list
-                        quadrants.add(quadrantMat)
-
-                    }
-                }
-
-                Log.d("Time test - image split", "${System.currentTimeMillis()-startTime}")
-                Log.d("Memory test - image split","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                mat.release()
-
-                val interpolationValue = 8
-
-                // apply bicubic interpolation to each image
-                // Get available CPU cores and memory
-                val availableCores = Runtime.getRuntime().availableProcessors()
-                val availableMemory = getAppMemoryUsage() / (1024 * 1024) // Convert to MB
-
-                // Determine the number of coroutines to use based on available memory
-                val maxCoroutines = if (availableMemory > 200) {
-                    availableCores // Use all available CPU cores
-                } else {
-                    1 // Use only one coroutine if memory is low
-                }
-
-                Log.d("Max Coroutines", "Using $maxCoroutines coroutines based on available memory: $availableMemory MB")
-
-                // Create a coroutine scope to handle the interpolation
-                runBlocking {
-                    val jobs = mutableListOf<Job>()
-
-                    // Process each quadrant in parallel using coroutines
-                    for (i in quadrants.indices) {
                         // Launch a coroutine for each quadrant
-                        jobs.add(launch {
-
-                            // Perform bicubic interpolation
-                            Imgproc.resize(
-                                quadrants[i], quadrants[i],
-                                Size(
-                                    quadrants[i].cols().toDouble() * interpolationValue,
-                                    quadrants[i].rows().toDouble() * interpolationValue
-                                ),
-                                0.0, 0.0, Imgproc.INTER_CUBIC
-                            )
-                            Log.d("Memory test - per interpolation", "${getAppMemoryUsage() / (1024 * 1024)} MB")
-
-                        })
-
-                        // Control the number of concurrent coroutines
-                        if (jobs.size >= maxCoroutines) {
-                            // Wait for the first batch to finish
-                            jobs.forEach { it.join() }
-                            jobs.clear() // Clear the completed jobs list
+                        val job = CoroutineScope(Dispatchers.Default).launch {
+                            // Limit the number of concurrent coroutines using a semaphore
+                            semaphore.withPermit {
+                                val resizedQuadrant = Mat()
+                                Imgproc.resize(
+                                    quadrantMat, resizedQuadrant,
+                                    Size(
+                                        quadrantMat.cols().toDouble() * interpolationValue,
+                                        quadrantMat.rows().toDouble() * interpolationValue
+                                    ),
+                                    0.0, 0.0, Imgproc.INTER_CUBIC
+                                )
+//                                Log.d("Memory test - After Interpolation", "${getAppMemoryUsage() / (1024 * 1024)} MB")
+                                memory.add(getAppMemoryUsage()/(1024*1024))
+                                // Merge the resized quadrant into the final image
+                                val rowOffset = i * quadrantHeight * interpolationValue
+                                val colOffset = j * quadrantWidth * interpolationValue
+                                resizedQuadrant.copyTo(
+                                    mergedImage.submat(
+                                        rowOffset, rowOffset + resizedQuadrant.rows(),
+                                        colOffset, colOffset + resizedQuadrant.cols()
+                                    )
+                                )
+                                // Release the quadrant Mat and resized Mat
+                                quadrantMat.release()
+                                resizedQuadrant.release()
+                            }
                         }
-                    }
 
-                    // Wait for any remaining coroutines to finish
+                        jobs.add(job)
+                    }
+                }
+
+                // Wait for all coroutines to finish
+                runBlocking {
                     jobs.forEach { it.join() }
                 }
 
-                Log.d("Time test - interpolation", "${System.currentTimeMillis() - startTime}")
-
-                // create an empty Mat to store the final merged image
-                val mergedImage = Mat.zeros(
-                    height * interpolationValue,
-                    width * interpolationValue,
-                    CvType.CV_8UC3
-                )
-
-                // calculate image location
-                for (i in 0 until quadrants.size) {
-                    val quadrant = quadrants[i]
-                    val row = i / divisionFactor
-                    val col = i % divisionFactor
-
-                    val rowOffset = row * quadrantHeight * interpolationValue
-                    val colOffset = col * quadrantWidth * interpolationValue
-                    // Copy the resized quadrant into the correct position in the merged image
-                    quadrant.copyTo(
-                        mergedImage.submat(
-                            rowOffset, rowOffset + quadrant.rows(),
-                            colOffset, colOffset + quadrant.cols()
-                        )
-                    )
-                    // Release resources
-                    Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                    quadrant.release()
-
-
-                }
-                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
-
+                mat.release()
+                Log.d("Time test - After Processing", "${System.currentTimeMillis()-startTime}")
+                Log.d("Memory test - Max Memory", ""+memory.maxOrNull())
 
                 // Save the final merged image
                 val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
@@ -402,6 +371,7 @@ class MainActivity : ComponentActivity() {
                         "images processed and saved.",
                         Toast.LENGTH_SHORT
                     ).show()
+                    processedImagesCounter = 0
                 }
             }
         }, handler)
