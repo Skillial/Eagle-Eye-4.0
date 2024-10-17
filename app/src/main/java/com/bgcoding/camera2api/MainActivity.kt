@@ -304,8 +304,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 mat.release()
-                Log.d("Time test - After Processing", "${System.currentTimeMillis()-startTime}")
-                Log.d("Memory test - Max Memory", ""+memory.maxOrNull())
+                Log.d("Time test - After Processing", "${System.currentTimeMillis()-startTime}s")
+                Log.d("Memory test - Max Memory", ""+memory.maxOrNull()+" MB")
 
                 // Save the final merged image
                 val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
