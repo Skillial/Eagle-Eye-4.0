@@ -24,7 +24,6 @@ class DirectoryStorage private constructor() {
 
     private var startingAlbum = 0
     var proposedPath: String? = null
-
     fun isAlbumDirExisting(albumNumber: Int): Boolean {
         val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + FileImageWriter.ALBUM_NAME_PREFIX + albumNumber)
         return file.isDirectory && file.exists()

@@ -113,11 +113,12 @@ class MainActivity : ComponentActivity() {
             Log.d("OpenCV", "Initialization Successful")
         }
         enableEdgeToEdge()
-        DirectoryStorage.getSharedInstance().refreshProposedPath()
+        DirectoryStorage.getSharedInstance().createDirectory()
         FileImageWriter.initialize(this)
         FileImageReader.initialize(this)
         ParameterConfig.initialize(this)
         AttributeHolder.initialize(this)
+
         val permissions = arrayOf(
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -343,7 +344,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun saveImageToStorage(bitmap: Bitmap): String {
-        val folder = File(Environment.getExternalStorageDirectory(), "MyApp/Images")
+        val folder = File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "MyApp/Images")
         if (!folder.exists()) {
             folder.mkdirs() // Create directory if it doesn't exist
         }
@@ -359,6 +360,7 @@ class MainActivity : ComponentActivity() {
             return file.absolutePath // Return the absolute path
         } catch (e: IOException) {
             e.printStackTrace()
+            Log.d("SaveImage", "Failed to save image: ${e.message}")
             return ""
         }
     }
@@ -367,7 +369,6 @@ class MainActivity : ComponentActivity() {
         SharpnessMeasure.initialize();
         val energyInputMatList: Array<Mat> = Array(ImageInputMap.size) { Mat() }
         val energyReaders: MutableList<InputImageEnergyReader> = mutableListOf()
-
         try {
             val energySem = Semaphore(0)  // Start with 0 permits to block acquire until all tasks finish
             for (i in energyInputMatList.indices) {
@@ -386,13 +387,12 @@ class MainActivity : ComponentActivity() {
 
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
-                energyInputMatList[i] = energyReaders[i].outputMat
+                energyInputMatList[i] = energyReaders[i].getOutputMat()
             }
 
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
-
 
         val yangFilter = YangFilter(energyInputMatList)
         yangFilter.perform()
@@ -481,7 +481,7 @@ class MainActivity : ComponentActivity() {
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, debug)
 
         try {
-            Thread.sleep(500)
+            Thread.sleep(3000)
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }

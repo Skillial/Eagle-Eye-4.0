@@ -10,6 +10,7 @@ import com.bgcoding.camera2api.processing.imagetools.ImageOperator.edgeSobelMeas
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
+import org.opencv.imgproc.Imgproc
 import kotlin.math.abs
 
 /**
@@ -61,18 +62,37 @@ class WarpResultEvaluator(
             val fileImageReader = FileImageReader.getInstance()
 
             if (fileImageReader != null) {
-                val warpedMat: Mat = fileImageReader.imReadOpenCV(compareNames[i], ImageFileAttribute.FileType.JPEG)
+                val maskMat: Mat = fileImageReader.imReadOpenCV(compareNames[i], ImageFileAttribute.FileType.JPEG)
 
-                val maskMat = ImageOperator.produceMask(warpedMat)
+// Produce the mask
+                val warpedMat = ImageOperator.produceMask(maskMat)
+
+// Convert to 16-bit type
                 warpedMat.convertTo(warpedMat, CvType.CV_16UC(warpedMat.channels()))
 
+// Ensure the number of channels matches referenceMat
+                if (referenceMat.channels() != warpedMat.channels()) {
+                    if (referenceMat.channels() == 3) {
+                        Imgproc.cvtColor(warpedMat, warpedMat, Imgproc.COLOR_GRAY2RGB) // Convert single-channel to 3-channel
+                    } else if (referenceMat.channels() == 1) {
+                        Imgproc.cvtColor(warpedMat, warpedMat, Imgproc.COLOR_RGB2GRAY) // Convert 3-channel to single-channel
+                    }
+                }
+
+// Log the types
                 Log.e(
-                    TAG, "Reference mat type: " + CvType.typeToString(
-                        this.referenceMat.type()
-                    ) + " Warped mat type: " + CvType.typeToString(warpedMat.type())
-                            + " Warped mat name: " + compareNames[i]
+                    TAG, "Reference mat type: " + CvType.typeToString(referenceMat.type()) +
+                            " Warped mat type: " + CvType.typeToString(warpedMat.type()) +
+                            " Warped mat name: " + compareNames[i]
                 )
-                Core.add(referenceMat, warpedMat, warpedMat)
+
+// Perform addition
+                if (referenceMat.size() == warpedMat.size() && referenceMat.type() == warpedMat.type()) {
+                    Core.add(referenceMat, warpedMat, warpedMat)
+                } else {
+                    Log.e(TAG, "Matrices are incompatible for addition: size or type mismatch.")
+                }
+
 
                 maskMat.release()
 
