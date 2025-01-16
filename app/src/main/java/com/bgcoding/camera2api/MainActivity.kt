@@ -211,6 +211,7 @@ class MainActivity : ComponentActivity() {
                 ImageInputMap.add(saveImageToStorage(bitmap))
                 if (ImageInputMap.size == 5) {
                     superResolutionImage()
+                    ImageInputMap.clear()
                     runOnUiThread {
                         loadingBox.visibility = View.GONE
                     }
