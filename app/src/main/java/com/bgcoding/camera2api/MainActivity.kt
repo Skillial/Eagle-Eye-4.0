@@ -655,12 +655,107 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+        override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+            open_camera()
+        }
 
+        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
 
+        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+            return true
+        }
 
+        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+    }
 
+    private fun initializeImageReader() {
+        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        val sizes = map?.getOutputSizes(ImageFormat.JPEG)
+        val highestResolution = sizes?.sortedWith(compareBy { it.width * it.height })?.last()
 
+        imageReader = if (highestResolution != null) {
+            ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
+        } else {
+            ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
+        }
 
+        imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
+            override fun onImageAvailable(reader: ImageReader?) {
+                val image = reader?.acquireNextImage()
+                image?.let {
+                    val buffer = it.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining())
+                    buffer.get(bytes)
+                    it.close()
 
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+                    val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+
+                    if (isSuperResolutionEnabled) {
+                        Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
+                        ImageInputMap.add(saveImageToStorage(bitmap))
+                        if (ImageInputMap.size == 5) {
+                            superResolutionImage()
+                            ImageInputMap.clear()
+                            runOnUiThread {
+                                loadingBox.visibility = View.GONE
+                            }
+                        }
+                    } else {
+                        Log.i("Main", "No IE is toggled. Saving a single image to device.")
+                        saveImageToStorage(bitmap)
+                        runOnUiThread {
+                            loadingBox.visibility = View.GONE
+                        }
+                    }
+                }
+            }
+        }, handler)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startBackgroundThread()
+        if (textureView.isAvailable) {
+            initializeImageReader()
+            open_camera()
+        } else {
+            textureView.surfaceTextureListener = surfaceTextureListener
+        }
+    }
+
+    private fun startBackgroundThread() {
+        handlerThread = HandlerThread("video thread")
+        handlerThread.start()
+        handler = Handler(handlerThread.looper)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        closeCamera()
+        stopBackgroundThread()
+    }
+
+    private fun closeCamera() {
+        try {
+            cameraCaptureSession.close()
+            cameraDevice.close()
+            imageReader.close()
+        } catch (e: Exception) {
+            Log.e("CameraClose", "Error closing camera: ${e.message}")
+        }
+    }
+
+    private fun stopBackgroundThread() {
+        handlerThread.quitSafely()
+        try {
+            handlerThread.join()
+        } catch (e: InterruptedException) {
+            Log.e("ThreadStop", "Error stopping background thread: ${e.message}")
+        }
+    }
 
 }
