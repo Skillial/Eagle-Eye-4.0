@@ -26,12 +26,15 @@ import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.ProgressBar
+import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
@@ -197,28 +200,42 @@ class MainActivity : ComponentActivity() {
         }
 
         imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
-            override fun onImageAvailable(p0: ImageReader?) {
-                val image = p0?.acquireNextImage()
+            override fun onImageAvailable(reader: ImageReader?) {
+                val image = reader?.acquireNextImage()
 
-                val buffer = image!!.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
+                image?.let {
+                    val buffer = it.planes[0].buffer
+                    val bytes = ByteArray(buffer.remaining())
+                    buffer.get(bytes)
+                    it.close()
 
-                image.close()
+                    // Convert byte array to Bitmap
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
-                // Convert byte array to Bitmap
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                ImageInputMap.add(saveImageToStorage(bitmap))
-                if (ImageInputMap.size == 5) {
-                    superResolutionImage()
-                    ImageInputMap.clear()
-                    runOnUiThread {
-                        loadingBox.visibility = View.GONE
+                    val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+                    val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+
+                    if (isSuperResolutionEnabled) {
+                        Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
+                        ImageInputMap.add(saveImageToStorage(bitmap))
+                        if (ImageInputMap.size == 5) {
+                            superResolutionImage()
+                            ImageInputMap.clear()
+                            runOnUiThread {
+                                loadingBox.visibility = View.GONE
+                            }
+                        }
+                    } else {
+                        // Directly save or process the image when SR is not enabled
+                        Log.i("Main", "No IE is toggled. Saving a single image to device.")
+                        saveImageToStorage(bitmap)
+                        runOnUiThread {
+                            loadingBox.visibility = View.GONE
+                        }
                     }
                 }
             }
         }, handler)
-
         /*findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
@@ -228,13 +245,16 @@ class MainActivity : ComponentActivity() {
         }*/
         findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
-                var totalCaptures = 5
-//                var completedCaptures = 0
+                val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+                val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+
+                // Set total captures based on SR toggle
+                val totalCaptures = if (isSuperResolutionEnabled) 5 else 1
+
                 val captureList = mutableListOf<CaptureRequest>()
 
-                for (i in 0 until totalCaptures) { // Change this to the number of photos you want to capture in the burst
-                    val captureRequest =
-                        cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                for (i in 0 until totalCaptures) {
+                    val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                     captureRequest.addTarget(imageReader.surface)
                     captureList.add(captureRequest.build())
                 }
@@ -253,21 +273,38 @@ class MainActivity : ComponentActivity() {
                             result: TotalCaptureResult
                         ) {
                             super.onCaptureCompleted(session, request, result)
-                            // Handle the result of the capture here
                             Log.d("BurstCapture", "Capture completed")
-//                        completedCaptures++
-//                        if (completedCaptures >= totalCaptures) {
-//                            runOnUiThread {
-//                                loadingBox.visibility = View.GONE
-//                            }
-//                            Toast.makeText(this@MainActivity, "Images captured and saved.", Toast.LENGTH_SHORT).show()
-//                        }
+                            // Handle the result of the capture here
                         }
                     },
                     null
                 )
             }
         }
+
+        val button: Button = findViewById(R.id.button)
+        button.setOnClickListener {
+            val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+            val popupView = inflater.inflate(R.layout.popup_menu, null)
+
+            val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
+            popupWindow.showAsDropDown(button, 0, 0)
+
+            val switch1: Switch = popupView.findViewById(R.id.switch1)
+            // Set initial state of switch
+            val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+            switch1.isChecked = sharedPreferences.getBoolean("super_resolution_enabled", false)
+
+            // Toggle
+            switch1.setOnCheckedChangeListener { _, isChecked ->
+                val editor = sharedPreferences.edit()
+                editor.putBoolean("super_resolution_enabled", isChecked)
+                editor.apply()
+            }
+
+            // Add logic for other switches here if needed
+        }
+
     }
 
     @SuppressLint("MissingPermission")
