@@ -83,7 +83,6 @@ class MainActivity : ComponentActivity() {
     private var sensorOrientation: Int = 0
     val ImageInputMap: MutableList<String> = mutableListOf()
 
-
     fun getAppMemoryUsage(): Long {
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memoryInfo = ActivityManager.MemoryInfo()
@@ -98,13 +97,14 @@ class MainActivity : ComponentActivity() {
 
     private val permissionsRequest =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            permissions.entries.forEach {
-                if (!it.value) {
-                    // Permission was denied, handle this situation
-                } else {
-                    // Permission was granted, you can now proceed with your operations
-                    // setCameraPreview()
-                }
+            if (permissions[Manifest.permission.CAMERA] == true &&
+                permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true &&
+                permissions[Manifest.permission.READ_EXTERNAL_STORAGE] == true) {
+                // All permissions granted, set up the camera preview
+                setCameraPreview()
+            } else {
+                // Permission was denied, handle this situation
+                Log.e("Permissions", "Required permissions not granted")
             }
         }
 
@@ -115,7 +115,8 @@ class MainActivity : ComponentActivity() {
         } else {
             Log.d("OpenCV", "Initialization Successful")
         }
-        enableEdgeToEdge()
+//        enableEdgeToEdge()
+
         DirectoryStorage.getSharedInstance().createDirectory()
         FileImageWriter.initialize(this)
         FileImageReader.initialize(this)
@@ -135,7 +136,7 @@ class MainActivity : ComponentActivity() {
         when {
             allPermissionsGranted -> {
                 // All permissions already granted
-                // setCameraPreview()
+                 setCameraPreview()
             }
 
             else -> {
@@ -143,7 +144,6 @@ class MainActivity : ComponentActivity() {
                 permissionsRequest.launch(permissions)
             }
         }
-        setCameraPreview()
 
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         handlerThread = HandlerThread("video thread")
@@ -352,11 +352,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setCameraPreview() {
-        /*setContent {
-            Camera2ApiTheme {
-
-            }
-        }*/
         setContentView(R.layout.activity_main)
         // Initialize UI elements
         this.textureView = findViewById(R.id.textureView)
@@ -365,13 +360,13 @@ class MainActivity : ComponentActivity() {
         this.loadingBox = findViewById(R.id.loadingBox)
     }
 
-    fun playShutterSound() {
+    private fun playShutterSound() {
         val sound = MediaActionSound()
         sound.play(MediaActionSound.SHUTTER_CLICK)
     }
 
     // Get id of front camera
-    fun getCameraId(lensFacing: Int): String {
+    private fun getCameraId(lensFacing: Int): String {
         for (cameraId in cameraManager.cameraIdList) {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
             if (characteristics.get(CameraCharacteristics.LENS_FACING) == lensFacing) {
