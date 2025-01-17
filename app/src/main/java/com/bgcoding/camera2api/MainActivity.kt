@@ -97,25 +97,27 @@ class MainActivity : ComponentActivity() {
 
     private val permissionsRequest =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            if (permissions[Manifest.permission.CAMERA] == true &&
-                permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true &&
-                permissions[Manifest.permission.READ_EXTERNAL_STORAGE] == true) {
-                // All permissions granted, set up the camera preview
-                setCameraPreview()
+            // log all granted permissions
+            permissions.entries.forEach {
+                Log.i("Permissions", "${it.key}: ${it.value}")
+            }
+
+            if (permissions.entries.all {
+                    it.value
+                }) {
+                // All permissions granted, initialize the app
+                initializeApp()
             } else {
                 // Permission was denied, handle this situation
                 Log.e("Permissions", "Required permissions not granted")
+                // close the app (for now)
+//                finish()
             }
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (!OpenCVLoader.initDebug()) {
-            Log.e("OpenCV", "Initialization Failed")
-        } else {
-            Log.d("OpenCV", "Initialization Successful")
-        }
-//        enableEdgeToEdge()
+    private fun initializeApp() {
+        setContentView(R.layout.activity_main) // Set the main content view
+        setCameraPreview()
 
         DirectoryStorage.getSharedInstance().createDirectory()
         FileImageWriter.initialize(this)
@@ -123,60 +125,10 @@ class MainActivity : ComponentActivity() {
         ParameterConfig.initialize(this)
         AttributeHolder.initialize(this)
 
-        val permissions = arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-
-        val allPermissionsGranted = permissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
-
-        when {
-            allPermissionsGranted -> {
-                // All permissions already granted
-                 setCameraPreview()
-            }
-
-            else -> {
-                // Some permissions not granted, request them
-                permissionsRequest.launch(permissions)
-            }
-        }
-
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         handlerThread = HandlerThread("video thread")
         handlerThread.start()
         handler = Handler((handlerThread).looper)
-
-        this.textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-                open_camera()
-            }
-
-            override fun onSurfaceTextureSizeChanged(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-            }
-
-            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                /*TODO("Not yet implemented")*/
-
-                return false
-            }
-
-            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-            }
-
-        }
-
 
         this.cameraId =
             getCameraId(CameraCharacteristics.LENS_FACING_BACK) // Dynamically get the rear camera ID
@@ -236,13 +188,34 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }, handler)
-        /*findViewById<Button>(R.id.capture).apply {
-            setOnClickListener {
-                captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-                captureRequest.addTarget(imageReader.surface)
-                cameraCaptureSession.capture(captureRequest.build(), null, null)
+
+        this.textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(
+                surface: SurfaceTexture,
+                width: Int,
+                height: Int
+            ) {
+                open_camera()
             }
-        }*/
+
+            override fun onSurfaceTextureSizeChanged(
+                surface: SurfaceTexture,
+                width: Int,
+                height: Int
+            ) {
+            }
+
+            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                /*TODO("Not yet implemented")*/
+
+                return false
+            }
+
+            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+            }
+
+        }
+
         findViewById<Button>(R.id.capture).apply {
             setOnClickListener {
                 val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
@@ -305,6 +278,39 @@ class MainActivity : ComponentActivity() {
             // Add logic for other switches here if needed
         }
 
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (!OpenCVLoader.initDebug()) {
+            Log.e("OpenCV", "Initialization Failed")
+        } else {
+            Log.d("OpenCV", "Initialization Successful")
+        }
+
+        val permissions = if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.Q) {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.CAMERA
+            )
+        }
+
+        val allPermissionsGranted = permissions.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (allPermissionsGranted) {
+            // All permissions already granted
+            initializeApp()
+        } else {
+            // Request permissions
+            permissionsRequest.launch(permissions)
+        }
     }
 
     @SuppressLint("MissingPermission")
