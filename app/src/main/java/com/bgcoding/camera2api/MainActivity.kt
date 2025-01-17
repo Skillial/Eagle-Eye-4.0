@@ -716,10 +716,10 @@ class MainActivity : ComponentActivity() {
         }, handler)
     }
 
-    override fun onResume() {
+    /*override fun onResume() {
         super.onResume()
         startBackgroundThread()
-        if (textureView.isAvailable) {
+        if (textureView.isAvailable && ) {
             initializeImageReader()
             open_camera()
         } else {
@@ -756,6 +756,6 @@ class MainActivity : ComponentActivity() {
         } catch (e: InterruptedException) {
             Log.e("ThreadStop", "Error stopping background thread: ${e.message}")
         }
-    }
+    }*/
 
 }
