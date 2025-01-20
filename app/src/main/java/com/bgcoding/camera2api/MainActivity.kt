@@ -41,6 +41,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.bgcoding.camera2api.assessment.InputImageEnergyReader
+import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.constants.ParameterConfig
 import com.bgcoding.camera2api.io.DirectoryStorage
 import com.bgcoding.camera2api.io.FileImageReader
@@ -69,20 +70,23 @@ import java.util.concurrent.Semaphore
 
 class MainActivity : ComponentActivity() {
     private lateinit var permissionHandler: PermissionsHandler
+    private lateinit var cameraController: CameraController
 
-    private var processedImagesCounter = 0
+    // TODO: Remove once refactored
     lateinit var captureRequest: CaptureRequest.Builder
     lateinit var handler: Handler
     lateinit var handlerThread: HandlerThread
     lateinit var cameraManager: CameraManager
-    lateinit var textureView: TextureView
     lateinit var cameraCaptureSession: CameraCaptureSession
     lateinit var cameraDevice: CameraDevice
     lateinit var imageReader: ImageReader
+    lateinit var cameraId: String
+
+    private var processedImagesCounter = 0
+    lateinit var textureView: TextureView
     lateinit var progressBar: ProgressBar
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
-    lateinit var cameraId: String
     private var sensorOrientation: Int = 0
     val ImageInputMap: MutableList<String> = mutableListOf()
 
@@ -128,14 +132,11 @@ class MainActivity : ComponentActivity() {
         ParameterConfig.initialize(this)
         AttributeHolder.initialize(this)
 
-        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        handlerThread = HandlerThread("video thread")
-        handlerThread.start()
-        handler = Handler((handlerThread).looper)
+        // initialize camera controller
+        cameraController = CameraController(this)
+        cameraController.initializeCamera()
 
-        this.cameraId =
-            getCameraId(CameraCharacteristics.LENS_FACING_BACK) // Dynamically get the rear camera ID
-        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        val characteristics = cameraController.getCameraCharacteristics()
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(ImageFormat.JPEG)
 
@@ -359,17 +360,6 @@ class MainActivity : ComponentActivity() {
     private fun playShutterSound() {
         val sound = MediaActionSound()
         sound.play(MediaActionSound.SHUTTER_CLICK)
-    }
-
-    // Get id of front camera
-    private fun getCameraId(lensFacing: Int): String {
-        for (cameraId in cameraManager.cameraIdList) {
-            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-            if (characteristics.get(CameraCharacteristics.LENS_FACING) == lensFacing) {
-                return cameraId
-            }
-        }
-        return ""
     }
 
     fun saveImageToStorage(bitmap: Bitmap): String {
