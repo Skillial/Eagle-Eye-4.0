@@ -48,6 +48,7 @@ import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.ImageFileAttribute
 import com.bgcoding.camera2api.model.AttributeHolder
 import com.bgcoding.camera2api.model.multiple.SharpnessMeasure
+import com.bgcoding.camera2api.permissions.PermissionsHandler
 import com.bgcoding.camera2api.processing.filters.YangFilter
 import com.bgcoding.camera2api.processing.imagetools.ImageOperator
 import com.bgcoding.camera2api.processing.multiple.alignment.FeatureMatchingOperator
@@ -67,6 +68,8 @@ import java.util.concurrent.Semaphore
 
 
 class MainActivity : ComponentActivity() {
+    private lateinit var permissionHandler: PermissionsHandler
+
     private var processedImagesCounter = 0
     lateinit var captureRequest: CaptureRequest.Builder
     lateinit var handler: Handler
@@ -288,28 +291,15 @@ class MainActivity : ComponentActivity() {
             Log.d("OpenCV", "Initialization Successful")
         }
 
-        val permissions = if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.Q) {
-            arrayOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        } else {
-            arrayOf(
-                Manifest.permission.CAMERA
-            )
-        }
-
-        val allPermissionsGranted = permissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
-
-        if (allPermissionsGranted) {
-            // All permissions already granted
-            initializeApp()
-        } else {
-            // Request permissions
-            permissionsRequest.launch(permissions)
+        permissionHandler = PermissionsHandler(this)
+        permissionHandler.requestPermissions { allPermissionsGranted ->
+            if (allPermissionsGranted) {
+                // All permissions already granted
+                initializeApp()
+            } else {
+                // Permission was denied, handle this situation
+                Log.e("Permissions", "Required permissions not granted")
+            }
         }
     }
 
