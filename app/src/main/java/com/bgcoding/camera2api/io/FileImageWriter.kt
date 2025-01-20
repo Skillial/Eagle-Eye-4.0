@@ -188,4 +188,27 @@
             }
             fileOrDirectory.delete()
         }
+
+        // New Methods
+        fun saveImageToStorage(bitmap: Bitmap): String {
+            val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "MyApp/Images")
+            if (!folder.exists()) {
+                folder.mkdirs() // Create directory if it doesn't exist
+            }
+
+            val fileName = "image_${System.currentTimeMillis()}.jpg"
+            val file = File(folder, fileName)
+
+            try {
+                val fos = FileOutputStream(file)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+                fos.close()
+                MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
+                return file.absolutePath // Return the absolute path
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Log.d("SaveImage", "Failed to save image: ${e.message}")
+                return ""
+            }
+        }
     }

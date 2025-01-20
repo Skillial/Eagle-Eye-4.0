@@ -2,34 +2,21 @@ package com.bgcoding.camera2api
 
 
 import LRWarpingOperator
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
 import android.media.Image
 import android.media.ImageReader
-import android.media.MediaActionSound
-import android.media.MediaScannerConnection
 import android.os.Bundle
-import android.os.Debug
-import android.os.Environment
-import android.os.Handler
-import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.LayoutInflater
-import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.widget.Button
@@ -39,9 +26,6 @@ import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import com.bgcoding.camera2api.assessment.InputImageEnergyReader
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.constants.ParameterConfig
@@ -65,8 +49,6 @@ import org.opencv.android.OpenCVLoader
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 import java.util.concurrent.Semaphore
 
 
@@ -84,6 +66,7 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.activity_main) // Set the main content view
         setCameraPreview()
 
+        // Initialize components
         DirectoryStorage.getSharedInstance().createDirectory()
         FileImageWriter.initialize(this)
         FileImageReader.initialize(this)
@@ -215,27 +198,7 @@ class MainActivity : ComponentActivity() {
         this.loadingBox = findViewById(R.id.loadingBox)
     }
 
-    fun saveImageToStorage(bitmap: Bitmap): String {
-        val folder = File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "MyApp/Images")
-        if (!folder.exists()) {
-            folder.mkdirs() // Create directory if it doesn't exist
-        }
 
-        val fileName = "image_${System.currentTimeMillis()}.jpg"
-        val file = File(folder, fileName)
-
-        try {
-            val fos = FileOutputStream(file)
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
-            fos.close()
-            MediaScannerConnection.scanFile(this, arrayOf(file.absolutePath), null, null)
-            return file.absolutePath // Return the absolute path
-        } catch (e: IOException) {
-            e.printStackTrace()
-            Log.d("SaveImage", "Failed to save image: ${e.message}")
-            return ""
-        }
-    }
 
     fun superResolutionImage(){
         SharpnessMeasure.initialize();
@@ -545,7 +508,7 @@ class MainActivity : ComponentActivity() {
 
         if (isSuperResolutionEnabled) {
             Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
-            ImageInputMap.add(saveImageToStorage(bitmap))
+            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let { ImageInputMap.add(it) }
             if (ImageInputMap.size == 5) {
                 superResolutionImage()
                 ImageInputMap.clear()
@@ -555,7 +518,7 @@ class MainActivity : ComponentActivity() {
             }
         } else {
             Log.i("Main", "No IE is toggled. Saving a single image to device.")
-            saveImageToStorage(bitmap)
+            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
             runOnUiThread {
                 loadingBox.visibility = View.GONE
             }
