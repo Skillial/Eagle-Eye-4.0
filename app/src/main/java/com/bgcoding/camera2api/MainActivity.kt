@@ -17,6 +17,7 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
+import android.media.Image
 import android.media.ImageReader
 import android.media.MediaActionSound
 import android.media.MediaScannerConnection
@@ -26,6 +27,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import android.util.Size
 import android.view.LayoutInflater
 import android.view.Surface
 import android.view.TextureView
@@ -73,21 +75,22 @@ class MainActivity : ComponentActivity() {
     private lateinit var cameraController: CameraController
 
     // TODO: Remove once refactored
-    lateinit var captureRequest: CaptureRequest.Builder
-    lateinit var handler: Handler
-    lateinit var handlerThread: HandlerThread
-    lateinit var cameraManager: CameraManager
-    lateinit var cameraCaptureSession: CameraCaptureSession
-    lateinit var cameraDevice: CameraDevice
-    lateinit var imageReader: ImageReader
-    lateinit var cameraId: String
+//    lateinit var captureRequest: CaptureRequest.Builder
+//    lateinit var handler: Handler
+//    lateinit var handlerThread: HandlerThread
+//    lateinit var cameraManager: CameraManager
+//    lateinit var cameraCaptureSession: CameraCaptureSession
+//    lateinit var cameraDevice: CameraDevice
+//    lateinit var imageReader: ImageReader
+//    lateinit var cameraId: String
+//    lateinit var captureRequest: CaptureRequest.Builder
+//    private var sensorOrientation: Int = 0
 
     private var processedImagesCounter = 0
     lateinit var textureView: TextureView
     lateinit var progressBar: ProgressBar
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
-    private var sensorOrientation: Int = 0
     val ImageInputMap: MutableList<String> = mutableListOf()
 
     fun getAppMemoryUsage(): Long {
@@ -101,26 +104,6 @@ class MainActivity : ComponentActivity() {
         val usedMemory = memoryInfoArray[0].getTotalPss() * 1024L // in bytes
         return usedMemory
     }
-
-    private val permissionsRequest =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            // log all granted permissions
-            permissions.entries.forEach {
-                Log.i("Permissions", "${it.key}: ${it.value}")
-            }
-
-            if (permissions.entries.all {
-                    it.value
-                }) {
-                // All permissions granted, initialize the app
-                initializeApp()
-            } else {
-                // Permission was denied, handle this situation
-                Log.e("Permissions", "Required permissions not granted")
-                // close the app (for now)
-//                finish()
-            }
-        }
 
     private fun initializeApp() {
         setContentView(R.layout.activity_main) // Set the main content view
@@ -136,62 +119,7 @@ class MainActivity : ComponentActivity() {
         cameraController = CameraController(this)
         cameraController.initializeCamera()
 
-        val characteristics = cameraController.getCameraCharacteristics()
-        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-        val sizes = map?.getOutputSizes(ImageFormat.JPEG)
-
-        // Sort the sizes array in descending order and select the first one (highest resolution)
-        val highestResolution = sizes?.sortedWith(compareBy { it.width * it.height })?.last()
-
-        imageReader = if (highestResolution != null) {
-            ImageReader.newInstance(
-                highestResolution.width,
-                highestResolution.height,
-                ImageFormat.JPEG,
-                20
-            )
-        } else {
-            // Fallback to a default resolution if no sizes are available
-            ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
-        }
-
-        imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
-            override fun onImageAvailable(reader: ImageReader?) {
-                val image = reader?.acquireNextImage()
-
-                image?.let {
-                    val buffer = it.planes[0].buffer
-                    val bytes = ByteArray(buffer.remaining())
-                    buffer.get(bytes)
-                    it.close()
-
-                    // Convert byte array to Bitmap
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-
-                    val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-                    val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-
-                    if (isSuperResolutionEnabled) {
-                        Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
-                        ImageInputMap.add(saveImageToStorage(bitmap))
-                        if (ImageInputMap.size == 5) {
-                            superResolutionImage()
-                            ImageInputMap.clear()
-                            runOnUiThread {
-                                loadingBox.visibility = View.GONE
-                            }
-                        }
-                    } else {
-                        // Directly save or process the image when SR is not enabled
-                        Log.i("Main", "No IE is toggled. Saving a single image to device.")
-                        saveImageToStorage(bitmap)
-                        runOnUiThread {
-                            loadingBox.visibility = View.GONE
-                        }
-                    }
-                }
-            }
-        }, handler)
+        initializeImageReader()
 
         this.textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(
@@ -231,17 +159,18 @@ class MainActivity : ComponentActivity() {
                 val captureList = mutableListOf<CaptureRequest>()
 
                 for (i in 0 until totalCaptures) {
-                    val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-                    captureRequest.addTarget(imageReader.surface)
+                    val captureRequest = cameraController.getCameraDevice().createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                    captureRequest.addTarget(cameraController.getImageReader().surface)
                     captureList.add(captureRequest.build())
                 }
 
-                playShutterSound()
+                cameraController.playShutterSound()
+
                 runOnUiThread {
                     loadingBox.visibility = View.VISIBLE
                 }
 
-                cameraCaptureSession.captureBurst(
+                cameraController.getCameraCaptureSession().captureBurst(
                     captureList,
                     object : CameraCaptureSession.CaptureCallback() {
                         override fun onCaptureCompleted(
@@ -306,25 +235,24 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("MissingPermission")
     private fun open_camera() {
-        cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
-            override fun onOpened(p0: CameraDevice) {
-                cameraDevice = p0
+        val cameraId = cameraController.getCameraId(CameraCharacteristics.LENS_FACING_BACK)
 
-                captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+        cameraController.getCameraManager().openCamera(cameraId, object : CameraDevice.StateCallback() {
+            override fun onOpened(p0: CameraDevice) {
+                cameraController.setCameraDevice(p0)
+
+                var captureRequest = cameraController.getCameraDevice().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                cameraController.setCaptureRequest(captureRequest)
 
                 var surface = Surface(textureView.surfaceTexture)
-                captureRequest.addTarget(surface)
+                cameraController.getCaptureRequest().addTarget(surface)
 
-                val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-                sensorOrientation =
-                    characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
-
-                cameraDevice.createCaptureSession(
-                    listOf(surface, imageReader.surface),
+                cameraController.getCameraDevice().createCaptureSession(
+                    listOf(surface, cameraController.getImageReader().surface),
                     object : CameraCaptureSession.StateCallback() {
                         override fun onConfigured(p0: CameraCaptureSession) {
-                            cameraCaptureSession = p0
-                            cameraCaptureSession.setRepeatingRequest(
+                            cameraController.setCameraCaptureSession(p0)
+                            cameraController.getCameraCaptureSession().setRepeatingRequest(
                                 captureRequest.build(),
                                 null,
                                 null
@@ -335,7 +263,7 @@ class MainActivity : ComponentActivity() {
 
                         }
                     },
-                    handler
+                    cameraController.getHandler()
                 )
             }
 
@@ -345,7 +273,7 @@ class MainActivity : ComponentActivity() {
             override fun onError(camera: CameraDevice, error: Int) {
             }
 
-        }, handler)
+        }, cameraController.getHandler())
     }
 
     private fun setCameraPreview() {
@@ -355,11 +283,6 @@ class MainActivity : ComponentActivity() {
         this.progressBar = findViewById(R.id.progressBar)
         this.loadingText = findViewById(R.id.loadingText)
         this.loadingBox = findViewById(R.id.loadingBox)
-    }
-
-    private fun playShutterSound() {
-        val sound = MediaActionSound()
-        sound.play(MediaActionSound.SHUTTER_CLICK)
     }
 
     fun saveImageToStorage(bitmap: Bitmap): String {
@@ -569,9 +492,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-
-
     private fun performMeanFusion(
         index: Int,
         bestIndex: Int,
@@ -650,50 +570,66 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun initializeImageReader() {
-        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-        val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-        val sizes = map?.getOutputSizes(ImageFormat.JPEG)
-        val highestResolution = sizes?.sortedWith(compareBy { it.width * it.height })?.last()
+        val highestResolution = cameraController.getHighestResolution()
+        setupImageReader(highestResolution)
+        setImageReaderListener()
+    }
 
-        imageReader = if (highestResolution != null) {
-            ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
+    private fun setupImageReader(highestResolution: Size?) {
+
+        val imageReader: ImageReader = if (highestResolution != null) {
+             ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
         } else {
             ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
         }
+
+        cameraController.setImageReader(imageReader)
+    }
+
+    private fun setImageReaderListener() {
+        val imageReader = cameraController.getImageReader()
 
         imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(reader: ImageReader?) {
                 val image = reader?.acquireNextImage()
                 image?.let {
-                    val buffer = it.planes[0].buffer
-                    val bytes = ByteArray(buffer.remaining())
-                    buffer.get(bytes)
-                    it.close()
-
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-                    val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-
-                    if (isSuperResolutionEnabled) {
-                        Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
-                        ImageInputMap.add(saveImageToStorage(bitmap))
-                        if (ImageInputMap.size == 5) {
-                            superResolutionImage()
-                            ImageInputMap.clear()
-                            runOnUiThread {
-                                loadingBox.visibility = View.GONE
-                            }
-                        }
-                    } else {
-                        Log.i("Main", "No IE is toggled. Saving a single image to device.")
-                        saveImageToStorage(bitmap)
-                        runOnUiThread {
-                            loadingBox.visibility = View.GONE
-                        }
-                    }
+                    processImage(it)
                 }
             }
-        }, handler)
+        }, cameraController.getHandler())
+    }
+
+    private fun processImage(image: Image) {
+        val buffer = image.planes[0].buffer
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        image.close()
+
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        handleImage(bitmap)
+    }
+
+    private fun handleImage(bitmap: Bitmap) {
+        val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+
+        if (isSuperResolutionEnabled) {
+            Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
+            ImageInputMap.add(saveImageToStorage(bitmap))
+            if (ImageInputMap.size == 5) {
+                superResolutionImage()
+                ImageInputMap.clear()
+                runOnUiThread {
+                    loadingBox.visibility = View.GONE
+                }
+            }
+        } else {
+            Log.i("Main", "No IE is toggled. Saving a single image to device.")
+            saveImageToStorage(bitmap)
+            runOnUiThread {
+                loadingBox.visibility = View.GONE
+            }
+        }
     }
 
     /*override fun onResume() {
