@@ -79,7 +79,7 @@ class LRWarpingOperator(
         val dMatchArray = goodMatch?.toArray() ?: emptyArray()
 
         for (i in dMatchArray.indices) {
-            Log.d(TAG, "DMATCHES${dMatchArray[i]}")
+//            Log.d(TAG, "DMATCHES${dMatchArray[i]}")
             pointList1.add(keyPoints1[dMatchArray[i].queryIdx].pt)
             pointList2.add(keyPoints2[dMatchArray[i].trainIdx].pt)
         }

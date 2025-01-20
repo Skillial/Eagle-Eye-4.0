@@ -129,7 +129,6 @@ class FeatureMatchingOperator(
             val dMatchList = initialMatch.toArray()
             val goodMatchesList: MutableList<DMatch> = ArrayList()
             for (i in dMatchList.indices) {
-                Log.d(TAG, "dMatch distance: " + dMatchList[i].distance)
                 if (dMatchList[i].distance < minDistance) {
                     goodMatchesList.add(dMatchList[i])
                 }
