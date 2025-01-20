@@ -80,18 +80,6 @@ class MainActivity : ComponentActivity() {
     lateinit var loadingBox: LinearLayout
     val ImageInputMap: MutableList<String> = mutableListOf()
 
-    fun getAppMemoryUsage(): Long {
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-
-        val memoryInfoArray = arrayOf(Debug.MemoryInfo())
-        Debug.getMemoryInfo(memoryInfoArray[0])
-
-        val usedMemory = memoryInfoArray[0].getTotalPss() * 1024L // in bytes
-        return usedMemory
-    }
-
     private fun initializeApp() {
         setContentView(R.layout.activity_main) // Set the main content view
         setCameraPreview()
