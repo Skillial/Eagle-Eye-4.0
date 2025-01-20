@@ -631,47 +631,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    /*override fun onResume() {
-        super.onResume()
-        startBackgroundThread()
-        if (textureView.isAvailable && ) {
-            initializeImageReader()
-            open_camera()
-        } else {
-            textureView.surfaceTextureListener = surfaceTextureListener
-        }
-    }
-
-    private fun startBackgroundThread() {
-        handlerThread = HandlerThread("video thread")
-        handlerThread.start()
-        handler = Handler(handlerThread.looper)
-    }
-
-    override fun onStop() {
-        super.onStop()
-        closeCamera()
-        stopBackgroundThread()
-    }
-
-    private fun closeCamera() {
-        try {
-            cameraCaptureSession.close()
-            cameraDevice.close()
-            imageReader.close()
-        } catch (e: Exception) {
-            Log.e("CameraClose", "Error closing camera: ${e.message}")
-        }
-    }
-
-    private fun stopBackgroundThread() {
-        handlerThread.quitSafely()
-        try {
-            handlerThread.join()
-        } catch (e: InterruptedException) {
-            Log.e("ThreadStop", "Error stopping background thread: ${e.message}")
-        }
-    }*/
-
 }
