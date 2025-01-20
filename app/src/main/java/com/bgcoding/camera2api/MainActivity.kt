@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
                 width: Int,
                 height: Int
             ) {
-                open_camera()
+                cameraController.openCamera(textureView)
             }
 
             override fun onSurfaceTextureSizeChanged(
@@ -113,8 +113,6 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                /*TODO("Not yet implemented")*/
-
                 return false
             }
 
@@ -206,49 +204,6 @@ class MainActivity : ComponentActivity() {
                 Log.e("Permissions", "Required permissions not granted")
             }
         }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun open_camera() {
-        val cameraId = cameraController.getCameraId(CameraCharacteristics.LENS_FACING_BACK)
-
-        cameraController.getCameraManager().openCamera(cameraId, object : CameraDevice.StateCallback() {
-            override fun onOpened(p0: CameraDevice) {
-                cameraController.setCameraDevice(p0)
-
-                var captureRequest = cameraController.getCameraDevice().createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                cameraController.setCaptureRequest(captureRequest)
-
-                var surface = Surface(textureView.surfaceTexture)
-                cameraController.getCaptureRequest().addTarget(surface)
-
-                cameraController.getCameraDevice().createCaptureSession(
-                    listOf(surface, cameraController.getImageReader().surface),
-                    object : CameraCaptureSession.StateCallback() {
-                        override fun onConfigured(p0: CameraCaptureSession) {
-                            cameraController.setCameraCaptureSession(p0)
-                            cameraController.getCameraCaptureSession().setRepeatingRequest(
-                                captureRequest.build(),
-                                null,
-                                null
-                            )
-                        }
-
-                        override fun onConfigureFailed(p0: CameraCaptureSession) {
-
-                        }
-                    },
-                    cameraController.getHandler()
-                )
-            }
-
-            override fun onDisconnected(p0: CameraDevice) {
-            }
-
-            override fun onError(camera: CameraDevice, error: Int) {
-            }
-
-        }, cameraController.getHandler())
     }
 
     private fun setCameraPreview() {
@@ -532,7 +487,7 @@ class MainActivity : ComponentActivity() {
 
     private val surfaceTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-            open_camera()
+            cameraController.openCamera(textureView)
         }
 
         override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}

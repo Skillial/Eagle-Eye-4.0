@@ -55,14 +55,11 @@ class CameraController(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    private fun open_camera(textureView: TextureView) {
-
+    fun openCamera(textureView: TextureView) {
         cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
-
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-
                 val surface = Surface(textureView.surfaceTexture)
                 captureRequest.addTarget(surface)
 
