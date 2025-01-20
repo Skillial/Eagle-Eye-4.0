@@ -74,19 +74,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var permissionHandler: PermissionsHandler
     private lateinit var cameraController: CameraController
 
-    // TODO: Remove once refactored
-//    lateinit var captureRequest: CaptureRequest.Builder
-//    lateinit var handler: Handler
-//    lateinit var handlerThread: HandlerThread
-//    lateinit var cameraManager: CameraManager
-//    lateinit var cameraCaptureSession: CameraCaptureSession
-//    lateinit var cameraDevice: CameraDevice
-//    lateinit var imageReader: ImageReader
-//    lateinit var cameraId: String
-//    lateinit var captureRequest: CaptureRequest.Builder
-//    private var sensorOrientation: Int = 0
-
-    private var processedImagesCounter = 0
     lateinit var textureView: TextureView
     lateinit var progressBar: ProgressBar
     lateinit var loadingText: TextView
