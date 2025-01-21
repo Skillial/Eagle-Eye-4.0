@@ -33,6 +33,7 @@ import com.bgcoding.camera2api.io.DirectoryStorage
 import com.bgcoding.camera2api.io.FileImageReader
 import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.ImageFileAttribute
+import com.bgcoding.camera2api.io.ImageReaderManager
 import com.bgcoding.camera2api.model.AttributeHolder
 import com.bgcoding.camera2api.model.multiple.SharpnessMeasure
 import com.bgcoding.camera2api.permissions.PermissionsHandler
@@ -55,6 +56,7 @@ import java.util.concurrent.Semaphore
 class MainActivity : ComponentActivity() {
     private lateinit var permissionHandler: PermissionsHandler
     private lateinit var cameraController: CameraController
+    private lateinit var imageReaderManager: ImageReaderManager
 
     lateinit var textureView: TextureView
     lateinit var progressBar: ProgressBar
@@ -77,7 +79,9 @@ class MainActivity : ComponentActivity() {
         cameraController = CameraController(this)
         cameraController.initializeCamera()
 
-        initializeImageReader()
+        // initialize image reader manager
+        imageReaderManager = ImageReaderManager(this, cameraController, ImageInputMap, loadingBox)
+        imageReaderManager.initializeImageReader()
 
         this.textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(
@@ -197,8 +201,6 @@ class MainActivity : ComponentActivity() {
         this.loadingText = findViewById(R.id.loadingText)
         this.loadingBox = findViewById(R.id.loadingBox)
     }
-
-
 
     fun superResolutionImage(){
         SharpnessMeasure.initialize();
@@ -445,83 +447,6 @@ class MainActivity : ComponentActivity() {
             }
 
             fusionOperator.getResult()!!.release()
-        }
-    }
-
-    private val surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-        override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-            cameraController.openCamera(textureView)
-        }
-
-        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
-
-        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-            return true
-        }
-
-        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
-    }
-
-    private fun initializeImageReader() {
-        val highestResolution = cameraController.getHighestResolution()
-        setupImageReader(highestResolution)
-        setImageReaderListener()
-    }
-
-    private fun setupImageReader(highestResolution: Size?) {
-
-        val imageReader: ImageReader = if (highestResolution != null) {
-             ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
-        } else {
-            ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
-        }
-
-        cameraController.setImageReader(imageReader)
-    }
-
-    private fun setImageReaderListener() {
-        val imageReader = cameraController.getImageReader()
-
-        imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
-            override fun onImageAvailable(reader: ImageReader?) {
-                val image = reader?.acquireNextImage()
-                image?.let {
-                    processImage(it)
-                }
-            }
-        }, cameraController.getHandler())
-    }
-
-    private fun processImage(image: Image) {
-        val buffer = image.planes[0].buffer
-        val bytes = ByteArray(buffer.remaining())
-        buffer.get(bytes)
-        image.close()
-
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        handleImage(bitmap)
-    }
-
-    private fun handleImage(bitmap: Bitmap) {
-        val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-
-        if (isSuperResolutionEnabled) {
-            Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let { ImageInputMap.add(it) }
-            if (ImageInputMap.size == 5) {
-                superResolutionImage()
-                ImageInputMap.clear()
-                runOnUiThread {
-                    loadingBox.visibility = View.GONE
-                }
-            }
-        } else {
-            Log.i("Main", "No IE is toggled. Saving a single image to device.")
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
-            runOnUiThread {
-                loadingBox.visibility = View.GONE
-            }
         }
     }
 }
