@@ -9,8 +9,11 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
 import android.media.MediaActionSound
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
@@ -64,23 +67,50 @@ class CameraController(private val context: Context) {
                 val surface = Surface(textureView.surfaceTexture)
                 captureRequest.addTarget(surface)
 
-                cameraDevice.createCaptureSession(
-                    listOf(surface, imageReader.surface),
-                    object : CameraCaptureSession.StateCallback() {
-                        override fun onConfigured(p0: CameraCaptureSession) {
-                            cameraCaptureSession = p0
-                            cameraCaptureSession.setRepeatingRequest(
-                                captureRequest.build(),
-                                null,
-                                null
-                            )
-                        }
+                val surfaces = listOf(surface, imageReader.surface)
 
-                        override fun onConfigureFailed(p0: CameraCaptureSession) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val outputConfigurations = surfaces.map { OutputConfiguration(it) }
+                    val sessionConfiguration = SessionConfiguration(
+                        SessionConfiguration.SESSION_REGULAR,
+                        outputConfigurations,
+                        context.mainExecutor,
+                        object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(p0: CameraCaptureSession) {
+                                cameraCaptureSession = p0
+                                cameraCaptureSession.setRepeatingRequest(
+                                    captureRequest.build(),
+                                    null,
+                                    handler
+                                )
+                            }
+
+                            override fun onConfigureFailed(p0: CameraCaptureSession) {
+                                Log.e("CameraCaptureSession", "Configuration failed")
+                            }
                         }
-                    },
-                    handler
-                )
+                    )
+                    cameraDevice.createCaptureSession(sessionConfiguration)
+                } else {
+                    cameraDevice.createCaptureSession(
+                        surfaces,
+                        object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(p0: CameraCaptureSession) {
+                                cameraCaptureSession = p0
+                                cameraCaptureSession.setRepeatingRequest(
+                                    captureRequest.build(),
+                                    null,
+                                    handler
+                                )
+                            }
+
+                            override fun onConfigureFailed(p0: CameraCaptureSession) {
+                                Log.e("CameraCaptureSession", "Configuration failed")
+                            }
+                        },
+                        handler
+                    )
+                }
             }
 
             override fun onDisconnected(p0: CameraDevice) {
