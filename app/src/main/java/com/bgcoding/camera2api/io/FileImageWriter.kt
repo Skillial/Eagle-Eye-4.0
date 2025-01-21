@@ -3,10 +3,13 @@
     import android.app.Activity
     import android.content.Context
     import android.graphics.Bitmap
+    import android.graphics.Matrix
+    import android.hardware.camera2.CameraCharacteristics
     import android.media.MediaScannerConnection
     import android.os.Environment
     import android.util.Log
     import android.widget.Toast
+    import com.bgcoding.camera2api.camera.CameraController
     import org.opencv.core.Mat
     import org.opencv.imgcodecs.Imgcodecs
     import java.io.File
@@ -189,6 +192,9 @@
 
         // New Methods
         fun saveImageToStorage(bitmap: Bitmap): String {
+            val helper = Helper()
+            val adjustedBitmap = helper.adjustImageOrientation(bitmap)
+
             val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "MyApp/Images")
             if (!folder.exists()) {
                 folder.mkdirs() // Create directory if it doesn't exist
@@ -199,7 +205,7 @@
 
             try {
                 val fos = FileOutputStream(file)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+                adjustedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
                 fos.close()
                 MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
                 return file.absolutePath // Return the absolute path
@@ -207,6 +213,21 @@
                 e.printStackTrace()
                 Log.d("SaveImage", "Failed to save image: ${e.message}")
                 return ""
+            }
+        }
+
+        inner class Helper {
+            fun adjustImageOrientation(image: Bitmap): Bitmap {
+                val sensorOrientation = CameraController.getInstance().getSensorOrientation()
+                val matrix = Matrix()
+
+                when (sensorOrientation) {
+                    90 -> matrix.postRotate(90f)
+                    180 -> matrix.postRotate(180f)
+                    270 -> matrix.postRotate(270f)
+                }
+
+                return Bitmap.createBitmap(image, 0, 0, image.width, image.height, matrix, true)
             }
         }
     }

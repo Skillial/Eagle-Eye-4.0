@@ -25,7 +25,6 @@ import com.bgcoding.camera2api.io.ImageReaderManager
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
 
 class CameraFragment : Fragment() {
-    private lateinit var cameraController: CameraController
     private lateinit var imageReaderManager: ImageReaderManager
     private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
@@ -58,7 +57,7 @@ class CameraFragment : Fragment() {
     private fun addEventListeners(view: View) {
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                cameraController.openCamera(textureView)
+                CameraController.getInstance().openCamera(textureView)
             }
 
             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
@@ -72,7 +71,7 @@ class CameraFragment : Fragment() {
 
         view.findViewById<Button>(R.id.capture)?.apply {
             setOnClickListener {
-                cameraController.captureImage(loadingBox)
+                CameraController.getInstance().captureImage(loadingBox)
             }
         }
 
@@ -84,12 +83,10 @@ class CameraFragment : Fragment() {
     }
 
     private fun initializeCamera() {
-        cameraController = CameraController(requireContext())
-        cameraController.initializeCamera()
-
+        CameraController.initialize(requireContext())
         concreteSuperResolution = ConcreteSuperResolution()
 
-        imageReaderManager = ImageReaderManager(requireContext(), cameraController, imageInputMap, concreteSuperResolution, loadingBox)
+        imageReaderManager = ImageReaderManager(requireContext(), CameraController.getInstance(), imageInputMap, concreteSuperResolution, loadingBox)
         imageReaderManager.initializeImageReader()
     }
 

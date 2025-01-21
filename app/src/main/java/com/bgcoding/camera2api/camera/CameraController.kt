@@ -29,6 +29,26 @@ class CameraController(private val context: Context) {
     companion object {
         // Constants
         const val maxNumberOfBurstImages = 5
+
+        @Volatile
+        private var instance: CameraController? = null
+
+        fun initialize(context: Context): CameraController {
+            return instance ?: synchronized(this) {
+                instance ?: CameraController(context).also {
+                    it.initializeCamera()
+                    instance = it
+                }
+            }
+        }
+
+        fun destroy() {
+            instance = null
+        }
+
+        fun getInstance(): CameraController {
+            return instance ?: throw IllegalStateException("Singleton is not initialized, call initialize(context) first.")
+        }
     }
 
     private lateinit var cameraManager: CameraManager
@@ -40,8 +60,6 @@ class CameraController(private val context: Context) {
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private var cameraId: String = ""
 
-
-
     fun initializeCamera() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK)
@@ -49,21 +67,6 @@ class CameraController(private val context: Context) {
         handlerThread = HandlerThread("CameraBackgroundThread")
         handlerThread.start()
         handler = Handler(handlerThread.looper)
-    }
-
-    fun captureImage() {
-        val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-        captureRequest.addTarget(imageReader.surface)
-
-        cameraCaptureSession.capture(
-            captureRequest.build(),
-            object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-                    Log.d("CameraCapture", "Image captured successfully")
-                }
-            },
-            handler
-        )
     }
 
     fun captureImage(loadingBox: LinearLayout) {
