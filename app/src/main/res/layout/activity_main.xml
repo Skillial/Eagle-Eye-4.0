@@ -9,63 +9,12 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="38dp"
-        android:layout_height="47dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="16dp"
-        android:background="#00FFFFFF"
-        android:drawableStart="@drawable/ic_settings"
-        android:drawablePadding="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextureView
-        android:id="@+id/textureView"
-        android:layout_width="409dp"
-        android:layout_height="575dp"
-        android:layout_marginTop="10dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button" />
-
-    <LinearLayout
-        android:id="@+id/loadingBox"
-        android:layout_width="413dp"
-        android:layout_height="734dp"
-        android:background="#AA000000"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="gone">
-
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:id="@+id/loadingText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Processing..."
-            android:textColor="#FFFFFF"
-            android:textSize="18sp" /> <!-- Margin above the text -->
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/capture"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="capture"
+    <FrameLayout
+        android:id="@+id/fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textureView" />
-
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
