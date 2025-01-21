@@ -5,8 +5,8 @@ import com.bgcoding.camera2api.constants.ParameterConfig
 import com.bgcoding.camera2api.io.FileImageReader
 import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.ImageFileAttribute
-import com.bgcoding.camera2api.processing.imagetools.MatMemory
 import com.bgcoding.camera2api.processing.imagetools.ImageOperator
+import com.bgcoding.camera2api.processing.imagetools.MatMemory
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat

@@ -2,8 +2,6 @@ package com.bgcoding.camera2api.model.single_glasner
 
 import android.util.Log
 import com.bgcoding.camera2api.io.JSONSaver
-import java.util.*
-import kotlin.collections.HashMap
 
 /**
  * Holds the HR-LR patch dictionary pairing

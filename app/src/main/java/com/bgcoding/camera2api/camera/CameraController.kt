@@ -1,12 +1,14 @@
 package com.bgcoding.camera2api.camera
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.ImageFormat
-import android.graphics.SurfaceTexture
-import android.hardware.camera2.*
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.TotalCaptureResult
 import android.media.ImageReader
 import android.media.MediaActionSound
 import android.os.Handler
@@ -15,7 +17,6 @@ import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
-import androidx.core.app.ActivityCompat
 
 class CameraController(private val context: Context) {
     private lateinit var cameraManager: CameraManager

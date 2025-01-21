@@ -4,15 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
-import android.util.Size
-import android.util.Log
 import android.media.Image
 import android.media.ImageReader
-import android.os.Handler
+import android.util.Log
+import android.util.Size
 import android.view.View
 import com.bgcoding.camera2api.MainActivity
 import com.bgcoding.camera2api.camera.CameraController
-import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
 
 class ImageReaderManager(

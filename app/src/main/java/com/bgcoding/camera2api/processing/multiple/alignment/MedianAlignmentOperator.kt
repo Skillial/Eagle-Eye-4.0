@@ -2,8 +2,8 @@ package com.bgcoding.camera2api.processing.multiple.alignment
 
 import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.ImageFileAttribute
-import com.bgcoding.camera2api.thread.FlaggingThread
 import com.bgcoding.camera2api.model.AttributeHolder
+import com.bgcoding.camera2api.thread.FlaggingThread
 import org.opencv.core.Mat
 import org.opencv.photo.Photo
 import java.util.concurrent.Semaphore

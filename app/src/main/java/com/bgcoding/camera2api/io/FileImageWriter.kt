@@ -4,18 +4,16 @@
     import android.content.Context
     import android.graphics.Bitmap
     import android.media.MediaScannerConnection
-    import android.net.Uri
     import android.os.Environment
     import android.util.Log
     import android.widget.Toast
-    import org.opencv.core.CvType
     import org.opencv.core.Mat
     import org.opencv.imgcodecs.Imgcodecs
     import java.io.File
     import java.io.FileOutputStream
     import java.io.IOException
     import java.text.SimpleDateFormat
-    import java.util.*
+    import java.util.Date
 
     class FileImageWriter private constructor(private val context: Context) {
 

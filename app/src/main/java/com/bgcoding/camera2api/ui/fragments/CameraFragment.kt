@@ -1,6 +1,5 @@
 package com.bgcoding.camera2api.ui.fragments
 
-import androidx.fragment.app.Fragment
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
@@ -19,7 +18,7 @@ import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
-import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.fragment.app.Fragment
 import com.bgcoding.camera2api.R
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.io.ImageReaderManager

@@ -3,7 +3,7 @@ package com.bgcoding.camera2api.processing
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
-import java.util.*
+import java.util.Arrays
 
 object ColorSpaceOperator {
 

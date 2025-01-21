@@ -1,7 +1,6 @@
 package com.bgcoding.camera2api.processing.filters
 
 
-import com.bgcoding.camera2api.processing.filters.YangFilterFusionOperator
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc

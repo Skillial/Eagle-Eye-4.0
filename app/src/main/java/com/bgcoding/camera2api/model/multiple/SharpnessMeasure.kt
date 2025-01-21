@@ -3,7 +3,6 @@ package com.bgcoding.camera2api.model.multiple
 import android.util.Log
 import org.opencv.core.Core
 import org.opencv.core.Mat
-import java.util.*
 
 /**
  * Stores the sharpness measure of images. To retrieve a sharpness measure from a certain image, use the image index.

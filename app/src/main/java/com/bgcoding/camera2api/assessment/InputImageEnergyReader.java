@@ -2,8 +2,8 @@ package com.bgcoding.camera2api.assessment;
 
 import android.util.Log;
 
-import com.bgcoding.camera2api.thread.FlaggingThread;
 import com.bgcoding.camera2api.processing.ColorSpaceOperator;
+import com.bgcoding.camera2api.thread.FlaggingThread;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Size;

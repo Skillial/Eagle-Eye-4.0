@@ -8,9 +8,9 @@ import org.opencv.core.DMatch
 import org.opencv.core.Mat
 import org.opencv.core.MatOfDMatch
 import org.opencv.core.MatOfKeyPoint
-import org.opencv.features2d.ORB
 import org.opencv.features2d.DescriptorMatcher
 import org.opencv.features2d.FastFeatureDetector
+import org.opencv.features2d.ORB
 import java.util.concurrent.Semaphore
 
 /**
