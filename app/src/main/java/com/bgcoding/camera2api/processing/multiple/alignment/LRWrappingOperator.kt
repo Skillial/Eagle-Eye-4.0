@@ -4,7 +4,13 @@ import com.bgcoding.camera2api.io.ImageFileAttribute
 import com.bgcoding.camera2api.model.AttributeHolder
 import com.bgcoding.camera2api.thread.FlaggingThread
 import org.opencv.calib3d.Calib3d
-import org.opencv.core.*
+import org.opencv.core.Core
+import org.opencv.core.Mat
+import org.opencv.core.MatOfDMatch
+import org.opencv.core.MatOfKeyPoint
+import org.opencv.core.MatOfPoint2f
+import org.opencv.core.Point
+import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
 import java.util.concurrent.Semaphore
 
