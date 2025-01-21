@@ -3,19 +3,13 @@ package com.bgcoding.camera2api
 
 import LRWarpingOperator
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
-import android.media.Image
-import android.media.ImageReader
 import android.os.Bundle
 import android.util.Log
-import android.util.Size
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
@@ -37,6 +31,7 @@ import com.bgcoding.camera2api.io.ImageReaderManager
 import com.bgcoding.camera2api.model.AttributeHolder
 import com.bgcoding.camera2api.model.multiple.SharpnessMeasure
 import com.bgcoding.camera2api.permissions.PermissionsHandler
+import com.bgcoding.camera2api.processing.ConcreteSuperResolution
 import com.bgcoding.camera2api.processing.filters.YangFilter
 import com.bgcoding.camera2api.processing.imagetools.ImageOperator
 import com.bgcoding.camera2api.processing.multiple.alignment.FeatureMatchingOperator
@@ -57,12 +52,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var permissionHandler: PermissionsHandler
     private lateinit var cameraController: CameraController
     private lateinit var imageReaderManager: ImageReaderManager
+    private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
     lateinit var textureView: TextureView
     lateinit var progressBar: ProgressBar
     lateinit var loadingText: TextView
     lateinit var loadingBox: LinearLayout
-    val ImageInputMap: MutableList<String> = mutableListOf()
+    val imageInputMap: MutableList<String> = mutableListOf()
 
     private fun initializeApp() {
         setContentView(R.layout.activity_main) // Set the main content view
@@ -79,8 +75,11 @@ class MainActivity : ComponentActivity() {
         cameraController = CameraController(this)
         cameraController.initializeCamera()
 
+        // initialize super resolution
+        concreteSuperResolution = ConcreteSuperResolution()
+
         // initialize image reader manager
-        imageReaderManager = ImageReaderManager(this, cameraController, ImageInputMap, loadingBox)
+        imageReaderManager = ImageReaderManager(this, cameraController, imageInputMap, concreteSuperResolution, loadingBox)
         imageReaderManager.initializeImageReader()
 
         this.textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
@@ -200,253 +199,5 @@ class MainActivity : ComponentActivity() {
         this.progressBar = findViewById(R.id.progressBar)
         this.loadingText = findViewById(R.id.loadingText)
         this.loadingBox = findViewById(R.id.loadingBox)
-    }
-
-    fun superResolutionImage(){
-        SharpnessMeasure.initialize();
-        val energyInputMatList: Array<Mat> = Array(ImageInputMap.size) { Mat() }
-        val energyReaders: MutableList<InputImageEnergyReader> = mutableListOf()
-        try {
-            val energySem = Semaphore(0)  // Start with 0 permits to block acquire until all tasks finish
-            for (i in energyInputMatList.indices) {
-                val reader = InputImageEnergyReader(energySem, ImageInputMap[i])
-                energyReaders.add(reader)
-                // Assuming each reader is run on a separate thread or coroutines
-            }
-
-            // Wait for all threads to finish
-            for (reader in energyReaders) {
-                reader.start()  // Ensure reader threads are started (this depends on how InputImageEnergyReader works)
-            }
-
-            // Wait for all semaphores to release
-            energySem.acquire(energyInputMatList.size)
-
-            // Once all tasks are done, copy results
-            for (i in energyReaders.indices) {
-                energyInputMatList[i] = energyReaders[i].getOutputMat()
-            }
-
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
-
-        val yangFilter = YangFilter(energyInputMatList)
-        yangFilter.perform()
-
-        val sharpnessResult = SharpnessMeasure.getSharedInstance().measureSharpness(yangFilter.getEdgeMatList())
-        val inputIndices: Array<Int> = SharpnessMeasure.getSharedInstance().trimMatList(ImageInputMap.size, sharpnessResult, 0.0)
-        val rgbInputMatList = Array(inputIndices.size) { Mat() }
-        interpolateImage(sharpnessResult.getOutsideLeastIndex());
-        SRProcessManager.getInstance().initialHRProduced()
-        var bestIndex = 0
-        var inputMat: Mat
-        for (i in inputIndices.indices) {
-            inputMat = FileImageReader.getInstance()!!.imReadFullPath(ImageInputMap[inputIndices[i]])
-            val unsharpMaskOperator = UnsharpMaskOperator(inputMat, inputIndices[i])
-            unsharpMaskOperator.perform()
-            rgbInputMatList[i] = unsharpMaskOperator.getResult()
-
-            if (sharpnessResult.bestIndex == inputIndices[i]) {
-                bestIndex = i
-            }
-        }
-        this.performActualSuperres(rgbInputMatList, inputIndices, bestIndex, false)
-        SRProcessManager.getInstance().srProcessCompleted()
-
-    }
-    private fun interpolateImage(index: Int) {
-        val inputMat = FileImageReader.getInstance()!!.imReadFullPath(ImageInputMap[index])
-
-        val outputMat = ImageOperator.performInterpolation(inputMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_LINEAR)
-        FileImageWriter.getInstance()?.saveMatrixToImage(outputMat, "linear", ImageFileAttribute.FileType.JPEG)
-        outputMat.release()
-
-        inputMat.release()
-        System.gc()
-    }
-
-    private fun performActualSuperres(
-        rgbInputMatList: Array<Mat>,
-        inputIndices: Array<Int>,
-        bestIndex: Int,
-        debugMode: Boolean
-    ) {
-        // Perform denoising on original input list
-        val denoisingOperator = DenoisingOperator(rgbInputMatList)
-        denoisingOperator.perform()
-
-        // Use var to allow reassignment
-        var updatedMatList = denoisingOperator.getResult()
-
-        // Pass updatedMatList to the next method
-        this.performFullSRMode(updatedMatList, inputIndices, bestIndex, debugMode)
-    }
-
-    private fun performFullSRMode(
-        rgbInputMatList: Array<Mat>,
-        inputIndices: Array<Int>,
-        bestIndex: Int,
-        debug: Boolean
-    ) {
-        // Perform feature matching of LR images against the first image as reference mat.
-        val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 1)
-
-        // Perform perspective warping and alignment
-        val succeedingMatList = rgbInputMatList.sliceArray(1 until rgbInputMatList.size)
-
-        val medianResultNames = Array(succeedingMatList.size) { i -> "median_align_" + i }
-        val warpResultNames = Array(succeedingMatList.size) { i -> "warp_" + i }
-
-
-        when (warpChoice) {
-            1 -> {
-                this.performMedianAlignment(rgbInputMatList, medianResultNames)
-                this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
-            }
-        }
-
-
-        SharpnessMeasure.destroy()
-
-        val numImages = AttributeHolder.getSharedInstance()!!.getValue("WARPED_IMAGES_LENGTH_KEY", 0)
-        val warpedImageNames = Array(numImages) { i -> "warp_" + i }
-        val medianAlignedNames = Array(numImages) { i -> "median_align_" + i }
-
-        val alignedImageNames = assessImageWarpResults(inputIndices[0], warpChoice, warpedImageNames, medianAlignedNames, debug)
-
-        this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, debug)
-
-        try {
-            Thread.sleep(3000)
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
-
-    }
-
-    private fun performMedianAlignment(imagesToAlignList: Array<Mat>, resultNames: Array<String>) {
-
-        val medianAlignmentOperator = MedianAlignmentOperator(imagesToAlignList, resultNames)
-        medianAlignmentOperator.perform()
-    }
-
-    private fun performPerspectiveWarping(
-        referenceMat: Mat,
-        candidateMatList: Array<Mat>,
-        imagesToWarpList: Array<Mat>,
-        resultNames: Array<String>
-    ) {
-
-        val matchingOperator = FeatureMatchingOperator(referenceMat, candidateMatList)
-        matchingOperator.perform()
-
-        val perspectiveWarpOperator = LRWarpingOperator(
-            matchingOperator.refKeypoint,
-            imagesToWarpList,
-            resultNames,
-            matchingOperator.getdMatchesList(),
-            matchingOperator.lrKeypointsList
-        )
-        perspectiveWarpOperator.perform()
-
-        // release images
-        matchingOperator.refKeypoint.release()
-    }
-
-    fun assessImageWarpResults(
-        index: Int,
-        alignmentUsed: Int,
-        warpedImageNames: Array<String>,
-        medianAlignedNames: Array<String>,
-        useLocalDir: Boolean
-    ): Array<String> {  // Change return type to Array<String>
-        return when (alignmentUsed) {
-            1 -> {
-                val referenceMat: Mat
-                val fileImageReader = FileImageReader.getInstance()
-                if (fileImageReader != null) {
-                    referenceMat = if (useLocalDir) {
-                        fileImageReader.imReadOpenCV("input_" + index, ImageFileAttribute.FileType.JPEG)
-                    } else {
-                        fileImageReader.imReadFullPath(ImageInputMap[index])
-                    }
-
-                    val warpResultEvaluator = WarpResultEvaluator(referenceMat, warpedImageNames, medianAlignedNames)
-                    warpResultEvaluator.perform()
-
-                    // Filter out null values and convert to a non-nullable array
-                    warpResultEvaluator.chosenAlignedNames.filterNotNull().toTypedArray()
-                } else {
-                    // Handle the case where FileImageReader is null (optional)
-                    throw IllegalStateException("FileImageReader instance is null.")
-                }
-            }
-            2 -> medianAlignedNames
-            else -> warpedImageNames
-        }
-    }
-
-    private fun performMeanFusion(
-        index: Int,
-        bestIndex: Int,
-        alignedImageNames: Array<String>,
-        debugMode: Boolean
-    ) {
-        if (alignedImageNames.size == 1) {
-            val resultMat: Mat = if (debugMode) {
-                FileImageReader.getInstance()?.imReadOpenCV(
-                    "input_" + bestIndex,
-                    ImageFileAttribute.FileType.JPEG
-                ) ?: throw IllegalStateException("FileImageReader instance is null")
-            } else {
-                FileImageReader.getInstance()?.imReadFullPath(
-                    ImageInputMap[bestIndex]
-                ) ?: throw IllegalStateException("FileImageReader instance is null")
-            }
-            // No need to perform image fusion, just use the best image.
-            val interpolatedMat = ImageOperator.performInterpolation(
-                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC
-            )
-            FileImageWriter.getInstance()?.saveMatrixToImage(
-                interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
-            )
-
-            resultMat.release()
-        } else {
-            val imagePathList = mutableListOf<String>()
-            // Add initial input HR image
-            val inputMat: Mat = if (debugMode) {
-                FileImageReader.getInstance()?.imReadOpenCV(
-                    "input_" + index,
-                    ImageFileAttribute.FileType.JPEG
-                ) ?: throw IllegalStateException("FileImageReader instance is null")
-            } else {
-                FileImageReader.getInstance()?.imReadFullPath(
-                    ImageInputMap[index]
-                ) ?: throw IllegalStateException("FileImageReader instance is null")
-            }
-
-            for (alignedImageName in alignedImageNames) {
-                imagePathList.add(alignedImageName)
-            }
-
-            val fusionOperator = MeanFusionOperator(inputMat, imagePathList.toTypedArray())
-            for (i in ImageInputMap.indices) {
-                val dirFile: File = File(ImageInputMap[i])
-                FileImageWriter.getInstance()?.deleteRecursive(dirFile)
-            }
-            fusionOperator.perform()
-            FileImageWriter.getInstance()?.apply {
-                saveMatrixToImage(
-                    fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
-                )
-                saveHRResultToUserDir(
-                    fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
-                )
-            }
-
-            fusionOperator.getResult()!!.release()
-        }
     }
 }

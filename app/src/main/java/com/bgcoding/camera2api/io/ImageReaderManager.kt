@@ -13,16 +13,18 @@ import android.view.View
 import com.bgcoding.camera2api.MainActivity
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.io.FileImageWriter
+import com.bgcoding.camera2api.processing.ConcreteSuperResolution
 
-// TODO: Remove cyclic dependencies
 class ImageReaderManager(
     private val context: Context,
     private val cameraController: CameraController,
     private val imageInputMap: MutableList<String>,
+    private val concreteSuperResolution: ConcreteSuperResolution,
     private val loadingBox: View
 ) {
 
     fun initializeImageReader() {
+        concreteSuperResolution.initialize(imageInputMap)
         val highestResolution = cameraController.getHighestResolution()
         setupImageReader(highestResolution)
         setImageReaderListener()
@@ -67,7 +69,7 @@ class ImageReaderManager(
             Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
             FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let { imageInputMap.add(it) }
             if (imageInputMap.size == 5) {
-                (context as MainActivity).superResolutionImage()
+                concreteSuperResolution.superResolutionImage(imageInputMap)
                 imageInputMap.clear()
                 (context as MainActivity).runOnUiThread {
                     loadingBox.visibility = View.GONE
