@@ -40,37 +40,22 @@ class CameraFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_camera, container, false)
-        textureView = view.findViewById(R.id.textureView)
-        progressBar = view.findViewById(R.id.progressBar)
-        loadingText = view.findViewById(R.id.loadingText)
-        loadingBox = view.findViewById(R.id.loadingBox)
 
+        assignViews(view)
         initializeCamera()
-
-        view.findViewById<Button>(R.id.capture)?.apply {
-            setOnClickListener {
-                captureImages()
-            }
-        }
-
-        view.findViewById<Button>(R.id.button)?.apply {
-            setOnClickListener {
-                showPopupMenu()
-            }
-        }
+        addEventListeners(view)
 
         return view
     }
 
-    private fun initializeCamera() {
-        cameraController = CameraController(requireContext())
-        cameraController.initializeCamera()
+    private fun assignViews(view: View) {
+        textureView = view.findViewById(R.id.textureView)
+        progressBar = view.findViewById(R.id.progressBar)
+        loadingText = view.findViewById(R.id.loadingText)
+        loadingBox = view.findViewById(R.id.loadingBox)
+    }
 
-        concreteSuperResolution = ConcreteSuperResolution()
-
-        imageReaderManager = ImageReaderManager(requireContext(), cameraController, imageInputMap, concreteSuperResolution, loadingBox)
-        imageReaderManager.initializeImageReader()
-
+    private fun addEventListeners(view: View) {
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                 cameraController.openCamera(textureView)
@@ -84,36 +69,28 @@ class CameraFragment : Fragment() {
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
         }
+
+        view.findViewById<Button>(R.id.capture)?.apply {
+            setOnClickListener {
+                cameraController.captureImage(loadingBox)
+            }
+        }
+
+        view.findViewById<Button>(R.id.button)?.apply {
+            setOnClickListener {
+                showPopupMenu()
+            }
+        }
     }
 
-    private fun captureImages() {
-        val sharedPreferences = requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-        val totalCaptures = if (isSuperResolutionEnabled) 5 else 1
-        val captureList = mutableListOf<CaptureRequest>()
+    private fun initializeCamera() {
+        cameraController = CameraController(requireContext())
+        cameraController.initializeCamera()
 
-        for (i in 0 until totalCaptures) {
-            val captureRequest = cameraController.getCameraDevice().createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureRequest.addTarget(cameraController.getImageReader().surface)
-            captureList.add(captureRequest.build())
-        }
+        concreteSuperResolution = ConcreteSuperResolution()
 
-        cameraController.playShutterSound()
-
-        requireActivity().runOnUiThread {
-            loadingBox.visibility = View.VISIBLE
-        }
-
-        cameraController.getCameraCaptureSession().captureBurst(
-            captureList,
-            object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-                    super.onCaptureCompleted(session, request, result)
-                    Log.d("BurstCapture", "Capture completed")
-                }
-            },
-            null
-        )
+        imageReaderManager = ImageReaderManager(requireContext(), cameraController, imageInputMap, concreteSuperResolution, loadingBox)
+        imageReaderManager.initializeImageReader()
     }
 
     private fun showPopupMenu() {

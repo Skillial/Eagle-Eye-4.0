@@ -1,6 +1,7 @@
 package com.bgcoding.camera2api.camera
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCaptureSession
@@ -20,8 +21,16 @@ import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
+import android.view.View
+import android.widget.LinearLayout
 
 class CameraController(private val context: Context) {
+
+    companion object {
+        // Constants
+        const val maxNumberOfBurstImages = 5
+    }
+
     private lateinit var cameraManager: CameraManager
     private lateinit var cameraDevice: CameraDevice
     private lateinit var imageReader: ImageReader
@@ -31,8 +40,7 @@ class CameraController(private val context: Context) {
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private var cameraId: String = ""
 
-    // Constants
-    private val maxNumberOfBurstImages: Int = 10
+
 
     fun initializeCamera() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -55,6 +63,36 @@ class CameraController(private val context: Context) {
                 }
             },
             handler
+        )
+    }
+
+    fun captureImage(loadingBox: LinearLayout) {
+        val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+        val totalCaptures = if (isSuperResolutionEnabled) maxNumberOfBurstImages else 1
+        val captureList = mutableListOf<CaptureRequest>()
+
+        for (i in 0 until totalCaptures) {
+            val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+            captureRequest.addTarget(imageReader.surface)
+            captureList.add(captureRequest.build())
+        }
+
+        playShutterSound()
+
+        (context as Activity).runOnUiThread {
+            loadingBox.visibility = View.VISIBLE
+        }
+
+        cameraCaptureSession.captureBurst(
+            captureList,
+            object : CameraCaptureSession.CaptureCallback() {
+                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                    super.onCaptureCompleted(session, request, result)
+                    Log.d("BurstCapture", "Capture completed")
+                }
+            },
+            null
         )
     }
 
