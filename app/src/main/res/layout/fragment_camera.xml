@@ -21,11 +21,11 @@
 
     <TextureView
         android:id="@+id/textureView"
-        android:layout_width="409dp"
-        android:layout_height="575dp"
-        android:layout_marginTop="10dp"
+        android:layout_width="413dp"
+        android:layout_height="546dp"
+        android:layout_marginTop="20dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button" />
 
@@ -55,15 +55,32 @@
             android:textSize="18sp" />
     </LinearLayout>
 
-    <Button
+    <ImageButton
         android:id="@+id/capture"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="capture"
+        android:layout_width="58dp"
+        android:layout_height="80dp"
+        android:layout_marginBottom="4dp"
+        android:background="#00FFFFFF"
+        android:scaleType="fitCenter"
+        android:src="@drawable/shutter_button"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textureView" />
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/switchCamera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:rotation="43"
+        android:scaleType="fitCenter"
+        android:src="@drawable/switch_camera"
+        app:backgroundTint="#313030"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:maxImageSize="30dp" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

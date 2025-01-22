@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.graphics.ImageFormat
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
@@ -171,6 +172,39 @@ class CameraController(private val context: Context) {
         }
         return ""
     }
+
+    fun switchCamera(textureView: TextureView) {
+        val currentLensFacing = cameraManager.getCameraCharacteristics(cameraId)
+            .get(CameraCharacteristics.LENS_FACING) ?: return
+
+        val newLensFacing = if (currentLensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+            CameraCharacteristics.LENS_FACING_BACK
+        } else {
+            CameraCharacteristics.LENS_FACING_FRONT
+        }
+
+        cameraDevice.close()
+        cameraId = getCameraId(newLensFacing)
+
+        textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+                openCamera(textureView)
+            }
+
+            override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {}
+
+            override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
+                return true
+            }
+
+            override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {}
+        }
+
+        if (textureView.isAvailable) {
+            openCamera(textureView)
+        }
+    }
+
 
     // helpers
     fun getHighestResolution(): Size? {
