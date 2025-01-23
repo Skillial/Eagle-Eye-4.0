@@ -78,6 +78,8 @@ class CameraController(private val context: Context) {
         for (i in 0 until totalCaptures) {
             val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             captureRequest.addTarget(imageReader.surface)
+            captureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureList.add(captureRequest.build())
         }
 
