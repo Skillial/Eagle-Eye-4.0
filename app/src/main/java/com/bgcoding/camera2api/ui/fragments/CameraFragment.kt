@@ -2,17 +2,13 @@ package com.bgcoding.camera2api.ui.fragments
 
 import android.content.Context
 import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.TotalCaptureResult
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ProgressBar
@@ -23,6 +19,7 @@ import com.bgcoding.camera2api.R
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.io.ImageReaderManager
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class CameraFragment : Fragment() {
     private lateinit var imageReaderManager: ImageReaderManager
@@ -69,7 +66,7 @@ class CameraFragment : Fragment() {
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
         }
 
-        view.findViewById<Button>(R.id.capture)?.apply {
+        view.findViewById<ImageView>(R.id.capture)?.apply {
             setOnClickListener {
                 CameraController.getInstance().captureImage(loadingBox)
             }
@@ -78,6 +75,12 @@ class CameraFragment : Fragment() {
         view.findViewById<Button>(R.id.button)?.apply {
             setOnClickListener {
                 showPopupMenu()
+            }
+        }
+
+        view.findViewById<FloatingActionButton>(R.id.switchCamera)?.apply {
+            setOnClickListener {
+                CameraController.getInstance().switchCamera(textureView)
             }
         }
     }
