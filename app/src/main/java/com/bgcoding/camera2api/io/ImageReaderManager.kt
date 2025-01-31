@@ -12,6 +12,11 @@ import android.view.View
 import com.bgcoding.camera2api.MainActivity
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ImageReaderManager(
     private val context: Context,
@@ -60,25 +65,33 @@ class ImageReaderManager(
     }
 
     private fun handleImage(bitmap: Bitmap) {
-        val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+        CoroutineScope(Dispatchers.IO).launch {
+            val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+            val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
 
-        if (isSuperResolutionEnabled) {
-            Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let { imageInputMap.add(it) }
-            if (imageInputMap.size == 5) {
-                concreteSuperResolution.superResolutionImage(imageInputMap)
-                imageInputMap.clear()
-                (context as MainActivity).runOnUiThread {
+            if (isSuperResolutionEnabled) {
+                val savedFile = async { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.await()
+                savedFile?.let {
+                    imageInputMap.add(it)
+                }
+
+                if (imageInputMap.size == 5) {
+                    concreteSuperResolution.superResolutionImage(imageInputMap)
+                    imageInputMap.clear()
+
+                    withContext(Dispatchers.Main) {
+                        loadingBox.visibility = View.GONE
+                    }
+                }
+            } else {
+                Log.i("Main", "No IE is toggled. Saving a single image to device.")
+                async { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.await()
+
+                withContext(Dispatchers.Main) {
                     loadingBox.visibility = View.GONE
                 }
             }
-        } else {
-            Log.i("Main", "No IE is toggled. Saving a single image to device.")
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
-            (context as MainActivity).runOnUiThread {
-                loadingBox.visibility = View.GONE
-            }
         }
     }
+
 }
