@@ -25,11 +25,18 @@ import java.io.File
 import java.util.concurrent.Semaphore
 
 class ConcreteSuperResolution : SuperResolutionTemplate() {
+    private var finalMat: Mat? = null
+
+    fun getFinalMat(): Mat? {
+        return finalMat
+    }
+
 
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
         val energyInputMatList: Array<Mat> = Array(imageInputMap.size) { Mat() }
         val energyReaders: MutableList<InputImageEnergyReader> = mutableListOf()
         val energySem = Semaphore(0)
+
 
         try {
             for (i in energyInputMatList.indices) {
@@ -259,8 +266,8 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
             FileImageWriter.getInstance()?.saveMatrixToImage(
                 interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
             )
-
-            resultMat.release()
+            this.finalMat = interpolatedMat
+//            resultMat.release()
         } else {
             val imagePathList = mutableListOf<String>()
             // Add initial input HR image
@@ -294,7 +301,8 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
                 )
             }
 
-            fusionOperator.getResult()!!.release()
+            this.finalMat = fusionOperator.getResult()!!
+//            fusionOperator.getResult()!!.release()
         }
     }
 }

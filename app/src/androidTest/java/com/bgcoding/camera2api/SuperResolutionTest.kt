@@ -17,9 +17,19 @@ import org.junit.runner.RunWith
 import org.opencv.android.OpenCVLoader
 import java.io.File
 import java.io.FileOutputStream
+import androidx.test.rule.GrantPermissionRule;
+import com.bgcoding.camera2api.metrics.ImageMetrics
+import org.junit.Rule
 
 @RunWith(AndroidJUnit4::class)
 class SuperResolutionTest {
+    @Rule
+    @JvmField
+    val grantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
+        android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        android.Manifest.permission.READ_EXTERNAL_STORAGE
+    )
+
     private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
     private val imageInputMap = mutableListOf<String>()
     private val concreteSuperResolution = ConcreteSuperResolution()
@@ -27,6 +37,7 @@ class SuperResolutionTest {
     @Before
     fun setUp() {
         val internalDir = File(context.filesDir, "test_images")
+//        val internalDir = File(context.cacheDir, "test_images")
         val assetManager = context.assets
         val assetImages = assetManager.list("test_images") ?: throw AssertionError("No images found in assets/test_images")
 
@@ -62,13 +73,58 @@ class SuperResolutionTest {
         } else {
             Log.d("OpenCV", "Initialization Successful")
         }
+        // Initialize AVD context
         DirectoryStorage.getSharedInstance().createDirectory()
         FileImageWriter.initialize(context)
         FileImageReader.initialize(context)
         ParameterConfig.initialize(context)
         AttributeHolder.initialize(context)
 
-        val result = concreteSuperResolution.superResolutionImage(imageInputMap)
-        assertNotNull("Super resolution output is null", result)
+        // Load images from assets and save temporary files
+        val assetManager = context.assets
+        val assetImages = assetManager.list("test_images") ?: throw AssertionError("No images found in assets/test_images")
+        val tempImagePaths = mutableListOf<String>()
+
+        for (imageName in assetImages) {
+            val inputStream = assetManager.open("test_images/$imageName")
+            val tempFile = File(context.cacheDir, imageName)
+            tempFile.outputStream().use { inputStream.copyTo(it) }
+            tempImagePaths.add(tempFile.absolutePath)
+        }
+
+        if (tempImagePaths.size != 5) {
+            throw AssertionError("Insufficient images for super resolution. Found: ${tempImagePaths.size}")
+        }
+
+        // Process images with super resolution
+        concreteSuperResolution.superResolutionImage(tempImagePaths) // Pass file paths
+
+        // Load Result Mat
+        val resultMat = concreteSuperResolution.getFinalMat()
+        assertNotNull("Super resolution output is null", resultMat)
+
+        if (resultMat != null) {
+            Log.d("ImageMetrics", "ResultMat: rows=${resultMat.rows()}, cols=${resultMat.cols()}, type=${resultMat.type()}")
+        }
+
+        // Load ground truth directly from assets
+        val groundTruthInputStream = assetManager.open("test_images/${assetImages[0]}")
+        val groundTruthByteArray = groundTruthInputStream.readBytes()
+        groundTruthInputStream.close()
+        val groundTruthMatOfByte = org.opencv.core.MatOfByte(*groundTruthByteArray)
+        val groundTruthMat = org.opencv.imgcodecs.Imgcodecs.imdecode(groundTruthMatOfByte, org.opencv.imgcodecs.Imgcodecs.IMREAD_COLOR)
+        groundTruthMatOfByte.release()
+        if (groundTruthMat.empty()) {
+            throw AssertionError("Failed to load ground truth image ${assetImages[0]}")
+        }
+
+        // Calculate metrics
+        val psnr = ImageMetrics.getPSNR(resultMat!!, groundTruthMat!!)
+        Log.d("PSNR", "PSNR: $psnr")
+        assert(psnr > 30) { "PSNR is too low, indicating poor quality." }
+
+        // Clean up
+        resultMat.release()
+        groundTruthMat.release()
     }
 }
