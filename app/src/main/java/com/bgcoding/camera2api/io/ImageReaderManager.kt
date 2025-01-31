@@ -70,22 +70,27 @@ class ImageReaderManager(
             val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
 
             if (isSuperResolutionEnabled) {
-                val savedFile = async { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.await()
-                savedFile?.let {
-                    imageInputMap.add(it)
+                val saveJob = launch {
+                    FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
+                        imageInputMap.add(it)
+                    }
                 }
 
-                if (imageInputMap.size == 5) {
-                    concreteSuperResolution.superResolutionImage(imageInputMap)
-                    imageInputMap.clear()
+                saveJob.join() // Ensures the file is saved before checking the count
 
-                    withContext(Dispatchers.Main) {
-                        loadingBox.visibility = View.GONE
+                if (imageInputMap.size == 5) {
+                    // Run super resolution asynchronously
+                    launch {
+                        concreteSuperResolution.superResolutionImage(imageInputMap)
+                        withContext(Dispatchers.Main) {
+                            loadingBox.visibility = View.GONE
+                        }
+                        imageInputMap.clear()
                     }
                 }
             } else {
                 Log.i("Main", "No IE is toggled. Saving a single image to device.")
-                async { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.await()
+                launch { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.join()
 
                 withContext(Dispatchers.Main) {
                     loadingBox.visibility = View.GONE
