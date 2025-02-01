@@ -29,7 +29,7 @@ class CameraController(private val context: Context) {
 
     companion object {
         // Constants
-        const val maxNumberOfBurstImages = 5
+        const val maxNumberOfBurstImages = 1
 
         @Volatile
         private var instance: CameraController? = null
