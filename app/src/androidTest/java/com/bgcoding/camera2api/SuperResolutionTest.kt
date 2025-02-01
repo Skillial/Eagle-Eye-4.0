@@ -37,7 +37,6 @@ class SuperResolutionTest {
     @Before
     fun setUp() {
         val internalDir = File(context.filesDir, "test_images")
-//        val internalDir = File(context.cacheDir, "test_images")
         val assetManager = context.assets
         val assetImages = assetManager.list("test_images") ?: throw AssertionError("No images found in assets/test_images")
 
@@ -108,7 +107,7 @@ class SuperResolutionTest {
         }
 
         // Load ground truth directly from assets
-        val groundTruthInputStream = assetManager.open("test_images/${assetImages[0]}")
+        val groundTruthInputStream = assetManager.open("ground_truth/ground_truth.jpg")
         val groundTruthByteArray = groundTruthInputStream.readBytes()
         groundTruthInputStream.close()
         val groundTruthMatOfByte = org.opencv.core.MatOfByte(*groundTruthByteArray)
