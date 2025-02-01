@@ -2,7 +2,6 @@ package com.bgcoding.camera2api.io
 
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
-import ai.onnxruntime.OrtLoggingLevel
 import ai.onnxruntime.OrtSession
 import android.app.ActivityManager
 import android.content.Context
@@ -125,17 +124,18 @@ class ImageReaderManager(
         sessionOptions.addNnapi()
         sessionOptions.addConfigEntry("session.use_device_memory_mapping", "1")
         sessionOptions.addConfigEntry("session.enable_stream_execution", "1")
-        val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/Quantized_albedoC.onnx")
-
+        val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
+        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
+        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
         Log.d("dehaze","models loaded"+getAvailableMemory())
         // Image Loading and Resizing
-        val (imSize, hazyImg) = loadAndResize(path, org.opencv.core.Size(1024.0, 1024.0))
+        val (imSize, hazyImg) = loadAndResize(path, org.opencv.core.Size(512.0, 512.0))
 
         // Preprocessing
         val hazyInput = preprocess(hazyImg, env)
 
         // Run Inference
-        val albedoOutput = try {
+        val albedoOutput: FloatArray? = try {
             ortSessionAlbedo.run(mapOf("input.1" to hazyInput)).use { results ->
                 val output = results.get(0)
                 if (output is OnnxTensor) {
@@ -145,25 +145,46 @@ class ImageReaderManager(
                 }
             }
         } catch (e: Exception) {
-            Log.e("dehaze", "Error running inference: ${e.message}")
+            Log.e("dehaze", "Error running albedo inference: ${e.message}", e)
+            null
+        }
+
+        if (albedoOutput == null) {
+            Log.e("dehaze", "Albedo inference failed, skipping transmission inference")
             return
         }
-        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
-        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
-        Log.d("dehaze","albedo output")
 
-        val transmissionOutput = ortSessionTransmission.run(mapOf("input.1" to hazyInput)).use { results ->
-            val output = results.get(0)
-            if (output is OnnxTensor) {
-                output.floatBuffer.array() // Convert to FloatArray
-            } else {
-                throw IllegalStateException("Unexpected output type: ${output::class.java}")
-            }
+        Log.d("dehaze", "Albedo output computed successfully")
+
+// Prepare albedoOutput as input for ortSessionTransmission
+        val transmissionInput = try {
+            // Reshape albedoOutput into the expected input shape for ortSessionTransmission
+            val inputShape = longArrayOf(1, 3, 512, 512) // Example shape, adjust as needed
+            OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), inputShape)
+        } catch (e: Exception) {
+            Log.e("dehaze", "Error creating transmission input tensor: ${e.message}", e)
+            return
         }
+
+// Run ortSessionTransmission inference
+        val transmissionOutput = try {
+            ortSessionTransmission.run(mapOf("input.1" to transmissionInput)).use { results ->
+                val output = results.get(0)
+                if (output is OnnxTensor) {
+                    output.floatBuffer.array() // Convert to FloatArray
+                } else {
+                    throw IllegalStateException("Unexpected output type: ${output::class.java}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("dehaze", "Error running transmission inference: ${e.message}", e)
+            return
+        }
+
         Log.d("dehaze","transmission output")
 
         val hazyResized = Mat()
-        Imgproc.resize(hazyImg, hazyResized, org.opencv.core.Size(512.0, 512.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        Imgproc.resize(hazyImg, hazyResized, org.opencv.core.Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
         val airlightInput = preprocess(hazyResized, env)
         val airlightOutput = ortSessionAirlight.run(mapOf("input.1" to airlightInput)).use { results ->
             val output = results.get(0)
@@ -198,21 +219,39 @@ class ImageReaderManager(
         val albedoMat = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
         albedoMat.put(0, 0, albedoOutput)
 
-// Use airlight values and albedo in the dehazing equation
+// Normalize the hazy image
         val hazyImgNorm = Mat()
         Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32F)
+
+// Create a clear image matrix
         val clearImg = Mat.ones(hazyImgNorm.size(), CvType.CV_32F)
 
 // Reconstruct the clear image using albedo, transmission, and airlight
-        Core.subtract(hazyImgNorm, Scalar(airlightRed * (1 - TResized.get(0, 0)[0]), airlightGreen * (1 - TResized.get(0, 0)[0]), airlightBlue * (1 - TResized.get(0, 0)[0])), clearImg)
-        Core.divide(clearImg, TResized, clearImg)
+        for (i in 0 until hazyImgNorm.rows()) {
+            for (j in 0 until hazyImgNorm.cols()) {
+                val tVal = TResized.get(i, j)[0]
+                val tValMax = maxOf(tVal, 0.001) // Ensure T is not too small
+
+                val clearRed = (hazyImgNorm.get(i, j)[0] - airlightRed * (1 - tVal)) / tValMax
+                val clearGreen = (hazyImgNorm.get(i, j)[1] - airlightGreen * (1 - tVal)) / tValMax
+                val clearBlue = (hazyImgNorm.get(i, j)[2] - airlightBlue * (1 - tVal)) / tValMax
+
+                clearImg.put(i, j, clearRed, clearGreen, clearBlue)
+            }
+        }
+
+// Clip the values to ensure they are within the range [0, 1]
+        Core.minMaxLoc(clearImg).let { minMax ->
+            Core.multiply(clearImg, Scalar(1.0 / minMax.maxVal), clearImg)
+        }
+        Core.max(clearImg, Scalar(0.0), clearImg)
+        Core.min(clearImg, Scalar(1.0), clearImg)
 
 // Multiply by the albedo to restore the original colors
         Core.multiply(clearImg, albedoMat, clearImg)
 
-        Core.minMaxLoc(clearImg).let { minMax ->
-            Core.multiply(clearImg, Scalar(255.0 / minMax.maxVal), clearImg)
-        }
+// Scale the image back to the range [0, 255]
+        Core.multiply(clearImg, Scalar(255.0), clearImg)
 
 // Save the dehazed image
         val clearImgResized = Mat()
