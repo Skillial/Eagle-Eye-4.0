@@ -1,8 +1,11 @@
 package com.bgcoding.camera2api.ui.fragments
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.SurfaceTexture
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
@@ -17,11 +20,13 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.bgcoding.camera2api.R
 import com.bgcoding.camera2api.camera.CameraController
+import com.bgcoding.camera2api.io.FileImageWriter
+import com.bgcoding.camera2api.io.FileImageWriter.Companion.OnImageSavedListener
 import com.bgcoding.camera2api.io.ImageReaderManager
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
-class CameraFragment : Fragment() {
+class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager
     private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
@@ -29,7 +34,13 @@ class CameraFragment : Fragment() {
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingText: TextView
     private lateinit var loadingBox: LinearLayout
+    private lateinit var thumbnailPreview: ImageView
     private val imageInputMap: MutableList<String> = mutableListOf()
+
+    override fun onImageSaved(filePath: String) {
+        Log.d("CameraFragment", "onImageSaved: $filePath")
+        updateThumbnail(BitmapFactory.decodeFile(filePath))
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -41,6 +52,9 @@ class CameraFragment : Fragment() {
         initializeCamera()
         addEventListeners(view)
 
+        // used to update the thumbnail preview
+        FileImageWriter.setOnImageSavedListener(this)
+
         return view
     }
 
@@ -49,6 +63,7 @@ class CameraFragment : Fragment() {
         progressBar = view.findViewById(R.id.progressBar)
         loadingText = view.findViewById(R.id.loadingText)
         loadingBox = view.findViewById(R.id.loadingBox)
+        thumbnailPreview = view.findViewById(R.id.thumbnailPreview)
     }
 
     private fun addEventListeners(view: View) {
@@ -91,6 +106,12 @@ class CameraFragment : Fragment() {
 
         imageReaderManager = ImageReaderManager(requireContext(), CameraController.getInstance(), imageInputMap, concreteSuperResolution, loadingBox)
         imageReaderManager.initializeImageReader()
+    }
+
+    private fun updateThumbnail(bitmap: Bitmap) {
+        activity?.runOnUiThread {
+            thumbnailPreview.setImageBitmap(bitmap)
+        }
     }
 
     private fun showPopupMenu() {

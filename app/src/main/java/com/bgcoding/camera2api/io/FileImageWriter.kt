@@ -57,7 +57,21 @@
                 }
                 fileOrDirectory.delete()
             }
+
+
+
+            interface OnImageSavedListener {
+                fun onImageSaved(filePath: String)
+            }
+
+            private var onImageSavedListener: OnImageSavedListener? = null
+
+            fun setOnImageSavedListener(listener: OnImageSavedListener) {
+                this.onImageSavedListener = listener
+            }
         }
+
+
 
         private val proposedPath = DirectoryStorage.getSharedInstance().proposedPath
 
@@ -140,6 +154,8 @@
             }
 
             refreshImageGallery(imageFile)
+
+            onImageSavedListener?.onImageSaved(imageFile.path)
         }
 
         private fun refreshImageGallery(srFile: File) {
@@ -208,6 +224,16 @@
                 adjustedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
                 fos.close()
                 MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
+
+                // Check if the file exists and is not empty
+                if (file.exists() && file.length() > 0) {
+                    Log.d("SaveImage", "Image saved successfully: ${file.absolutePath}")
+                    true
+                } else {
+                    Log.d("SaveImage", "Failed to save image: File is empty or does not exist")
+                    false
+                }
+
                 return file.absolutePath // Return the absolute path
             } catch (e: IOException) {
                 e.printStackTrace()

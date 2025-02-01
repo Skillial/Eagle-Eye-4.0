@@ -2,6 +2,7 @@
 package com.bgcoding.camera2api.processing
 
 import LRWarpingOperator
+import android.util.Log
 import com.bgcoding.camera2api.assessment.InputImageEnergyReader
 import com.bgcoding.camera2api.constants.ParameterConfig
 import com.bgcoding.camera2api.io.FileImageReader
@@ -289,6 +290,8 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
                 saveMatrixToImage(
                     fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
                 )
+
+                Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
                 saveHRResultToUserDir(
                     fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
                 )
