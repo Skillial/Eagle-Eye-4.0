@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.media.Image
 import android.media.ImageReader
+import android.os.Environment
 import android.util.Log
 import android.util.Size
 import android.view.View
@@ -25,6 +26,7 @@ import org.opencv.core.Mat
 import org.opencv.core.Scalar
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
+import java.io.File
 import java.nio.FloatBuffer
 
 
@@ -121,19 +123,17 @@ class ImageReaderManager(
         val sessionOptions = OrtSession.SessionOptions()
         sessionOptions.setMemoryPatternOptimization(true)
         sessionOptions.setCPUArenaAllocator(false)
-        sessionOptions.addNnapi()
         sessionOptions.addConfigEntry("session.use_device_memory_mapping", "1")
         sessionOptions.addConfigEntry("session.enable_stream_execution", "1")
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
         val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
-        Log.d("dehaze","models loaded"+getAvailableMemory())
         // Image Loading and Resizing
         val (imSize, hazyImg) = loadAndResize(path, org.opencv.core.Size(512.0, 512.0))
 
         // Preprocessing
         val hazyInput = preprocess(hazyImg, env)
-
+//        Log.d("dehaze", "Hazy input shape: ${hazyInput.shape.contentToString()}")
         // Run Inference
         val albedoOutput: FloatArray? = try {
             ortSessionAlbedo.run(mapOf("input.1" to hazyInput)).use { results ->
@@ -180,7 +180,11 @@ class ImageReaderManager(
             Log.e("dehaze", "Error running transmission inference: ${e.message}", e)
             return
         }
-
+        Log.d("dehaze", "Transmission output size: ${transmissionOutput?.size}")
+        // Sample transmission output values
+        for (i in 0 until 5) {
+            Log.d("dehaze", "Transmission output value $i: ${transmissionOutput?.get(i)}")
+        }
         Log.d("dehaze","transmission output")
 
         val hazyResized = Mat()
@@ -195,94 +199,117 @@ class ImageReaderManager(
             }
         }
 
-        Log.d("dehaze","airlight output")
-
 // Postprocessing
-        val T = transmissionOutput.map { (it * 0.5f) + 0.5f }.toFloatArray() // Apply transformation
+        val T = transmissionOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
+        Log.d("dehaze", "T size: ${T.size}")
+        Log.d("dehaze", "T min: ${T.minOrNull()}, max: ${T.maxOrNull()}")
 
-// Create a Mat from the FloatArray
         val transmissionMat = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
         transmissionMat.put(0, 0, T)
 
-// Resize the Mat
-        val TResized = Mat(hazyImg.size(), CvType.CV_32F)
-        Imgproc.resize(transmissionMat, TResized, hazyImg.size(), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        val TResized = transmissionMat.clone()
 
-// Extract airlight values
         val airlightRed = airlightOutput[0]
         val airlightGreen = airlightOutput[1]
         val airlightBlue = airlightOutput[2]
+        Log.d("dehaze", "Airlight: R=$airlightRed, G=$airlightGreen, B=$airlightBlue")
+        Log.d("dehaze", "Albedo output size: ${albedoOutput.size}")
+        val albedoMat = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32FC3)
+        albedoMat.put(0, 0, albedoOutput) // Make sure albedoOutput is correctly formatted
 
-        println("Airlight output: ${airlightOutput.contentToString()}")
-
-// Use albedoOutput in the dehazing equation
-        val albedoMat = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
-        albedoMat.put(0, 0, albedoOutput)
-
-// Normalize the hazy image
         val hazyImgNorm = Mat()
-        Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32F)
+        Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3) // Important: Use CV_32FC3
 
-// Create a clear image matrix
-        val clearImg = Mat.ones(hazyImgNorm.size(), CvType.CV_32F)
+        val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3) // Initialize as 3-channel
 
-// Reconstruct the clear image using albedo, transmission, and airlight
         for (i in 0 until hazyImgNorm.rows()) {
             for (j in 0 until hazyImgNorm.cols()) {
                 val tVal = TResized.get(i, j)[0]
-                val tValMax = maxOf(tVal, 0.001) // Ensure T is not too small
+                val tValMax = maxOf(tVal, 0.001)
 
-                val clearRed = (hazyImgNorm.get(i, j)[0] - airlightRed * (1 - tVal)) / tValMax
-                val clearGreen = (hazyImgNorm.get(i, j)[1] - airlightGreen * (1 - tVal)) / tValMax
-                val clearBlue = (hazyImgNorm.get(i, j)[2] - airlightBlue * (1 - tVal)) / tValMax
+                val hazyPixel = hazyImgNorm.get(i, j)
+                val albedoPixel = albedoMat.get(i, j)
+                var clearRed = (hazyPixel[0] - airlightRed * (1 - tVal)) / tValMax
+                var clearGreen = (hazyPixel[1] - airlightGreen * (1 - tVal)) / tValMax
+                var clearBlue = (hazyPixel[2] - airlightBlue * (1 - tVal)) / tValMax
 
-                clearImg.put(i, j, clearRed, clearGreen, clearBlue)
+                // Multiply by albedo *BEFORE* clipping
+                clearRed *= albedoPixel[0]
+                clearGreen *= albedoPixel[1]
+                clearBlue *= albedoPixel[2]
+
+//                 Clip individually
+                clearRed = clearRed.coerceIn(0.0, 1.0)
+                clearGreen = clearGreen.coerceIn(0.0, 1.0)
+                clearBlue = clearBlue.coerceIn(0.0, 1.0)
+                if (i == j && i in 0 until 5) {
+                    Log.d("dehaze", "Hazy Pixel ($i, $j): R=${hazyPixel[0]}, G=${hazyPixel[1]}, B=${hazyPixel[2]}")
+                    Log.d("dehaze", "Clear Pixel ($i, $j): R=$clearRed, G=$clearGreen, B=$clearBlue")
+                }
+
+
+                clearImg.put(i, j, clearRed*255.0, clearGreen*255.0, clearBlue*255.0)
             }
         }
-
-// Clip the values to ensure they are within the range [0, 1]
-        Core.minMaxLoc(clearImg).let { minMax ->
-            Core.multiply(clearImg, Scalar(1.0 / minMax.maxVal), clearImg)
+        Log.d("dehaze", "Clear image type: ${clearImg.type()}")
+        for (i in 0 until 5) {
+            val pixel = clearImg.get(i, i)
+            Log.d("dehaze", "Clear Image Pixel ($i, $i): R=${pixel[0]}, G=${pixel[1]}, B=${pixel[2]}")
         }
-        Core.max(clearImg, Scalar(0.0), clearImg)
-        Core.min(clearImg, Scalar(1.0), clearImg)
+// Scale to 0-255 *after* clipping
+//        Core.multiply(clearImg, Scalar(255.0), clearImg)
 
-// Multiply by the albedo to restore the original colors
-        Core.multiply(clearImg, albedoMat, clearImg)
-
-// Scale the image back to the range [0, 255]
-        Core.multiply(clearImg, Scalar(255.0), clearImg)
-
+        Log.d("dehaze", "Clear image type: ${clearImg.type()}")
+        for (i in 0 until 5) {
+            val pixel = clearImg.get(i, i)
+            Log.d("dehaze", "Clear Image Pixel ($i, $i): R=${pixel[0]}, G=${pixel[1]}, B=${pixel[2]}")
+        }
 // Save the dehazed image
         val clearImgResized = Mat()
         Imgproc.resize(clearImg, clearImgResized, imSize, 0.0, 0.0, Imgproc.INTER_CUBIC)
         val clearImgUint8 = Mat()
         clearImgResized.convertTo(clearImgUint8, CvType.CV_8U)
         Imgproc.cvtColor(clearImgUint8, clearImgUint8, Imgproc.COLOR_RGB2BGR)
-        Imgcodecs.imwrite("dehazed_result.png", clearImgUint8)
+
+        val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "DehazeApp")
+        if (!mediaStorageDir.exists()) {
+            mediaStorageDir.mkdirs()  // Create directory if it doesn't exist
+        }
+
+        val file = File(mediaStorageDir, "dehazed_result.png")
+        Imgcodecs.imwrite(file.absolutePath, clearImgUint8)
+
 
         Log.d("dehaze","dehazed image saved")
     }
 
     private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
-        // Convert the image to a float array and normalize
         val imgFloat = Mat()
-        img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0) // Normalize to [0, 1]
+        img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0) // Normalize to [0,1]
 
-        // Subtract mean and divide by std (normalization)
-        val mean = floatArrayOf(0.5f, 0.5f, 0.5f)
-        val std = floatArrayOf(0.5f, 0.5f, 0.5f)
-        Core.subtract(imgFloat, Scalar(mean[0].toDouble(), mean[1].toDouble(), mean[2].toDouble()), imgFloat)
-        Core.divide(imgFloat, Scalar(std[0].toDouble(), std[1].toDouble(), std[2].toDouble()), imgFloat)
+        // Ensure RGB format before reordering
+        Imgproc.cvtColor(imgFloat, imgFloat, Imgproc.COLOR_BGR2RGB)
 
-        // Convert the Mat to a FloatBuffer
-        val floatBuffer = FloatBuffer.allocate(imgFloat.rows() * imgFloat.cols() * imgFloat.channels())
-        imgFloat.get(0, 0, floatBuffer.array())
+        // Convert Mat to FloatBuffer (HWC → CHW)
+        val chwData = FloatArray(3 * img.rows() * img.cols())
+        val channels = mutableListOf(Mat(), Mat(), Mat())
+        Core.split(imgFloat, channels)  // Split channels
 
-        // Create an OnnxTensor from the FloatBuffer
-        val shape = longArrayOf(1, imgFloat.channels().toLong(), imgFloat.rows().toLong(), imgFloat.cols().toLong())
-        return OnnxTensor.createTensor(env, floatBuffer, shape)
+        val height = img.rows()
+        val width = img.cols()
+
+        for (i in 0 until height) {
+            for (j in 0 until width) {
+                chwData[i * width + j] = channels[0].get(i, j)[0].toFloat() // R
+                chwData[height * width + i * width + j] = channels[1].get(i, j)[0].toFloat() // G
+                chwData[2 * height * width + i * width + j] = channels[2].get(i, j)[0].toFloat() // B
+            }
+        }
+
+        val inputShape = longArrayOf(1, 3, img.rows().toLong(), img.cols().toLong())
+        return OnnxTensor.createTensor(env, FloatBuffer.wrap(chwData), inputShape)
     }
+
 
 
     private fun handleImage(bitmap: Bitmap) {
