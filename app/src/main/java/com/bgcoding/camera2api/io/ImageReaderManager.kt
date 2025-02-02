@@ -60,9 +60,7 @@ class ImageReaderManager(
         imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(reader: ImageReader?) {
                 val image = reader?.acquireNextImage()
-                image?.let {
-                    processImage(it)
-                }
+                image?.let { processImage(it) }
             }
         }, cameraController.getHandler())
     }
@@ -72,48 +70,38 @@ class ImageReaderManager(
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
         image.close()
-
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-//        handleImage(bitmap)
+//        handleSuperResolutionImage(bitmap)
+        handleDehazeImage(bitmap)
+    }
+
+    private fun handleDehazeImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
-            lateinit var fileName: String
-            val saveJob = launch {
-                FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
-                    fileName = it
-                }
-            }
-            saveJob.join()
-            Log.d("dehaze","image saved")
-            dehazeImage(fileName)
+            val fileName = FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
+            bitmap.recycle()
+            fileName?.let { dehazeImage(it) }
         }
     }
 
     private fun loadAndResize(imagePath: String, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
-
         val img = Imgcodecs.imread(imagePath)
         if (img.empty()) {
             throw IllegalArgumentException("Image not found: $imagePath")
         }
         val imSize = org.opencv.core.Size(img.cols().toDouble(), img.rows().toDouble())
-        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)  // Convert to RGB
-        Imgproc.resize(img, img, size)  // Resize the image
+        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
+        Imgproc.resize(img, img, size)
         return Pair(imSize, img)
     }
 
-    private fun loadAndResizeFromAssets( imagePath: String, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
-        // Load image from assets
-        val assetManager = context.assets
+    private fun loadAndResizeFromAssets(imagePath: String, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
         val inputStream: InputStream
         try {
-            inputStream = assetManager.open("model/dehaze-test/try.png")  // Open image from assets
+            inputStream = context.assets.open("model/dehaze-test/try.png")
         } catch (e: Exception) {
             throw IllegalArgumentException("Image not found in assets: $imagePath")
         }
-
-        // Convert the InputStream to a ByteArray
         val byteArray = inputStream.readBytes()
-
-        // Create a Mat from the byte array
         val matOfByte = org.opencv.core.MatOfByte(*byteArray)
         val img = Imgcodecs.imdecode(matOfByte, Imgcodecs.IMREAD_COLOR)
 
@@ -122,11 +110,12 @@ class ImageReaderManager(
         }
 
         val imSize = org.opencv.core.Size(img.cols().toDouble(), img.rows().toDouble())
-        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)  // Convert to RGB
-        Imgproc.resize(img, img, size)  // Resize the image
+        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
+        Imgproc.resize(img, img, size)
 
         return Pair(imSize, img)
     }
+
     private fun loadModelFromAssets(env: OrtEnvironment, sessionOptions: OrtSession.SessionOptions, modelPath: String): OrtSession {
         return context.assets.open(modelPath).use { inputStream ->
             val modelBytes = inputStream.readBytes()
@@ -147,8 +136,8 @@ class ImageReaderManager(
 
         return availableMemoryMB // Returns available memory in MB
     }
+
     fun dehazeImage(path: String) {
-        // Load ONNX models (REPLACE WITH YOUR ACTUAL PATHS)
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions()
         sessionOptions.setMemoryPatternOptimization(true)
@@ -156,23 +145,20 @@ class ImageReaderManager(
         sessionOptions.addConfigEntry("session.use_device_memory_mapping", "1")
         sessionOptions.addConfigEntry("session.enable_stream_execution", "1")
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
-        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
-        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
-        // Image Loading and Resizing
+
         val (imSize, hazyImg) = loadAndResizeFromAssets(path, org.opencv.core.Size(512.0, 512.0))
 
-        // Preprocessing
         val hazyInput = preprocess(hazyImg, env)
-//        Log.d("dehaze", "Hazy input shape: ${hazyInput.shape.contentToString()}")
-        // Run Inference
-        val albedoOutput: FloatArray? = try {
+        var albedoOutput: FloatArray? = try {
             ortSessionAlbedo.run(mapOf("input.1" to hazyInput)).use { results ->
                 val output = results.get(0)
                 if (output is OnnxTensor) {
-                    val floatBuffer = output.floatBuffer
-                    val floatArray = FloatArray(floatBuffer.remaining()) // Ensure correct size
-                    floatBuffer.get(floatArray) // Read data properly
-                    floatArray
+                    output.use { tensor ->
+                        val floatBuffer = tensor.floatBuffer
+                        val floatArray = FloatArray(floatBuffer.remaining())
+                        floatBuffer.get(floatArray)
+                        return@use floatArray
+                    }
                 } else {
                     throw IllegalStateException("Unexpected output type: ${output::class.java}")
                 }
@@ -180,6 +166,9 @@ class ImageReaderManager(
         } catch (e: Exception) {
             Log.e("dehaze", "Error running albedo inference: ${e.message}", e)
             null
+        } finally {
+            hazyInput.close()
+            ortSessionAlbedo.close()
         }
 
         if (albedoOutput == null) {
@@ -189,83 +178,92 @@ class ImageReaderManager(
 
         Log.d("dehaze", "Albedo output computed successfully")
 
+        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
 
-
-// Prepare albedoOutput as input for ortSessionTransmission
-        val transmissionInput = try {
-            val inputShape = longArrayOf(1, 3, 512, 512) // Ensure this matches expected shape
-            OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), inputShape)
+        val transmissionInput: OnnxTensor? = try {
+            val inputShape = longArrayOf(1, 3, 512, 512)
+            val tensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), inputShape)
+            tensor
         } catch (e: Exception) {
             Log.e("dehaze", "Error creating transmission input tensor: ${e.message}", e)
+            null
+        }
+        albedoOutput = null
+        if (transmissionInput == null) {
+            Log.e("dehaze", "Transmission input tensor creation failed, skipping transmission inference")
             return
         }
 
-// Run ortSessionTransmission inference
-        val transmissionOutput = try {
+        var transmissionOutput: FloatArray? = try {
             ortSessionTransmission.run(mapOf("input.1" to transmissionInput)).use { results ->
-//                val output = results.get(0)
-//                if (output is OnnxTensor) {
-//                    output.floatBuffer.array() // Convert to FloatArray
-//                } else {
-//                    throw IllegalStateException("Unexpected output type: ${output::class.java}")
-//                }
                 val output = results.get(0)
                 if (output is OnnxTensor) {
-                    val floatBuffer = output.floatBuffer
-                    val floatArray = FloatArray(floatBuffer.remaining()) // Ensure correct size
-                    floatBuffer.get(floatArray) // Read data properly
-                    floatArray
+                    output.use { tensor -> // Ensures OnnxTensor is closed
+                        val floatBuffer = tensor.floatBuffer
+                        val floatArray = FloatArray(floatBuffer.remaining())
+                        floatBuffer.get(floatArray)
+                        return@use floatArray
+                    }
                 } else {
                     throw IllegalStateException("Unexpected output type: ${output::class.java}")
                 }
             }
         } catch (e: Exception) {
             Log.e("dehaze", "Error running transmission inference: ${e.message}", e)
-            return
+            null
+        } finally {
+            transmissionInput.close()
+            ortSessionTransmission.close()
         }
+        var T: FloatArray? = transmissionOutput?.map { (it * 0.5f) + 0.5f }?.toFloatArray()
+        transmissionOutput = null
 
-        Log.d("dehaze", "Transmission output size: ${transmissionOutput?.size}")
-        // Sample transmission output values
-        for (i in 0 until 5) {
-            Log.d("dehaze", "Transmission output value $i: ${transmissionOutput?.get(i)}")
-        }
-        Log.d("dehaze","transmission output")
+        val TResized = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
+        TResized.put(0, 0, T)
+
+
+        Log.d("dehaze", "transmission output")
 
         val hazyResized = Mat()
         Imgproc.resize(hazyImg, hazyResized, org.opencv.core.Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
         val airlightInput = preprocess(hazyResized, env)
-        val airlightOutput = ortSessionAirlight.run(mapOf("input.1" to airlightInput)).use { results ->
-            val output = results.get(0)
-            if (output is OnnxTensor) {
-                output.floatBuffer.array() // Convert to FloatArray
-            } else {
-                throw IllegalStateException("Unexpected output type: ${output::class.java}")
+        hazyResized.release()
+        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
+        sessionOptions.close()
+        var airlightOutput: FloatArray? = try {
+            ortSessionAirlight.run(mapOf("input.1" to airlightInput)).use { results ->
+                val output = results.get(0)
+                if (output is OnnxTensor) {
+                    output.floatBuffer.array()
+                } else {
+                    throw IllegalStateException("Unexpected output type: ${output::class.java}")
+                }
             }
+        } catch (e: Exception) {
+            Log.e("dehaze", "Error running airlight inference: ${e.message}", e)
+            null
+        } finally {
+            airlightInput.close()
+            ortSessionAirlight.close()
         }
 
-// Postprocessing
-        val T = transmissionOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
-        Log.d("dehaze", "T size: ${T.size}")
-        Log.d("dehaze", "T min: ${T.minOrNull()}, max: ${T.maxOrNull()}")
-        Log.d("dehaze", "hazyImg size: ${hazyImg.rows()} x ${hazyImg.cols()}")
-        Log.d("dehaze", "Expected T size: ${hazyImg.rows() * hazyImg.cols()}")
-
-        val transmissionMat = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
-        transmissionMat.put(0, 0, T)
-
-        val TResized = transmissionMat.clone()
+        if (airlightOutput == null) {
+            Log.e("dehaze", "Airlight inference failed, skipping dehazing")
+            return
+        }
+        Log.d("dehaze", "Airlight output")
 
         val airlightRed = airlightOutput[0]
         val airlightGreen = airlightOutput[1]
         val airlightBlue = airlightOutput[2]
-        Log.d("dehaze", "Airlight: R=$airlightRed, G=$airlightGreen, B=$airlightBlue")
-        Log.d("dehaze", "Albedo output size: ${albedoOutput.size}")
 
+        airlightOutput = null
 
         val hazyImgNorm = Mat()
-        Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3) // Important: Use CV_32FC3
+        Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
+        hazyImg.release()
 
-        val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3) // Initialize as 3-channel
+        val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3)
 
         for (i in 0 until hazyImgNorm.rows()) {
             for (j in 0 until hazyImgNorm.cols()) {
@@ -277,71 +275,54 @@ class ImageReaderManager(
                 var clearGreen = (hazyPixel[1] - airlightGreen * (1 - tVal)) / tValMax
                 var clearBlue = (hazyPixel[2] - airlightBlue * (1 - tVal)) / tValMax
 
-
-//                 Clip individually
                 clearRed = clearRed.coerceIn(0.0, 1.0)
                 clearGreen = clearGreen.coerceIn(0.0, 1.0)
                 clearBlue = clearBlue.coerceIn(0.0, 1.0)
-                if (i == j && i in 0 until 5) {
-                    Log.d("dehaze", "Hazy Pixel ($i, $j): R=${hazyPixel[0]}, G=${hazyPixel[1]}, B=${hazyPixel[2]}")
-                    Log.d("dehaze", "Clear Pixel ($i, $j): R=$clearRed, G=$clearGreen, B=$clearBlue")
-                }
 
-
-                clearImg.put(i, j, clearRed*255.0, clearGreen*255.0, clearBlue*255.0)
+                clearImg.put(i, j, clearRed * 255.0, clearGreen * 255.0, clearBlue * 255.0)
             }
         }
+        hazyImgNorm.release()
 
-// Scale to 0-255 *after* clipping
-//        Core.multiply(clearImg, Scalar(255.0), clearImg)
-
-// Save the dehazed image
         val clearImgResized = Mat()
         Imgproc.resize(clearImg, clearImgResized, imSize, 0.0, 0.0, Imgproc.INTER_CUBIC)
-        val clearImgUint8 = Mat()
-        clearImgResized.convertTo(clearImgUint8, CvType.CV_8U)
-        Imgproc.cvtColor(clearImgUint8, clearImgUint8, Imgproc.COLOR_RGB2BGR)
+        clearImg.release()
+        clearImgResized.convertTo(clearImgResized, CvType.CV_8U)
+        Imgproc.cvtColor(clearImgResized, clearImgResized, Imgproc.COLOR_RGB2BGR)
 
         val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "DehazeApp")
         if (!mediaStorageDir.exists()) {
-            mediaStorageDir.mkdirs()  // Create directory if it doesn't exist
+            mediaStorageDir.mkdirs()
         }
 
-        val drfile = File(mediaStorageDir, "dehazed_result.png")
-        Imgcodecs.imwrite(drfile.absolutePath, clearImgUint8)
+        val file = File(mediaStorageDir, "dehazed_result.png")
+        Imgcodecs.imwrite(file.absolutePath, clearImgResized)
+        clearImgResized.release()
 
-
-        val TrFile = File(mediaStorageDir, "transmission_result.png")
-        Imgcodecs.imwrite(TrFile.absolutePath, transmissionMat)
-
-
-        Log.d("dehaze","dehazed image saved")
+        Log.d("dehaze", "dehazed image saved")
     }
 
     private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
         val imgFloat = Mat()
-        img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0) // Scale to [0, 1]
+        img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0)
 
-// Normalize to [-1, 1] (Equivalent to transforms.Normalize)
-        Core.subtract(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat) // Subtract mean
-        Core.divide(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)   // Divide by std
+        Core.subtract(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)
+        Core.divide(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)
 
-        // Ensure RGB format before reordering
         Imgproc.cvtColor(imgFloat, imgFloat, Imgproc.COLOR_BGR2RGB)
 
-        // Convert Mat to FloatBuffer (HWC → CHW)
         val chwData = FloatArray(3 * img.rows() * img.cols())
         val channels = mutableListOf(Mat(), Mat(), Mat())
-        Core.split(imgFloat, channels)  // Split channels
+        Core.split(imgFloat, channels)
 
         val height = img.rows()
         val width = img.cols()
 
         for (i in 0 until height) {
             for (j in 0 until width) {
-                chwData[i * width + j] = channels[0].get(i, j)[0].toFloat() // R
-                chwData[height * width + i * width + j] = channels[1].get(i, j)[0].toFloat() // G
-                chwData[2 * height * width + i * width + j] = channels[2].get(i, j)[0].toFloat() // B
+                chwData[i * width + j] = channels[0].get(i, j)[0].toFloat()
+                chwData[height * width + i * width + j] = channels[1].get(i, j)[0].toFloat()
+                chwData[2 * height * width + i * width + j] = channels[2].get(i, j)[0].toFloat()
             }
         }
 
@@ -350,8 +331,7 @@ class ImageReaderManager(
     }
 
 
-
-    private fun handleImage(bitmap: Bitmap) {
+    private fun handleSuperResolutionImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
             val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
             val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
