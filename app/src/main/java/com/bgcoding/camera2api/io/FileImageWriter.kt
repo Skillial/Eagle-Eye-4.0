@@ -1,6 +1,7 @@
 package com.bgcoding.camera2api.io
 
 import android.app.Activity
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
@@ -109,24 +110,51 @@ class FileImageWriter private constructor(private val context: Context) {
     @Synchronized
     fun saveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Use MediaStore for API 29+
             val contentResolver = context.contentResolver
+            val selection = "${MediaStore.Images.Media.DISPLAY_NAME} = ?"
+
+            val projection = arrayOf(MediaStore.Images.Media._ID)
+            val selectionArgs = arrayOf("$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+            // Check if file exists and delete it
+            val cursor = contentResolver?.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )
+
+            Log.i(TAG, "Checking if file exists: $fileName")
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    // Check if file exists
+                    Log.i(TAG, "Trying to delete file: $fileName")
+                    val id = it.getLong(it.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                    val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                    val rowsDeleted = contentResolver.delete(uri, null, null)
+                    if (rowsDeleted > 0) {
+                        Log.d(TAG, "Deleted existing file: $fileName")
+                    } else {
+                        Log.e(TAG, "Failed to delete existing file: $fileName")
+                    }
+                }
+            }
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg") // Adjust MIME type as needed
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending
+                put(MediaStore.Images.Media.IS_PENDING, 1)
             }
 
             val uri: Uri? = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
             if (uri != null) {
                 try {
-                    val outputStream = contentResolver.openOutputStream(uri)
-                    if (outputStream != null) {
+                    contentResolver.openOutputStream(uri)?.use { outputStream ->
                         val buffer = MatOfByte()
                         Imgcodecs.imencode(ImageFileAttribute.getFileExtension(fileType), mat, buffer)
                         outputStream.write(buffer.toArray())
-                        outputStream.close()
                     }
                     // Mark as complete
                     values.clear()
@@ -150,10 +178,40 @@ class FileImageWriter private constructor(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // Use MediaStore for API 29+
             val contentResolver = context.contentResolver
+            val projection = arrayOf(MediaStore.Images.Media._ID)
+            val selection = "${MediaStore.Images.Media.DISPLAY_NAME} = ?"
+            val selectionArgs = arrayOf("$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+
+            // Check if file exists
+            val cursor = contentResolver?.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )
+            Log.i(TAG, "Checking if file exists: $fileName")
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val id = it.getLong(it.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                    val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                    val rowsDeleted = contentResolver.delete(uri, null, null)
+                    if (rowsDeleted > 0) {
+                        Log.d(TAG, "Deleted existing file: $fileName")
+                        // Ensure deletion is processed by waiting a moment
+                        Thread.sleep(500) // Small delay to allow MediaStore to update
+                    } else {
+                        Log.e(TAG, "Failed to delete existing file: $fileName")
+                    }
+                }
+            }
+
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg") // Adjust MIME type as needed
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/SR0")
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
                 put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending
             }
 
@@ -186,35 +244,47 @@ class FileImageWriter private constructor(private val context: Context) {
 
     @Synchronized
     fun saveMatrixToImage(mat: Mat, directory: String, fileName: String, fileType: ImageFileAttribute.FileType) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Use MediaStore for API 29+
-            val contentResolver = context.contentResolver
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg") // Adjust MIME type as needed
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/SR0/$directory")
-                put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending
-            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentResolver = context.contentResolver
+                val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                val selection = "${MediaStore.Images.Media.DISPLAY_NAME} = ?"
+                val selectionArgs = arrayOf(fileName)
 
-            val uri: Uri? = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                try {
-                    val outputStream = contentResolver.openOutputStream(uri)
-                    if (outputStream != null) {
-                        val buffer = MatOfByte()
-                        Imgcodecs.imencode(ImageFileAttribute.getFileExtension(fileType), mat, buffer)
-                        outputStream.write(buffer.toArray())
-                        outputStream.close()
+                // Check if file exists
+                val cursor = contentResolver.query(collection, arrayOf(MediaStore.Images.Media._ID), selection, selectionArgs, null)
+                if (cursor != null) {
+                    if (cursor.moveToFirst()) {
+                        val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID))
+                        val existingUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                        contentResolver.delete(existingUri, null, null) // Delete existing file
                     }
-                    // Mark as complete
-                    values.clear()
-                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                    contentResolver.update(uri, values, null, null)
-                    Log.d(TAG, "Saved using MediaStore: $fileName in $directory")
-                } catch (e: IOException) {
-                    Log.e(TAG, "Failed to save image: ${e.message}")
+                    cursor.close()
                 }
-            }
+
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+
+                val uri: Uri? = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            val buffer = MatOfByte()
+                            Imgcodecs.imencode(ImageFileAttribute.getFileExtension(fileType), mat, buffer)
+                            outputStream.write(buffer.toArray())
+                        }
+                        // Mark as complete
+                        values.clear()
+                        values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                        contentResolver.update(uri, values, null, null)
+                        Log.d(TAG, "Saved using MediaStore: $fileName")
+                    } catch (e: IOException) {
+                        Log.e(TAG, "Failed to save image: ${e.message}")
+                    }
+                }
         } else {
             // Use traditional file system for API < 29
             val dirFile = File(proposedPath + "/$directory")

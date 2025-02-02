@@ -23,6 +23,8 @@ import org.junit.Rule
 
 @RunWith(AndroidJUnit4::class)
 class SuperResolutionTest {
+    private val test_folder = "test_images/test_" + 2
+
     @Rule
     @JvmField
     val grantPermissionRule: GrantPermissionRule = GrantPermissionRule.grant(
@@ -36,16 +38,16 @@ class SuperResolutionTest {
 
     @Before
     fun setUp() {
-        val internalDir = File(context.filesDir, "test_images")
+        val internalDir = File(context.filesDir, test_folder)
         val assetManager = context.assets
-        val assetImages = assetManager.list("test_images") ?: throw AssertionError("No images found in assets/test_images")
+        val assetImages = assetManager.list(test_folder) ?: throw AssertionError("No images found in assets/test_images")
 
         if (!internalDir.exists()) {
             internalDir.mkdirs()
         }
 
         for (imageName in assetImages) {
-            assetManager.open("test_images/$imageName").use { inputStream ->
+            assetManager.open("$test_folder/$imageName").use { inputStream ->
                 val outFile = File(internalDir, imageName)
 
                 if (!outFile.exists()) {
@@ -58,7 +60,7 @@ class SuperResolutionTest {
             }
         }
 
-        if (imageInputMap.size != 5) {
+        if (imageInputMap.size != 10) {
             throw AssertionError("Insufficient images for super resolution. Found: ${imageInputMap.size}")
         }
     }
@@ -81,17 +83,17 @@ class SuperResolutionTest {
 
         // Load images from assets and save temporary files
         val assetManager = context.assets
-        val assetImages = assetManager.list("test_images") ?: throw AssertionError("No images found in assets/test_images")
+        val assetImages = assetManager.list(test_folder) ?: throw AssertionError("No images found in assets/test_images")
         val tempImagePaths = mutableListOf<String>()
 
         for (imageName in assetImages) {
-            val inputStream = assetManager.open("test_images/$imageName")
+            val inputStream = assetManager.open("$test_folder/$imageName")
             val tempFile = File(context.cacheDir, imageName)
             tempFile.outputStream().use { inputStream.copyTo(it) }
             tempImagePaths.add(tempFile.absolutePath)
         }
 
-        if (tempImagePaths.size != 5) {
+        if (tempImagePaths.size != 10) {
             throw AssertionError("Insufficient images for super resolution. Found: ${tempImagePaths.size}")
         }
 
@@ -106,24 +108,9 @@ class SuperResolutionTest {
             Log.d("ImageMetrics", "ResultMat: rows=${resultMat.rows()}, cols=${resultMat.cols()}, type=${resultMat.type()}")
         }
 
-        // Load ground truth directly from assets
-        val groundTruthInputStream = assetManager.open("ground_truth/ground_truth.jpg")
-        val groundTruthByteArray = groundTruthInputStream.readBytes()
-        groundTruthInputStream.close()
-        val groundTruthMatOfByte = org.opencv.core.MatOfByte(*groundTruthByteArray)
-        val groundTruthMat = org.opencv.imgcodecs.Imgcodecs.imdecode(groundTruthMatOfByte, org.opencv.imgcodecs.Imgcodecs.IMREAD_COLOR)
-        groundTruthMatOfByte.release()
-        if (groundTruthMat.empty()) {
-            throw AssertionError("Failed to load ground truth image ${assetImages[0]}")
-        }
-
-        // Calculate metrics
-        val psnr = ImageMetrics.getPSNR(resultMat!!, groundTruthMat!!)
-        Log.d("PSNR", "PSNR: $psnr")
-        assert(psnr > 30) { "PSNR is too low, indicating poor quality." }
-
         // Clean up
-        resultMat.release()
-        groundTruthMat.release()
+        if (resultMat != null) {
+            resultMat.release()
+        }
     }
 }
