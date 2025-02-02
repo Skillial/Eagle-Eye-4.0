@@ -58,7 +58,7 @@ class ImageReaderManager(
         image.close()
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         handleSuperResolutionImage(bitmap)
-        handleDehazeImage(bitmap)
+//        handleDehazeImage(bitmap)
     }
 
     private fun handleDehazeImage(bitmap: Bitmap) {
