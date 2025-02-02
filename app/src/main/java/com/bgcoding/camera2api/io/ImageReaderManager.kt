@@ -7,6 +7,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.media.Image
 import android.media.ImageReader
 import android.os.Environment
@@ -19,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -75,37 +77,41 @@ class ImageReaderManager(
     }
 
     private fun handleDehazeImage(bitmap: Bitmap) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val fileName = FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
-            bitmap.recycle()
-            fileName?.let { dehazeImage(it) }
-        }
+        dehazeImage(bitmap)
     }
+    private fun loadAndResize(bitmap: Bitmap, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
+        val matrix = Matrix()
+        matrix.postRotate(90f)
+        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 
-    private fun loadAndResize(imagePath: String, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
-        val img = Imgcodecs.imread(imagePath)
+        val img = Mat()
+        Utils.bitmapToMat(rotatedBitmap, img)
+
         if (img.empty()) {
-            throw IllegalArgumentException("Image not found: $imagePath")
+            throw IllegalArgumentException("Image conversion failed")
         }
+
         val imSize = org.opencv.core.Size(img.cols().toDouble(), img.rows().toDouble())
-        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
+
         Imgproc.resize(img, img, size)
+
         return Pair(imSize, img)
     }
 
-    private fun loadAndResizeFromAssets(imagePath: String, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
+
+    private fun loadAndResizeFromAssets (size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
         val inputStream: InputStream
         try {
             inputStream = context.assets.open("model/dehaze-test/try.png")
         } catch (e: Exception) {
-            throw IllegalArgumentException("Image not found in assets: $imagePath")
+            throw IllegalArgumentException("Image not found in assets")
         }
         val byteArray = inputStream.readBytes()
         val matOfByte = org.opencv.core.MatOfByte(*byteArray)
         val img = Imgcodecs.imdecode(matOfByte, Imgcodecs.IMREAD_COLOR)
 
         if (img.empty()) {
-            throw IllegalArgumentException("Image decoding failed: $imagePath")
+            throw IllegalArgumentException("Image decoding failed")
         }
 
         val imSize = org.opencv.core.Size(img.cols().toDouble(), img.rows().toDouble())
@@ -122,7 +128,7 @@ class ImageReaderManager(
         }
     }
 
-    private fun dehazeImage(path: String) {
+    private fun dehazeImage(bitmap: Bitmap) {
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions().apply {
             setMemoryPatternOptimization(true)
@@ -131,7 +137,8 @@ class ImageReaderManager(
         }
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
 
-        val (imSize, hazyImg) = loadAndResizeFromAssets(path, org.opencv.core.Size(512.0, 512.0))
+//        val (imSize, hazyImg) = loadAndResize(bitmap, org.opencv.core.Size(512.0, 512.0))
+        val (imSize, hazyImg) = loadAndResizeFromAssets(org.opencv.core.Size(512.0, 512.0))
 
         val hazyInput = preprocess(hazyImg, env)
         val albedoOutput = hazyInput.use { input ->
@@ -141,7 +148,6 @@ class ImageReaderManager(
                 }
             }
         }
-
 
         Log.d("dehaze", "Albedo output computed successfully")
 
@@ -157,7 +163,6 @@ class ImageReaderManager(
             }
         }
 
-
         val T: FloatArray = transmissionOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
 
         val TResized = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
@@ -168,10 +173,13 @@ class ImageReaderManager(
 
         val hazyResized = Mat()
         Imgproc.resize(hazyImg, hazyResized, org.opencv.core.Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+
         val airlightInput = preprocess(hazyResized, env)
         hazyResized.release()
+
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
         sessionOptions.close()
+
         val airlightOutput = airlightInput.use { input ->
             ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
                 (results.get(0) as OnnxTensor).floatBuffer.array()
@@ -183,7 +191,6 @@ class ImageReaderManager(
         val airlightRed = airlightOutput[0]
         val airlightGreen = airlightOutput[1]
         val airlightBlue = airlightOutput[2]
-
 
         val hazyImgNorm = Mat()
         Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
@@ -214,6 +221,7 @@ class ImageReaderManager(
         val clearImgResized = Mat()
         Imgproc.resize(clearImg, clearImgResized, imSize, 0.0, 0.0, Imgproc.INTER_CUBIC)
         clearImg.release()
+
         clearImgResized.convertTo(clearImgResized, CvType.CV_8U)
         Imgproc.cvtColor(clearImgResized, clearImgResized, Imgproc.COLOR_RGB2BGR)
 
