@@ -57,10 +57,25 @@ class ImageReaderManager(
         buffer.get(bytes)
         image.close()
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        handleSuperResolutionImage(bitmap)
-//        handleDehazeImage(bitmap)
+        val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+        val isDehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
+        if (isSuperResolutionEnabled) {
+            handleSuperResolutionImage(bitmap)
+        } else if (isDehazeEnabled) {
+            handleDehazeImage(bitmap)
+        } else {
+            handleNormalImage(bitmap)
+        }
     }
-
+    private fun handleNormalImage(bitmap: Bitmap) {
+        CoroutineScope(Dispatchers.IO).launch {
+            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
+            withContext(Dispatchers.Main) {
+                loadingBox.visibility = View.GONE
+            }
+        }
+    }
     private fun handleDehazeImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.Main).launch {
             withContext(Dispatchers.IO) {
@@ -85,7 +100,7 @@ class ImageReaderManager(
 
                 saveJob.join() // Ensures the file is saved before checking the count
 
-                if (imageInputMap.size == 5) {
+                if (imageInputMap.size == 10) {
                     // Run super resolution asynchronously
                     launch {
                         concreteSuperResolution.superResolutionImage(imageInputMap)
