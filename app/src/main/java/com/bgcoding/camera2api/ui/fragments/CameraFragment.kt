@@ -97,16 +97,36 @@ class CameraFragment : Fragment() {
         val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_menu, null)
         val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
-        popupWindow.showAsDropDown(view?.findViewById(R.id.button), 0, 0)
 
         val switch1: Switch = popupView.findViewById(R.id.switch1)
+        val switch2: Switch = popupView.findViewById(R.id.switch2)
         val sharedPreferences = requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
         switch1.isChecked = sharedPreferences.getBoolean("super_resolution_enabled", false)
-
+        switch2.isChecked = sharedPreferences.getBoolean("dehaze_enabled", false)
         switch1.setOnCheckedChangeListener { _, isChecked ->
             val editor = sharedPreferences.edit()
             editor.putBoolean("super_resolution_enabled", isChecked)
+            if (isChecked) {
+                editor.putBoolean("super_resolution_enabled", true)
+                editor.putBoolean("dehaze_enabled", false)
+                switch2.isChecked = false
+            } else {
+                editor.putBoolean("super_resolution_enabled", false)
+            }
             editor.apply()
         }
+        switch2.setOnCheckedChangeListener { _, isChecked ->
+            val editor = sharedPreferences.edit()
+            editor.putBoolean("dehaze_enabled", isChecked)
+            if (isChecked) {
+                editor.putBoolean("dehaze_enabled", true)
+                editor.putBoolean("super_resolution_enabled", false)
+                switch1.isChecked = false
+            } else {
+                editor.putBoolean("dehaze_enabled", false)
+            }
+            editor.apply()
+        }
+        popupWindow.showAsDropDown(view?.findViewById(R.id.button), 0, 0)
     }
 }
