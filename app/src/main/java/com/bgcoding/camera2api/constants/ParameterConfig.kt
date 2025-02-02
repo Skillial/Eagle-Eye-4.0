@@ -41,7 +41,7 @@ class ParameterConfig private constructor(appContext: Context) {
 
         @JvmStatic
         fun getScalingFactor(): Int {
-            return sharedInstance?.sharedPrefs?.getInt(SCALE_KEY, 1) ?: 1
+            return sharedInstance?.sharedPrefs?.getInt(SCALE_KEY, 2) ?: 2 // change to 2
         }
 
         @JvmStatic

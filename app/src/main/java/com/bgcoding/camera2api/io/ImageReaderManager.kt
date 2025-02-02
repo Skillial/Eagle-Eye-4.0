@@ -9,9 +9,13 @@ import android.media.ImageReader
 import android.util.Log
 import android.util.Size
 import android.view.View
-import com.bgcoding.camera2api.MainActivity
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.bgcoding.camera2api.processing.dehaze.SynthDehaze
 
 class ImageReaderManager(
     private val context: Context,
@@ -42,9 +46,7 @@ class ImageReaderManager(
         imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
             override fun onImageAvailable(reader: ImageReader?) {
                 val image = reader?.acquireNextImage()
-                image?.let {
-                    processImage(it)
-                }
+                image?.let { processImage(it) }
             }
         }, cameraController.getHandler())
     }
@@ -54,31 +56,54 @@ class ImageReaderManager(
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
         image.close()
-
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        handleImage(bitmap)
+        handleSuperResolutionImage(bitmap)
+//        handleDehazeImage(bitmap)
     }
 
-    private fun handleImage(bitmap: Bitmap) {
-        val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+    private fun handleDehazeImage(bitmap: Bitmap) {
+        CoroutineScope(Dispatchers.Main).launch {
+            withContext(Dispatchers.IO) {
+                SynthDehaze(context).dehazeImage(bitmap)
+            }
+            loadingBox.visibility = View.GONE
+        }
+    }
 
-        if (isSuperResolutionEnabled) {
-            Log.i("Main", "Super Resolution is toggled. Performing Super Resolution.")
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let { imageInputMap.add(it) }
-            if (imageInputMap.size == 5) {
-                concreteSuperResolution.superResolutionImage(imageInputMap)
-                imageInputMap.clear()
-                (context as MainActivity).runOnUiThread {
+
+    private fun handleSuperResolutionImage(bitmap: Bitmap) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+            val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+
+            if (isSuperResolutionEnabled) {
+                val saveJob = launch {
+                    FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
+                        imageInputMap.add(it)
+                    }
+                }
+
+                saveJob.join() // Ensures the file is saved before checking the count
+
+                if (imageInputMap.size == 5) {
+                    // Run super resolution asynchronously
+                    launch {
+                        concreteSuperResolution.superResolutionImage(imageInputMap)
+                        withContext(Dispatchers.Main) {
+                            loadingBox.visibility = View.GONE
+                        }
+                        imageInputMap.clear()
+                    }
+                }
+            } else {
+                Log.i("Main", "No IE is toggled. Saving a single image to device.")
+                launch { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.join()
+
+                withContext(Dispatchers.Main) {
                     loadingBox.visibility = View.GONE
                 }
             }
-        } else {
-            Log.i("Main", "No IE is toggled. Saving a single image to device.")
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
-            (context as MainActivity).runOnUiThread {
-                loadingBox.visibility = View.GONE
-            }
         }
     }
+
 }

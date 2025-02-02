@@ -12,6 +12,8 @@ composeBom = "2023.08.00"
 fragmentKtx = "1.8.5"
 appcompat = "1.7.0"
 material = "1.12.0"
+onnxruntimeAndroidVersion = "1.20.0"
+onnxruntimeMobile = "1.15.0"
 
 [libraries]
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
@@ -32,6 +34,8 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntimeAndroidVersion" }
+onnxruntime-mobile = { module = "com.microsoft.onnxruntime:onnxruntime-mobile", version.ref = "onnxruntimeMobile" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
