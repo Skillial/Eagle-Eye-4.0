@@ -101,13 +101,41 @@
         }
 
         @Synchronized
+        fun saveBitmapToUserDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType) {
+            val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
+            val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
+            val imageFileName = "IMG_$timeStamp"
+            val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+
+            try {
+                FileOutputStream(imageFile).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                }
+                Log.d(TAG, "Saved: ${imageFile.absolutePath}")
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+
+            refreshImageGallery(imageFile)
+        }
+
+        @Synchronized
+        fun saveMatToUserDir(mat: Mat, fileType: ImageFileAttribute.FileType) {
+            val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
+            val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
+            val imageFileName = "IMG_$timeStamp"
+            val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            Imgcodecs.imwrite(imageFile.absolutePath, mat)
+
+            refreshImageGallery(imageFile)
+        }
+
+        @Synchronized
         fun saveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {
             val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
             Log.d(TAG, "Saved ${imageFile.absolutePath}")
         }
-
-
 
         @Synchronized
         fun debugSaveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {

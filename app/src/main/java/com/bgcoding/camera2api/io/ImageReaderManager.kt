@@ -70,7 +70,7 @@ class ImageReaderManager(
     }
     private fun handleNormalImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
-            FileImageWriter.getInstance()?.saveImageToStorage(bitmap)
+            FileImageWriter.getInstance()!!.saveBitmapToUserDir(bitmap,ImageFileAttribute.FileType.JPEG)
             withContext(Dispatchers.Main) {
                 loadingBox.visibility = View.GONE
             }

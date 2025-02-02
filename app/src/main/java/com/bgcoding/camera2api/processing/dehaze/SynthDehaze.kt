@@ -7,6 +7,8 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.Environment
 import android.util.Log
+import com.bgcoding.camera2api.io.FileImageWriter
+import com.bgcoding.camera2api.io.ImageFileAttribute
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -165,16 +167,9 @@ class SynthDehaze(private val context: android.content.Context) {
         clearImgResized.convertTo(clearImgResized, CvType.CV_8U)
         Imgproc.cvtColor(clearImgResized, clearImgResized, Imgproc.COLOR_RGB2BGR)
 
-        val mediaStorageDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "DehazeApp")
-        if (!mediaStorageDir.exists()) {
-            mediaStorageDir.mkdirs()
-        }
-
-        val file = File(mediaStorageDir, "dehazed_result.png")
-        Imgcodecs.imwrite(file.absolutePath, clearImgResized)
+        FileImageWriter.getInstance()!!.saveMatToUserDir(clearImgResized, ImageFileAttribute.FileType.JPEG)
         clearImgResized.release()
 
-        Log.d("dehaze", "dehazed image saved")
     }
 
     private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
