@@ -137,92 +137,49 @@ class ImageReaderManager(
         return availableMemoryMB // Returns available memory in MB
     }
 
-    fun dehazeImage(path: String) {
+    private fun dehazeImage(path: String) {
         val env = OrtEnvironment.getEnvironment()
-        val sessionOptions = OrtSession.SessionOptions()
-        sessionOptions.setMemoryPatternOptimization(true)
-        sessionOptions.setCPUArenaAllocator(false)
-        sessionOptions.addConfigEntry("session.use_device_memory_mapping", "1")
-        sessionOptions.addConfigEntry("session.enable_stream_execution", "1")
+        val sessionOptions = OrtSession.SessionOptions().apply {
+            setMemoryPatternOptimization(true)
+            addConfigEntry("session.use_device_memory_mapping", "1")
+            addConfigEntry("session.enable_stream_execution", "1")
+        }
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
 
         val (imSize, hazyImg) = loadAndResizeFromAssets(path, org.opencv.core.Size(512.0, 512.0))
 
         val hazyInput = preprocess(hazyImg, env)
-        var albedoOutput: FloatArray? = try {
-            ortSessionAlbedo.run(mapOf("input.1" to hazyInput)).use { results ->
-                val output = results.get(0)
-                if (output is OnnxTensor) {
-                    output.use { tensor ->
-                        val floatBuffer = tensor.floatBuffer
-                        val floatArray = FloatArray(floatBuffer.remaining())
-                        floatBuffer.get(floatArray)
-                        return@use floatArray
-                    }
-                } else {
-                    throw IllegalStateException("Unexpected output type: ${output::class.java}")
+        val albedoOutput = hazyInput.use { input ->
+            ortSessionAlbedo.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).use { tensor ->
+                    FloatArray(tensor.floatBuffer.remaining()).also { tensor.floatBuffer.get(it) }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("dehaze", "Error running albedo inference: ${e.message}", e)
-            null
-        } finally {
-            hazyInput.close()
-            ortSessionAlbedo.close()
         }
 
-        if (albedoOutput == null) {
-            Log.e("dehaze", "Albedo inference failed, skipping transmission inference")
-            return
-        }
 
         Log.d("dehaze", "Albedo output computed successfully")
 
         val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
 
-        val transmissionInput: OnnxTensor? = try {
-            val inputShape = longArrayOf(1, 3, 512, 512)
-            val tensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), inputShape)
-            tensor
-        } catch (e: Exception) {
-            Log.e("dehaze", "Error creating transmission input tensor: ${e.message}", e)
-            null
-        }
-        albedoOutput = null
-        if (transmissionInput == null) {
-            Log.e("dehaze", "Transmission input tensor creation failed, skipping transmission inference")
-            return
-        }
+        val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 512, 512))
 
-        var transmissionOutput: FloatArray? = try {
-            ortSessionTransmission.run(mapOf("input.1" to transmissionInput)).use { results ->
-                val output = results.get(0)
-                if (output is OnnxTensor) {
-                    output.use { tensor -> // Ensures OnnxTensor is closed
-                        val floatBuffer = tensor.floatBuffer
-                        val floatArray = FloatArray(floatBuffer.remaining())
-                        floatBuffer.get(floatArray)
-                        return@use floatArray
-                    }
-                } else {
-                    throw IllegalStateException("Unexpected output type: ${output::class.java}")
+        val transmissionOutput = transmissionInput.use { input ->
+            ortSessionTransmission.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).use { tensor ->
+                    FloatArray(tensor.floatBuffer.remaining()).also { tensor.floatBuffer.get(it) }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("dehaze", "Error running transmission inference: ${e.message}", e)
-            null
-        } finally {
-            transmissionInput.close()
-            ortSessionTransmission.close()
         }
-        var T: FloatArray? = transmissionOutput?.map { (it * 0.5f) + 0.5f }?.toFloatArray()
-        transmissionOutput = null
+
+
+        val T: FloatArray = transmissionOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
 
         val TResized = Mat(hazyImg.rows(), hazyImg.cols(), CvType.CV_32F)
         TResized.put(0, 0, T)
 
 
-        Log.d("dehaze", "transmission output")
+        Log.d("dehaze", "Transmission output computed successfully")
 
         val hazyResized = Mat()
         Imgproc.resize(hazyImg, hazyResized, org.opencv.core.Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
@@ -230,34 +187,18 @@ class ImageReaderManager(
         hazyResized.release()
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
         sessionOptions.close()
-        var airlightOutput: FloatArray? = try {
-            ortSessionAirlight.run(mapOf("input.1" to airlightInput)).use { results ->
-                val output = results.get(0)
-                if (output is OnnxTensor) {
-                    output.floatBuffer.array()
-                } else {
-                    throw IllegalStateException("Unexpected output type: ${output::class.java}")
-                }
+        val airlightOutput = airlightInput.use { input ->
+            ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).floatBuffer.array()
             }
-        } catch (e: Exception) {
-            Log.e("dehaze", "Error running airlight inference: ${e.message}", e)
-            null
-        } finally {
-            airlightInput.close()
-            ortSessionAirlight.close()
         }
 
-        if (airlightOutput == null) {
-            Log.e("dehaze", "Airlight inference failed, skipping dehazing")
-            return
-        }
-        Log.d("dehaze", "Airlight output")
+        Log.d("dehaze", "Airlight output computed successfully")
 
         val airlightRed = airlightOutput[0]
         val airlightGreen = airlightOutput[1]
         val airlightBlue = airlightOutput[2]
 
-        airlightOutput = null
 
         val hazyImgNorm = Mat()
         Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
@@ -282,6 +223,7 @@ class ImageReaderManager(
                 clearImg.put(i, j, clearRed * 255.0, clearGreen * 255.0, clearBlue * 255.0)
             }
         }
+        TResized.release()
         hazyImgNorm.release()
 
         val clearImgResized = Mat()
