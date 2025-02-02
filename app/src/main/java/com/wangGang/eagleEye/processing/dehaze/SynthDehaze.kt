@@ -42,7 +42,7 @@ class SynthDehaze(private val context: android.content.Context) {
     private fun loadAndResizeFromAssets (size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
         val inputStream: InputStream
         try {
-            inputStream = context.assets.open("model/dehaze-test/try.png")
+            inputStream = context.assets.open("test/dehaze/try.png")
         } catch (e: Exception) {
             throw IllegalArgumentException("Image not found in assets")
         }
