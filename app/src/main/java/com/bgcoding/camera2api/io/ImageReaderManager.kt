@@ -88,34 +88,22 @@ class ImageReaderManager(
 
     private fun handleSuperResolutionImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
-            val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-            val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-
-            if (isSuperResolutionEnabled) {
-                val saveJob = launch {
-                    FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
-                        imageInputMap.add(it)
-                    }
+            val saveJob = launch {
+                FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
+                    imageInputMap.add(it)
                 }
+            }
 
-                saveJob.join() // Ensures the file is saved before checking the count
+            saveJob.join() // Ensures the file is saved before checking the count
 
-                if (imageInputMap.size == 10) {
-                    // Run super resolution asynchronously
-                    launch {
-                        concreteSuperResolution.superResolutionImage(imageInputMap)
-                        withContext(Dispatchers.Main) {
-                            loadingBox.visibility = View.GONE
-                        }
-                        imageInputMap.clear()
+            if (imageInputMap.size == 10) {
+                // Run super resolution asynchronously
+                launch {
+                    concreteSuperResolution.superResolutionImage(imageInputMap)
+                    withContext(Dispatchers.Main) {
+                        loadingBox.visibility = View.GONE
                     }
-                }
-            } else {
-                Log.i("Main", "No IE is toggled. Saving a single image to device.")
-                launch { FileImageWriter.getInstance()?.saveImageToStorage(bitmap) }.join()
-
-                withContext(Dispatchers.Main) {
-                    loadingBox.visibility = View.GONE
+                    imageInputMap.clear()
                 }
             }
         }
