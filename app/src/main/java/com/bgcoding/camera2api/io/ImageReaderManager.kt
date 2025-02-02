@@ -4,18 +4,18 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.media.Image
 import android.media.ImageReader
-import android.util.Log
 import android.util.Size
 import android.view.View
 import com.bgcoding.camera2api.camera.CameraController
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
+import com.bgcoding.camera2api.processing.dehaze.SynthDehaze
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.bgcoding.camera2api.processing.dehaze.SynthDehaze
 
 class ImageReaderManager(
     private val context: Context,
@@ -43,11 +43,9 @@ class ImageReaderManager(
 
     private fun setImageReaderListener() {
         val imageReader = cameraController.getImageReader()
-        imageReader.setOnImageAvailableListener(object : ImageReader.OnImageAvailableListener {
-            override fun onImageAvailable(reader: ImageReader?) {
-                val image = reader?.acquireNextImage()
-                image?.let { processImage(it) }
-            }
+        imageReader.setOnImageAvailableListener({ reader ->
+            val image = reader?.acquireNextImage()
+            image?.let { processImage(it) }
         }, cameraController.getHandler())
     }
 
@@ -69,8 +67,11 @@ class ImageReaderManager(
         }
     }
     private fun handleNormalImage(bitmap: Bitmap) {
+        val matrix = Matrix()
+        matrix.postRotate(90f)
+        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         CoroutineScope(Dispatchers.IO).launch {
-            FileImageWriter.getInstance()!!.saveBitmapToUserDir(bitmap,ImageFileAttribute.FileType.JPEG)
+            FileImageWriter.getInstance()!!.saveBitmapToUserDir(rotatedBitmap,ImageFileAttribute.FileType.JPEG)
             withContext(Dispatchers.Main) {
                 loadingBox.visibility = View.GONE
             }

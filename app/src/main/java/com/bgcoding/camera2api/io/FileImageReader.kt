@@ -10,6 +10,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.util.Locale
 
 /**
  * Reads images from external dir
@@ -66,7 +67,7 @@ class FileImageReader private constructor(private var context: Context?) {
      * @return
      */
     fun imReadOpenCV(fileName: String, fileType: ImageFileAttribute.FileType): Mat {
-        return if (fileName.toLowerCase().contains(".jpg")) {
+        return if (fileName.lowercase(Locale.getDefault()).contains(".jpg")) {
             Log.d(TAG, "Filepath for imread: $fileName")
             Imgcodecs.imread(fileName)
         } else {
@@ -92,7 +93,7 @@ class FileImageReader private constructor(private var context: Context?) {
         return file.exists()
     }
 
-    fun loadBitmapFromFile(fileName: String, fileType: ImageFileAttribute.FileType): Bitmap {
+    private fun loadBitmapFromFile(fileName: String, fileType: ImageFileAttribute.FileType): Bitmap {
         val completeFilePath = "${FileImageWriter.getInstance()?.getFilePath()}/$fileName${ImageFileAttribute.getFileExtension(fileType)}"
         Log.d(TAG, "Filepath for loading bitmap: $completeFilePath")
         return BitmapFactory.decodeFile(completeFilePath)

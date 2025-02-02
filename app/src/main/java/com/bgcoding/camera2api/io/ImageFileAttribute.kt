@@ -5,8 +5,8 @@ package com.bgcoding.camera2api.io
  */
 object ImageFileAttribute {
 
-    const val JPEG_EXT = ".jpg"
-    const val PNG_EXT = ".png"
+    private const val JPEG_EXT = ".jpg"
+    private const val PNG_EXT = ".png"
 
     enum class FileType {
         JPEG,

@@ -1,7 +1,7 @@
 // ConcreteSuperResolution.kt
 package com.bgcoding.camera2api.processing
 
-import LRWarpingOperator
+import com.bgcoding.camera2api.processing.multiple.alignment.LRWarpingOperator
 import com.bgcoding.camera2api.assessment.InputImageEnergyReader
 import com.bgcoding.camera2api.constants.ParameterConfig
 import com.bgcoding.camera2api.io.FileImageReader
@@ -114,7 +114,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         denoisingOperator.perform()
 
         // Use var to allow reassignment
-        var updatedMatList = denoisingOperator.getResult()
+        val updatedMatList = denoisingOperator.getResult()
 
         // Pass updatedMatList to the next method
         this.performFullSRMode(updatedMatList, inputIndices, imageInputMap, bestIndex, debugMode)
@@ -150,8 +150,8 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         // Perform perspective warping and alignment
         val succeedingMatList = rgbInputMatList.sliceArray(1 until rgbInputMatList.size)
 
-        val medianResultNames = Array(succeedingMatList.size) { i -> "median_align_" + i }
-        val warpResultNames = Array(succeedingMatList.size) { i -> "warp_" + i }
+        val medianResultNames = Array(succeedingMatList.size) { i -> "median_align_$i" }
+        val warpResultNames = Array(succeedingMatList.size) { i -> "warp_$i" }
 
 
         when (warpChoice) {
@@ -165,8 +165,8 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         SharpnessMeasure.destroy()
 
         val numImages = AttributeHolder.getSharedInstance()!!.getValue("WARPED_IMAGES_LENGTH_KEY", 0)
-        val warpedImageNames = Array(numImages) { i -> "warp_" + i }
-        val medianAlignedNames = Array(numImages) { i -> "median_align_" + i }
+        val warpedImageNames = Array(numImages) { i -> "warp_$i" }
+        val medianAlignedNames = Array(numImages) { i -> "median_align_$i" }
 
         val alignedImageNames = assessImageWarpResults(inputIndices[0], warpChoice, imageInputMap, warpedImageNames, medianAlignedNames, debug)
 
@@ -217,7 +217,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
                 val fileImageReader = FileImageReader.getInstance()
                 if (fileImageReader != null) {
                     referenceMat = if (useLocalDir) {
-                        fileImageReader.imReadOpenCV("input_" + index, ImageFileAttribute.FileType.JPEG)
+                        fileImageReader.imReadOpenCV("input_$index", ImageFileAttribute.FileType.JPEG)
                     } else {
                         fileImageReader.imReadFullPath(imageInputMap[index])
                     }
@@ -247,7 +247,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         if (alignedImageNames.size == 1) {
             val resultMat: Mat = if (debugMode) {
                 FileImageReader.getInstance()?.imReadOpenCV(
-                    "input_" + bestIndex,
+                    "input_$bestIndex",
                     ImageFileAttribute.FileType.JPEG
                 ) ?: throw IllegalStateException("FileImageReader instance is null")
             } else {
@@ -269,7 +269,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
             // Add initial input HR image
             val inputMat: Mat = if (debugMode) {
                 FileImageReader.getInstance()?.imReadOpenCV(
-                    "input_" + index,
+                    "input_$index",
                     ImageFileAttribute.FileType.JPEG
                 ) ?: throw IllegalStateException("FileImageReader instance is null")
             } else {
@@ -284,7 +284,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
 
             val fusionOperator = MeanFusionOperator(inputMat, imagePathList.toTypedArray())
             for (i in imageInputMap.indices) {
-                val dirFile: File = File(imageInputMap[i])
+                val dirFile = File(imageInputMap[i])
                 FileImageWriter.getInstance()?.deleteRecursive(dirFile)
             }
             fusionOperator.perform()

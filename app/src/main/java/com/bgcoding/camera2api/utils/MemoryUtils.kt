@@ -13,7 +13,7 @@ object MemoryUtils {
         val memoryInfoArray = arrayOf(Debug.MemoryInfo())
         Debug.getMemoryInfo(memoryInfoArray[0])
 
-        val usedMemory = memoryInfoArray[0].getTotalPss() * 1024L // in bytes
+        val usedMemory = memoryInfoArray[0].totalPss * 1024L // in bytes
         return usedMemory
     }
 }

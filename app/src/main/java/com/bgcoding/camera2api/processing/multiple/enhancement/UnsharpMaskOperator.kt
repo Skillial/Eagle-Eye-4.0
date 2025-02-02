@@ -16,7 +16,8 @@ class UnsharpMaskOperator(private val inputMat: Mat, private val index: Int)  {
         Imgproc.blur(this.inputMat, blurMat, Size(25.0, 25.0))
 
         Core.addWeighted(this.inputMat, 2.25, blurMat, -1.25, 0.0, this.outputMat, CvType.CV_8UC(this.inputMat.channels()))
-        FileImageWriter.getInstance()?.debugSaveMatrixToImage(this.outputMat, "sharpen_" + index, ImageFileAttribute.FileType.JPEG)
+        FileImageWriter.getInstance()?.debugSaveMatrixToImage(this.outputMat,
+            "sharpen_$index", ImageFileAttribute.FileType.JPEG)
 
         blurMat.release()
         this.inputMat.release()

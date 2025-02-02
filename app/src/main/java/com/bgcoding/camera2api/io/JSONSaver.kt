@@ -48,7 +48,7 @@ object JSONSaver {
     private fun mapToJson(data: HashMap<PatchAttribute, PatchAttribute>): JSONObject {
         val jsonObject = JSONObject()
         for ((lrPatchAttrib, hrPatchAttrib) in data) {
-            val key = lrPatchAttrib.imageName ?: throw NullPointerException("key == null")
+            val key = lrPatchAttrib.imageName
             try {
                 jsonObject.put(key, hrPatchAttrib.imageName)
             } catch (e: JSONException) {

@@ -13,13 +13,13 @@ class PatchAttribute(
     imageName: String,
     imagePath: String
 ) {
-    var pyramidDepth: Int = 0
-    var colStart: Int = 0
-    var rowStart: Int = 0
-    var colEnd: Int = 0
-    var rowEnd: Int = 0
+    private var pyramidDepth: Int = 0
+    private var colStart: Int = 0
+    private var rowStart: Int = 0
+    private var colEnd: Int = 0
+    private var rowEnd: Int = 0
     val imageName: String
-    val imagePath: String
+    private val imagePath: String
 
     init {
         this.pyramidDepth = pyramidDepth

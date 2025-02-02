@@ -29,7 +29,7 @@ class CameraController(private val context: Context) {
 
     companion object {
         // Constants
-        val maxNumberOfBurstImages = 10
+        const val maxNumberOfBurstImages = 10
 
         @Volatile
         private var instance: CameraController? = null
@@ -165,7 +165,7 @@ class CameraController(private val context: Context) {
         }, handler)
     }
 
-    fun getCameraId(lensFacing: Int): String {
+    private fun getCameraId(lensFacing: Int): String {
         for (cameraId in cameraManager.cameraIdList) {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
             if (characteristics.get(CameraCharacteristics.LENS_FACING) == lensFacing) {
@@ -216,7 +216,7 @@ class CameraController(private val context: Context) {
         return sizes?.sortedWith(compareBy { it.width * it.height })?.last()
     }
 
-    fun playShutterSound() {
+    private fun playShutterSound() {
         val sound = MediaActionSound()
         sound.play(MediaActionSound.SHUTTER_CLICK)
     }

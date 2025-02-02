@@ -46,7 +46,7 @@ class AttributeHolder private constructor(appContext: Context) {
         return sharedPrefs.getInt(key, defaultValue)
     }
 
-    fun getValueFloat(key: String, defaultValue: Float): Float {
+    private fun getValueFloat(key: String, defaultValue: Float): Float {
         return sharedPrefs.getFloat(key, defaultValue)
     }
 

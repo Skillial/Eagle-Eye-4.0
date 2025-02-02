@@ -4,7 +4,6 @@
     import android.content.Context
     import android.graphics.Bitmap
     import android.graphics.Matrix
-    import android.hardware.camera2.CameraCharacteristics
     import android.media.MediaScannerConnection
     import android.os.Environment
     import android.util.Log
@@ -51,7 +50,7 @@
                 }
             }
 
-            internal fun deleteRecursive(fileOrDirectory: File) {
+            private fun deleteRecursive(fileOrDirectory: File) {
                 if (fileOrDirectory.isDirectory) {
                     fileOrDirectory.listFiles()?.forEach { deleteRecursive(it) }
                 }
@@ -88,7 +87,7 @@
 
         fun saveBitmapImage(bitmap: Bitmap, directory: String, fileName: String, fileType: ImageFileAttribute.FileType) {
             try {
-                val dirFile = File(proposedPath + "/$directory")
+                val dirFile = File("$proposedPath/$directory")
                 dirFile.mkdirs()
                 val processedImageFile = File(dirFile.path, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
                 FileOutputStream(processedImageFile).use { out ->
@@ -146,7 +145,7 @@
 
         @Synchronized
         fun saveMatrixToImage(mat: Mat, directory: String, fileName: String, fileType: ImageFileAttribute.FileType) {
-            val dirFile = File(proposedPath + "/$directory")
+            val dirFile = File("$proposedPath/$directory")
             if (!dirFile.mkdirs()) {
                 dirFile.mkdir()
             }
@@ -196,7 +195,7 @@
 
         @Synchronized
         fun deleteImage(fileName: String, directory: String, fileType: ImageFileAttribute.FileType) {
-            val dirFile = File(proposedPath + "/$directory")
+            val dirFile = File("$proposedPath/$directory")
             val imageFile = File(dirFile.path, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
             imageFile.delete()
         }

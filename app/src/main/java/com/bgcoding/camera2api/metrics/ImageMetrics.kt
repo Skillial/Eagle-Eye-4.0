@@ -16,7 +16,7 @@ object ImageMetrics {
         return psnr
     }
 
-    fun getMSE(I1: Mat, I2: Mat): Double {
+    private fun getMSE(I1: Mat, I2: Mat): Double {
         var s1 = Mat()
         Core.absdiff(I1, I2, s1) // |I1 - I2|
 

@@ -47,7 +47,7 @@ class PatchRelationTable private constructor() {
         pairList.forEach { it.sort() }
     }
 
-    fun hasHRAttribute(lrAttrib: PatchAttribute): Boolean {
+    private fun hasHRAttribute(lrAttrib: PatchAttribute): Boolean {
         return pairwiseTable.containsKey(lrAttrib)
     }
 

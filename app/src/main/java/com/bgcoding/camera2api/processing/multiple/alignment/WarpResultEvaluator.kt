@@ -149,7 +149,7 @@ class WarpResultEvaluator(
             warpedResults: IntArray,
             warpedMatNames: Array<String>
         ) {
-            var average = 0.0f
+            val average: Float
             var sum = 0
             for (i in warpedResults.indices) {
                 Log.d(

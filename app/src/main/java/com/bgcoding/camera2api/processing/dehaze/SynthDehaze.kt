@@ -5,7 +5,6 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.graphics.Bitmap
 import android.graphics.Matrix
-import android.os.Environment
 import android.util.Log
 import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.ImageFileAttribute
@@ -16,7 +15,6 @@ import org.opencv.core.Mat
 import org.opencv.core.Scalar
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
-import java.io.File
 import java.io.InputStream
 import java.nio.FloatBuffer
 

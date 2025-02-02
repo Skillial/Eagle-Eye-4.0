@@ -24,7 +24,7 @@ class DirectoryStorage private constructor() {
 
     private var startingAlbum = 0
     var proposedPath: String? = null
-    fun isAlbumDirExisting(albumNumber: Int): Boolean {
+    private fun isAlbumDirExisting(albumNumber: Int): Boolean {
         val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + FileImageWriter.ALBUM_NAME_PREFIX + albumNumber)
         return file.isDirectory && file.exists()
     }
@@ -44,7 +44,7 @@ class DirectoryStorage private constructor() {
         Log.i(TAG, "Image storage is set to: $proposedPath")
     }
 
-    fun refreshProposedPath() {
+    private fun refreshProposedPath() {
         proposedPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + ALBUM_NAME_PREFIX + startingAlbum
     }
 

@@ -42,7 +42,7 @@ class MeanFusionOperator(
         initialMat.convertTo(initialMat, CvType.CV_16UC(initialMat.channels())) // Convert to CV_16UC
         Log.d(TAG, "Initial image for fusion Size: ${initialMat.size()} Scale: $scale")
 
-        var sumMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_LINEAR) // Linear interpolation
+        val sumMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_LINEAR) // Linear interpolation
         initialMat.release()
         outputMat?.release()
 

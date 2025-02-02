@@ -3,7 +3,6 @@ package com.bgcoding.camera2api.processing
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
-import java.util.Arrays
 
 object ColorSpaceOperator {
 
@@ -36,7 +35,7 @@ object ColorSpaceOperator {
     @JvmStatic
     fun convertYUVtoRGB(yuvMat: Array<Mat>): Mat {
         val rgbMat = Mat()
-        Core.merge(Arrays.asList(*yuvMat), rgbMat)
+        Core.merge(listOf(*yuvMat), rgbMat)
 
         Imgproc.cvtColor(rgbMat, rgbMat, Imgproc.COLOR_YUV2BGR)
 

@@ -1,4 +1,4 @@
-package com.bgcoding.camera2api.processing.filters
+package com.bgcoding.camera2api.processing.multiple.fusion
 
 import android.util.Log
 import com.bgcoding.camera2api.processing.imagetools.ImageOperator

@@ -1,3 +1,5 @@
+package com.bgcoding.camera2api.processing.multiple.alignment
+
 import android.util.Log
 import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.ImageFileAttribute

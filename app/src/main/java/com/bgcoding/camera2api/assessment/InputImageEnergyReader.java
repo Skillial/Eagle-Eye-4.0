@@ -14,7 +14,7 @@ import java.util.concurrent.Semaphore;
 
 public class InputImageEnergyReader extends FlaggingThread {
     private final static String TAG = "InputImageEnergyReader";
-    private String inputImagePath;
+    private final String inputImagePath;
     private Mat outputMat;
 
     public InputImageEnergyReader(Semaphore semaphore, String inputImagePath) {

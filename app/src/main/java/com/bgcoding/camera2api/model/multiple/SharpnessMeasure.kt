@@ -86,7 +86,7 @@ class SharpnessMeasure private constructor() {
         return this.latestResult
     }
 
-    fun measure(edgeMat: Mat): Double {
+    private fun measure(edgeMat: Mat): Double {
         val withValues = Core.countNonZero(edgeMat)
         val dimension = edgeMat.cols() * edgeMat.rows()
 
