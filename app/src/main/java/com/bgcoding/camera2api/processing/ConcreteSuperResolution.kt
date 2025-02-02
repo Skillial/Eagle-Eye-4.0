@@ -19,6 +19,10 @@ import com.bgcoding.camera2api.processing.multiple.enhancement.UnsharpMaskOperat
 import com.bgcoding.camera2api.processing.multiple.fusion.MeanFusionOperator
 import com.bgcoding.camera2api.processing.multiple.refinement.DenoisingOperator
 import com.bgcoding.camera2api.processing.process_observer.SRProcessManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import java.io.File
@@ -71,31 +75,30 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
     override fun performSuperResolution(filteredMatList: Array<Mat>, imageInputMap: List<String>) {
         val sharpnessResult = SharpnessMeasure.getSharedInstance().measureSharpness(filteredMatList)
         val inputIndices: Array<Int> = SharpnessMeasure.getSharedInstance().trimMatList(imageInputMap.size, sharpnessResult, 0.0)
+
         val rgbInputMatList = Array(inputIndices.size) { Mat() }
+        val bestIndex = inputIndices.indexOf(sharpnessResult.bestIndex)
 
-        for (i in inputIndices.indices) {
-            val inputMat = FileImageReader.getInstance()!!.imReadFullPath(imageInputMap[inputIndices[i]])
-            val unsharpMaskOperator = UnsharpMaskOperator(inputMat, inputIndices[i])
-            unsharpMaskOperator.perform()
-            rgbInputMatList[i] = unsharpMaskOperator.getResult()
+        // Run image processing in parallel
+        runBlocking {
+            inputIndices.mapIndexed { index, i ->
+                async(Dispatchers.IO) {
+                    val inputMat = FileImageReader.getInstance()!!.imReadFullPath(imageInputMap[i])
+                    val unsharpMaskOperator = UnsharpMaskOperator(inputMat, i)
+                    unsharpMaskOperator.perform()
+                    rgbInputMatList[index] = unsharpMaskOperator.getResult()
+                }
+            }.awaitAll()
         }
 
-        // Implement the super resolution logic here
-        interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap);
+        // Super-resolution interpolation
+        interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
         SRProcessManager.getInstance().initialHRProduced()
-        var bestIndex = 0
-        var inputMat: Mat
-        for (i in inputIndices.indices) {
-            inputMat = FileImageReader.getInstance()!!.imReadFullPath(imageInputMap[inputIndices[i]])
-            val unsharpMaskOperator = UnsharpMaskOperator(inputMat, inputIndices[i])
-            unsharpMaskOperator.perform()
-            rgbInputMatList[i] = unsharpMaskOperator.getResult()
 
-            if (sharpnessResult.bestIndex == inputIndices[i]) {
-                bestIndex = i
-            }
-        }
-        this.performActualSuperres(rgbInputMatList, inputIndices, imageInputMap, bestIndex, false)
+        // Perform actual super-resolution
+        performActualSuperres(rgbInputMatList, inputIndices, imageInputMap, bestIndex, false)
+
+        // Mark process as completed
         SRProcessManager.getInstance().srProcessCompleted()
     }
 
