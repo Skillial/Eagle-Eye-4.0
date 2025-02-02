@@ -3,7 +3,6 @@ package com.bgcoding.camera2api.io
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
-import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -121,20 +120,6 @@ class ImageReaderManager(
             val modelBytes = inputStream.readBytes()
             env.createSession(modelBytes, sessionOptions)
         }
-    }
-
-    fun getAvailableMemory(): Long {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-
-        // Available memory in bytes
-        val availableMemory = memoryInfo.availMem
-
-        // Convert to megabytes (optional)
-        val availableMemoryMB = availableMemory / (1024 * 1024)
-
-        return availableMemoryMB // Returns available memory in MB
     }
 
     private fun dehazeImage(path: String) {
