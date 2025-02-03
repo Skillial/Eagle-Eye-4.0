@@ -1,11 +1,14 @@
 package com.bgcoding.camera2api.ui.fragments
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.SurfaceTexture
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -13,12 +16,14 @@ import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.bgcoding.camera2api.R
 import com.bgcoding.camera2api.camera.CameraController
@@ -26,7 +31,11 @@ import com.bgcoding.camera2api.io.FileImageWriter
 import com.bgcoding.camera2api.io.FileImageWriter.Companion.OnImageSavedListener
 import com.bgcoding.camera2api.io.ImageReaderManager
 import com.bgcoding.camera2api.processing.ConcreteSuperResolution
+import com.bgcoding.camera2api.ui.activities.PhotoActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager
@@ -37,11 +46,11 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var loadingText: TextView
     private lateinit var loadingBox: LinearLayout
     private lateinit var thumbnailPreview: ImageView
-    private lateinit var captureButton: ImageView
+    private lateinit var captureButton: ImageButton
     private lateinit var popupButton: Button
     private lateinit var switchCameraButton: FloatingActionButton
     private val imageInputMap: MutableList<String> = mutableListOf()
-
+    private var thumbnailUri: Uri? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -107,7 +116,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         }
 
         thumbnailPreview.setOnClickListener {
-            showPhotoPopup()
+            showPhotoActivity()
         }
     }
 
@@ -130,6 +139,17 @@ class CameraFragment : Fragment(), OnImageSavedListener {
             thumbnailPreview.setImageBitmap(bitmap)
         }
     }
+
+    private fun showPhotoActivity() {
+        if (thumbnailUri != null) {
+            val intent = Intent(requireContext(), PhotoActivity::class.java)
+            intent.putExtra("imageUri", thumbnailUri.toString()) // Use stored URI
+            startActivity(intent)
+        } else {
+            Log.e("CameraFragment", "thumbnailUri is null, cannot open PhotoActivity")
+        }
+    }
+
 
     private fun showPhotoPopup() {
         val inflater =
@@ -177,5 +197,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         val bitmap =
             BitmapFactory.decodeStream(requireContext().contentResolver.openInputStream(uri))
         updateThumbnail(bitmap)
+        thumbnailUri = uri
     }
 }
