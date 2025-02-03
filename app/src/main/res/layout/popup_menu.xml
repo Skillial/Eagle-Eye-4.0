@@ -13,4 +13,11 @@
         android:text="Super Resolution"
         android:textColor="#000000" />
 
+    <Switch
+        android:id="@+id/switch2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dehaze"
+        android:textColor="#000000" />
+
 </LinearLayout>

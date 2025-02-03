@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Camera2Api"
+rootProject.name = "Eagle Eye Camera"
 include(":app")
 include(":openCV")

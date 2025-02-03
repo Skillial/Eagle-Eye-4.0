@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.bgcoding.camera2api"
+    namespace = "com.wangGang.eagleEye"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.bgcoding.camera2api"
+        applicationId = "com.wangGang.eagleEye"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -50,8 +50,7 @@ android {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0")
+    implementation(libs.onnxruntime.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
