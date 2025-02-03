@@ -144,7 +144,7 @@ class FileImageWriter private constructor(private val context: Context) {
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/SR0")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
 
@@ -211,7 +211,7 @@ class FileImageWriter private constructor(private val context: Context) {
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg") // Adjust MIME type as needed
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/SR0")
                 put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending
             }
 
@@ -264,7 +264,7 @@ class FileImageWriter private constructor(private val context: Context) {
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/SR0")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
                 }
 
@@ -287,7 +287,7 @@ class FileImageWriter private constructor(private val context: Context) {
                 }
         } else {
             // Use traditional file system for API < 29
-            val dirFile = File(proposedPath + "/$directory")
+            val dirFile = File(proposedPath + "/$directory" + "/SR0")
             if (!dirFile.mkdirs()) {
                 dirFile.mkdir()
             }
