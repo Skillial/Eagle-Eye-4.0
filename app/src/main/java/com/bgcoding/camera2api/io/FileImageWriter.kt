@@ -120,7 +120,12 @@
         fun saveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {
             val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
+            Log.d(TAG, "saveMatrixToImage")
             Log.d(TAG, "Saved ${imageFile.absolutePath}")
+
+            if (fileName.equals("result")) {
+                refreshImageGallery(imageFile)
+            }
         }
 
 
@@ -129,6 +134,7 @@
         fun debugSaveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {
             val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
+            Log.d(TAG, "debugSaveMatrixToImage")
             Log.d(TAG, "Saved ${imageFile.absolutePath}")
         }
 
@@ -149,6 +155,8 @@
             val imageFileName = "EagleEyeHD_$timeStamp"
             val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
+
+            Log.d("FileImageWriter", "Saved HR image: ${imageFile.absolutePath}")
 
             val message = "Super HD image saved at: ${imageFile.path}"
             (context as Activity).runOnUiThread {

@@ -261,6 +261,8 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
                 interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
             )
 
+            Log.d("ConcreteSuperResolution", "saveHRResultToUserDir 1")
+
             resultMat.release()
         } else {
             val imagePathList = mutableListOf<String>()
@@ -287,6 +289,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
             }
             fusionOperator.perform()
             FileImageWriter.getInstance()?.apply {
+                Log.d("ConcreteSuperResolution", "saveMatrixToImage")
                 saveMatrixToImage(
                     fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
                 )

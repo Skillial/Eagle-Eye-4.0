@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import com.bgcoding.camera2api.R
@@ -15,7 +16,7 @@ class PhotoActivity : AppCompatActivity() {
         setContentView(R.layout.activity_photo)
 
         val imageView: ImageView = findViewById(R.id.photoView)
-        val backButton: Button = findViewById(R.id.backButton)
+        val backButton: ImageButton = findViewById(R.id.backButton)
 
         // Retrieve the image URI from intent
         val imageUri = intent.getStringExtra("imageUri")
