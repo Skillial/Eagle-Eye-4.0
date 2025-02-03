@@ -6,6 +6,7 @@
     import android.graphics.Matrix
     import android.hardware.camera2.CameraCharacteristics
     import android.media.MediaScannerConnection
+    import android.net.Uri
     import android.os.Environment
     import android.util.Log
     import android.widget.Toast
@@ -15,6 +16,7 @@
     import java.io.File
     import java.io.FileOutputStream
     import java.io.IOException
+    import java.net.URI
     import java.text.SimpleDateFormat
     import java.util.Date
 
@@ -61,7 +63,7 @@
 
 
             interface OnImageSavedListener {
-                fun onImageSaved(filePath: String)
+                fun onImageSaved(uri: Uri)
             }
 
             private var onImageSavedListener: OnImageSavedListener? = null
@@ -155,7 +157,8 @@
 
             refreshImageGallery(imageFile)
 
-            onImageSavedListener?.onImageSaved(imageFile.path)
+            Log.d("FileImageWriter", "Saved thumbnail: ${imageFile.absolutePath}")
+
         }
 
         private fun refreshImageGallery(srFile: File) {
@@ -165,6 +168,7 @@
             ) { path, uri ->
                 Log.i("ExternalStorage", "Scanned $path")
                 Log.i("ExternalStorage", "-> uri=$uri")
+                onImageSavedListener?.onImageSaved(uri)
             }
         }
 

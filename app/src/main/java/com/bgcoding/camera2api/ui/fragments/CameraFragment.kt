@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.SurfaceTexture
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -41,10 +42,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var switchCameraButton: FloatingActionButton
     private val imageInputMap: MutableList<String> = mutableListOf()
 
-    override fun onImageSaved(filePath: String) {
-        Log.d("CameraFragment", "onImageSaved: $filePath")
-        updateThumbnail(BitmapFactory.decodeFile(filePath))
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -75,11 +72,20 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     private fun addEventListeners(view: View) {
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+            override fun onSurfaceTextureAvailable(
+                surface: SurfaceTexture,
+                width: Int,
+                height: Int
+            ) {
                 CameraController.getInstance().openCamera(textureView)
             }
 
-            override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+            override fun onSurfaceTextureSizeChanged(
+                surface: SurfaceTexture,
+                width: Int,
+                height: Int
+            ) {
+            }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
                 return false
@@ -109,7 +115,13 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         CameraController.initialize(requireContext())
         concreteSuperResolution = ConcreteSuperResolution()
 
-        imageReaderManager = ImageReaderManager(requireContext(), CameraController.getInstance(), imageInputMap, concreteSuperResolution, loadingBox)
+        imageReaderManager = ImageReaderManager(
+            requireContext(),
+            CameraController.getInstance(),
+            imageInputMap,
+            concreteSuperResolution,
+            loadingBox
+        )
         imageReaderManager.initializeImageReader()
     }
 
@@ -120,9 +132,15 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun showPhotoPopup() {
-        val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val inflater =
+            requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_photo, null)
-        val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
+        val popupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
 
         val photoView: ImageView? = popupView.findViewById(R.id.photoView)
         photoView?.setImageDrawable(thumbnailPreview.drawable)
@@ -131,13 +149,20 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun showPopupMenu() {
-        val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val inflater =
+            requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_menu, null)
-        val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
+        val popupWindow = PopupWindow(
+            popupView,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            true
+        )
         popupWindow.showAsDropDown(view?.findViewById(R.id.button), 0, 0)
 
         val switch1: Switch = popupView.findViewById(R.id.switch1)
-        val sharedPreferences = requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val sharedPreferences =
+            requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
         switch1.isChecked = sharedPreferences.getBoolean("super_resolution_enabled", false)
 
         switch1.setOnCheckedChangeListener { _, isChecked ->
@@ -145,5 +170,12 @@ class CameraFragment : Fragment(), OnImageSavedListener {
             editor.putBoolean("super_resolution_enabled", isChecked)
             editor.apply()
         }
+    }
+
+    override fun onImageSaved(uri: Uri) {
+        Log.d("CameraFragment", "onImageSaved: $uri")
+        val bitmap =
+            BitmapFactory.decodeStream(requireContext().contentResolver.openInputStream(uri))
+        updateThumbnail(bitmap)
     }
 }
