@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
@@ -35,6 +36,9 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var loadingText: TextView
     private lateinit var loadingBox: LinearLayout
     private lateinit var thumbnailPreview: ImageView
+    private lateinit var captureButton: ImageView
+    private lateinit var popupButton: Button
+    private lateinit var switchCameraButton: FloatingActionButton
     private val imageInputMap: MutableList<String> = mutableListOf()
 
     override fun onImageSaved(filePath: String) {
@@ -64,6 +68,9 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         loadingText = view.findViewById(R.id.loadingText)
         loadingBox = view.findViewById(R.id.loadingBox)
         thumbnailPreview = view.findViewById(R.id.thumbnailPreview)
+        captureButton = view.findViewById(R.id.capture)
+        popupButton = view.findViewById(R.id.button)
+        switchCameraButton = view.findViewById(R.id.switchCamera)
     }
 
     private fun addEventListeners(view: View) {
@@ -81,22 +88,20 @@ class CameraFragment : Fragment(), OnImageSavedListener {
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
         }
 
-        view.findViewById<ImageView>(R.id.capture)?.apply {
-            setOnClickListener {
-                CameraController.getInstance().captureImage(loadingBox)
-            }
+        captureButton.setOnClickListener {
+            CameraController.getInstance().captureImage(loadingBox)
         }
 
-        view.findViewById<Button>(R.id.button)?.apply {
-            setOnClickListener {
-                showPopupMenu()
-            }
+        popupButton.setOnClickListener {
+            showPopupMenu()
         }
 
-        view.findViewById<FloatingActionButton>(R.id.switchCamera)?.apply {
-            setOnClickListener {
-                CameraController.getInstance().switchCamera(textureView)
-            }
+        switchCameraButton.setOnClickListener {
+            CameraController.getInstance().switchCamera(textureView)
+        }
+
+        thumbnailPreview.setOnClickListener {
+            showPhotoPopup()
         }
     }
 
@@ -112,6 +117,17 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         activity?.runOnUiThread {
             thumbnailPreview.setImageBitmap(bitmap)
         }
+    }
+
+    private fun showPhotoPopup() {
+        val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView = inflater.inflate(R.layout.popup_photo, null)
+        val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
+
+        val photoView: ImageView? = popupView.findViewById(R.id.photoView)
+        photoView?.setImageDrawable(thumbnailPreview.drawable)
+
+        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0)
     }
 
     private fun showPopupMenu() {
