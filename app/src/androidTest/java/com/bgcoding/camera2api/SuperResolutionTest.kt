@@ -23,7 +23,7 @@ import org.junit.Rule
 
 @RunWith(AndroidJUnit4::class)
 class SuperResolutionTest {
-    private val test_folder = "test_images/test_" + 2
+    private val test_folder = "test_images/test_" + 3
 
     @Rule
     @JvmField

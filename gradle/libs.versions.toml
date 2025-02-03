@@ -12,10 +12,12 @@ composeBom = "2023.08.00"
 fragmentKtx = "1.8.5"
 appcompat = "1.7.0"
 material = "1.12.0"
+rules = "1.4.0"
 
 [libraries]
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-rules = { module = "androidx.test:rules", version.ref = "rules" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
