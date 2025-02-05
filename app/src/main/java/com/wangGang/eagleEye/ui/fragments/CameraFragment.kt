@@ -29,12 +29,8 @@ import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.io.ImageReaderManager
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
-import com.wangGang.eagleEye.R
-import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
-import com.wangGang.eagleEye.io.ImageReaderManager
-import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.ui.activities.PhotoActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.io.File

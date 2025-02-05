@@ -1,5 +1,4 @@
-package com.bgcoding.camera2api.ui.activities
-
+package com.wangGang.eagleEye.ui.activities
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -7,7 +6,7 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
-import com.bgcoding.camera2api.R
+import com.wangGang.eagleEye.R
 
 class PhotoActivity : AppCompatActivity() {
 
