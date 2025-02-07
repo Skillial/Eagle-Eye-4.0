@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.SurfaceTexture
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
@@ -23,6 +24,7 @@ import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.wangGang.eagleEye.R
@@ -49,6 +51,8 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var captureButton: ImageButton
     private lateinit var popupButton: Button
     private lateinit var switchCameraButton: FloatingActionButton
+    private lateinit var constraintLayout: ConstraintLayout
+
     private val imageInputMap: MutableList<String> = mutableListOf()
     private var thumbnailUri: Uri? = null
 
@@ -61,6 +65,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         assignViews(view)
         initializeCamera()
         addEventListeners(view)
+        setBackground()
 
         // used to update the thumbnail preview
         FileImageWriter.setOnImageSavedListener(this)
@@ -69,6 +74,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun assignViews(view: View) {
+        constraintLayout = view.findViewById(R.id.constraintLayout)
         textureView = view.findViewById(R.id.textureView)
         progressBar = view.findViewById(R.id.progressBar)
         loadingText = view.findViewById(R.id.loadingText)
@@ -77,6 +83,22 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         captureButton = view.findViewById(R.id.capture)
         popupButton = view.findViewById(R.id.button)
         switchCameraButton = view.findViewById(R.id.switchCamera)
+
+    }
+
+    private fun setBackground() {
+        // get preferences of super_resolution_enabled and dehaze_enabled
+        val sharedPreferences = requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val superResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
+        val dehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
+
+        if (superResolutionEnabled) {
+            constraintLayout.setBackgroundColor(Color.GREEN);
+        } else if (dehazeEnabled) {
+            constraintLayout.setBackgroundColor(Color.BLUE);
+        } else {
+            constraintLayout.setBackgroundColor(Color.BLACK);
+        }
     }
 
     private fun addEventListeners(view: View) {
@@ -150,24 +172,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         }
     }
 
-
-    private fun showPhotoPopup() {
-        val inflater =
-            requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val popupView = inflater.inflate(R.layout.popup_photo, null)
-        val popupWindow = PopupWindow(
-            popupView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-
-        val photoView: ImageView? = popupView.findViewById(R.id.photoView)
-        photoView?.setImageDrawable(thumbnailPreview.drawable)
-
-        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0)
-    }
-
     private fun showPopupMenu() {
         val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_menu, null)
@@ -185,8 +189,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 editor.putBoolean("super_resolution_enabled", true)
                 editor.putBoolean("dehaze_enabled", false)
                 switch2.isChecked = false
+                constraintLayout.setBackgroundColor(Color.GREEN);
             } else {
                 editor.putBoolean("super_resolution_enabled", false)
+                constraintLayout.setBackgroundColor(Color.BLACK);
             }
             editor.apply()
         }
@@ -197,8 +203,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 editor.putBoolean("dehaze_enabled", true)
                 editor.putBoolean("super_resolution_enabled", false)
                 switch1.isChecked = false
+                constraintLayout.setBackgroundColor(Color.BLUE);
             } else {
                 editor.putBoolean("dehaze_enabled", false)
+                constraintLayout.setBackgroundColor(Color.BLACK);
             }
             editor.apply()
         }
