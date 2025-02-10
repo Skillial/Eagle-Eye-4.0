@@ -29,6 +29,8 @@ import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.util.concurrent.Semaphore
 
+const val TAG = "ConcreteSuperResolution"
+
 class ConcreteSuperResolution : SuperResolutionTemplate() {
 
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
@@ -146,7 +148,7 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         debug: Boolean
     ) {
         // Perform feature matching of LR images against the first image as reference mat.
-        val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 1)
+        val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 3)
 
         // Perform perspective warping and alignment
         val succeedingMatList = rgbInputMatList.sliceArray(1 until rgbInputMatList.size)
@@ -155,9 +157,20 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         val warpResultNames = Array(succeedingMatList.size) { i -> "warp_$i" }
 
 
+        // 1 = Best Alignment Technique
+        // 2 = Median Alignment
+        // 3 = Perspective Warping
+        // 3 is default
         when (warpChoice) {
             1 -> {
-                this.performMedianAlignment(rgbInputMatList, medianResultNames)
+                Log.i(TAG, "Performing Best Alignment Technique")
+                this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
+            }
+            2 -> {
+                Log.i(TAG, "Performing Median Alignment")
+                this.performMedianAlignment(rgbInputMatList, medianResultNames)            }
+            3 -> {
+                Log.i(TAG, "Performing Perspective Warping")
                 this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
             }
         }
