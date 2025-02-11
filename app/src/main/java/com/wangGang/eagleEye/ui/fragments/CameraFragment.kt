@@ -22,7 +22,6 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.io.FileImageWriter
@@ -42,7 +41,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var thumbnailPreview: ImageView
     private lateinit var captureButton: ImageButton
     private lateinit var popupButton: Button
-    private lateinit var switchCameraButton: FloatingActionButton
+    private lateinit var switchCameraButton: ImageButton
     private lateinit var constraintLayout: ConstraintLayout
 
     private val imageInputMap: MutableList<String> = mutableListOf()

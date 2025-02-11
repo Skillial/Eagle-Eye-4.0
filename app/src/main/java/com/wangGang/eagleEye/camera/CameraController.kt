@@ -160,8 +160,6 @@ class CameraController(private val context: Context) {
         }, handler)
     }
 
-
-
     private fun getCameraId(lensFacing: Int): String {
         for (cameraId in cameraManager.cameraIdList) {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
