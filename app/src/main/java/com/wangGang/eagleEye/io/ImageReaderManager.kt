@@ -12,6 +12,7 @@ import android.view.View
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
+import com.wangGang.eagleEye.ui.fragments.CameraViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,13 +21,12 @@ import kotlinx.coroutines.withContext
 class ImageReaderManager(
     private val context: Context,
     private val cameraController: CameraController,
-    private val imageInputMap: MutableList<String>,
     private val concreteSuperResolution: ConcreteSuperResolution,
-    private val loadingBox: View
+    private val viewModel: CameraViewModel
 ) {
 
     fun initializeImageReader() {
-        concreteSuperResolution.initialize(imageInputMap)
+        concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
         setupImageReader(highestResolution)
         setImageReaderListener()
@@ -59,10 +59,13 @@ class ImageReaderManager(
         val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
         val isDehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
         if (isSuperResolutionEnabled) {
+            viewModel.updateLoadingText("Processing Super Resolution...")
             handleSuperResolutionImage(bitmap)
         } else if (isDehazeEnabled) {
+            viewModel.updateLoadingText("Processing Dehaze...")
             handleDehazeImage(bitmap)
         } else {
+            viewModel.updateLoadingText("Processing Normal Image...")
             handleNormalImage(bitmap)
         }
     }
@@ -72,9 +75,7 @@ class ImageReaderManager(
         val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         CoroutineScope(Dispatchers.IO).launch {
             FileImageWriter.getInstance()!!.saveBitmapToUserDir(rotatedBitmap,ImageFileAttribute.FileType.JPEG)
-            withContext(Dispatchers.Main) {
-                loadingBox.visibility = View.GONE
-            }
+            viewModel.setLoadingBoxVisible(false)
         }
     }
     private fun handleDehazeImage(bitmap: Bitmap) {
@@ -82,7 +83,7 @@ class ImageReaderManager(
             withContext(Dispatchers.IO) {
                 SynthDehaze(context).dehazeImage(bitmap)
             }
-            loadingBox.visibility = View.GONE
+            viewModel.setLoadingBoxVisible(false)
         }
     }
 
@@ -91,20 +92,18 @@ class ImageReaderManager(
         CoroutineScope(Dispatchers.IO).launch {
             val saveJob = launch {
                 FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
-                    imageInputMap.add(it)
+                    viewModel.addImageInput(it)
                 }
             }
 
             saveJob.join() // Ensures the file is saved before checking the count
 
-            if (imageInputMap.size == 10) {
+            if (viewModel.imageInputMap.value?.size == 10) {
                 // Run super resolution asynchronously
                 launch {
-                    concreteSuperResolution.superResolutionImage(imageInputMap)
-                    withContext(Dispatchers.Main) {
-                        loadingBox.visibility = View.GONE
-                    }
-                    imageInputMap.clear()
+                    concreteSuperResolution.superResolutionImage(viewModel.imageInputMap.value!!)
+                    viewModel.setLoadingBoxVisible(false)
+                    viewModel.clearImageInputMap()
                 }
             }
         }

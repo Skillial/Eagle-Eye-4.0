@@ -1,8 +1,6 @@
 package com.wangGang.eagleEye.camera
 
-import CameraViewModel
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
@@ -25,6 +23,7 @@ import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.widget.LinearLayout
+import com.wangGang.eagleEye.ui.fragments.CameraViewModel
 
 class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
 

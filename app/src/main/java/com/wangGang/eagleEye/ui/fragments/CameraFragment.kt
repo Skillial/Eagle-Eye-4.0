@@ -1,6 +1,5 @@
 package com.wangGang.eagleEye.ui.fragments
 
-import CameraViewModel
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -78,6 +77,17 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
         viewModel.loadingText.observe(viewLifecycleOwner, Observer { text ->
             loadingText.text = text
+        })
+
+        viewModel.thumbnailUri.observe(viewLifecycleOwner, Observer { uri ->
+            uri?.let {
+                val bitmap = BitmapFactory.decodeStream(requireContext().contentResolver.openInputStream(it))
+                updateThumbnail(bitmap)
+            }
+        })
+
+        viewModel.loadingBoxVisible.observe(viewLifecycleOwner, Observer { visible ->
+            loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
         })
     }
 
@@ -193,17 +203,14 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         imageReaderManager = ImageReaderManager(
             requireContext(),
             CameraController.getInstance(),
-            imageInputMap,
             concreteSuperResolution,
-            loadingBox
+            viewModel
         )
         imageReaderManager.initializeImageReader()
     }
 
     private fun updateThumbnail(bitmap: Bitmap) {
-        activity?.runOnUiThread {
-            thumbnailPreview.setImageBitmap(bitmap)
-        }
+        thumbnailPreview.setImageBitmap(bitmap)
     }
 
     private fun showPhotoActivity() {
@@ -263,9 +270,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     override fun onImageSaved(uri: Uri) {
         Log.d("CameraFragment", "onImageSaved: $uri")
-        val bitmap =
-            BitmapFactory.decodeStream(requireContext().contentResolver.openInputStream(uri))
-        updateThumbnail(bitmap)
-        thumbnailUri = uri
+        viewModel.updateThumbnailUri(uri)
     }
 }
