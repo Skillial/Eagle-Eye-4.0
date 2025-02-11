@@ -66,11 +66,38 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         initializeCamera()
         addEventListeners(view)
         setBackground()
-
         // used to update the thumbnail preview
         FileImageWriter.setOnImageSavedListener(this)
 
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d("CameraFragment", "onResume")
+
+        if (textureView.isAvailable) {
+            CameraController.getInstance().openCamera(textureView)
+        } else {
+            textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                    CameraController.getInstance().openCamera(textureView)
+                }
+
+                override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+
+                override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean = false
+
+                override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d("CameraFragment", "onStop")
+
+        CameraController.getInstance().closeCamera()
     }
 
     private fun assignViews(view: View) {
@@ -83,7 +110,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         captureButton = view.findViewById(R.id.capture)
         popupButton = view.findViewById(R.id.button)
         switchCameraButton = view.findViewById(R.id.switchCamera)
-
     }
 
     private fun setBackground() {
@@ -102,29 +128,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun addEventListeners(view: View) {
-        textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-                CameraController.getInstance().openCamera(textureView)
-            }
-
-            override fun onSurfaceTextureSizeChanged(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-            }
-
-            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                return false
-            }
-
-            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
-        }
-
         captureButton.setOnClickListener {
             CameraController.getInstance().captureImage(loadingBox)
         }

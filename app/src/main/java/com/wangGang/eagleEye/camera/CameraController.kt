@@ -52,6 +52,7 @@ class CameraController(private val context: Context) {
         }
     }
 
+    // Properties
     private lateinit var cameraManager: CameraManager
     private lateinit var cameraDevice: CameraDevice
     private lateinit var imageReader: ImageReader
@@ -61,15 +62,7 @@ class CameraController(private val context: Context) {
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private var cameraId: String = ""
 
-    fun initializeCamera() {
-        cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK)
-
-        handlerThread = HandlerThread("CameraBackgroundThread")
-        handlerThread.start()
-        handler = Handler(handlerThread.looper)
-    }
-
+    // Methods
     fun captureImage(loadingBox: LinearLayout) {
         val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
         val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
@@ -104,6 +97,8 @@ class CameraController(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun openCamera(textureView: TextureView) {
+        initializeHandlerThread()
+
         cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
@@ -164,6 +159,8 @@ class CameraController(private val context: Context) {
             }
         }, handler)
     }
+
+
 
     private fun getCameraId(lensFacing: Int): String {
         for (cameraId in cameraManager.cameraIdList) {
@@ -270,5 +267,37 @@ class CameraController(private val context: Context) {
 
     fun setCaptureRequest(captureRequest: CaptureRequest.Builder) {
         this.captureRequest = captureRequest
+    }
+
+    // Lifecycle
+    fun initializeCamera() {
+        cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK)
+
+        initializeHandlerThread()
+    }
+
+    private fun initializeHandlerThread() {
+        if (!::handlerThread.isInitialized || !handlerThread.isAlive) {
+            handlerThread = HandlerThread("CameraBackgroundThread")
+            handlerThread.start()
+            handler = Handler(handlerThread.looper)
+        }
+    }
+
+    fun closeCamera() {
+        try {
+            cameraCaptureSession.close()
+            cameraDevice.close()
+            handlerThread.quitSafely()
+        } catch (e: Exception) {
+            Log.e("CameraController", "Error closing camera: ", e)
+        }
+    }
+
+    fun reopenCamera(textureView: TextureView) {
+        if (!::cameraDevice.isInitialized) {
+            openCamera(textureView)
+        }
     }
 }
