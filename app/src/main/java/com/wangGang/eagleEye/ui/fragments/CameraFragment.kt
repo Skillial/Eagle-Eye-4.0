@@ -4,14 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.SurfaceTexture
-import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.util.Log
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
@@ -25,19 +21,15 @@ import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
-import com.wangGang.eagleEye.io.ImageReaderManager
-import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
+import com.wangGang.eagleEye.io.ImageReaderManager
+import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.ui.activities.PhotoActivity
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 
 class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager
