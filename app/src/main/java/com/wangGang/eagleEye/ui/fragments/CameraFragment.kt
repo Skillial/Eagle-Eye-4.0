@@ -34,6 +34,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager
     private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
+    private lateinit var algoIndicatorLayout: LinearLayout
     private lateinit var textureView: TextureView
     private lateinit var progressBar: ProgressBar
     private lateinit var loadingText: TextView
@@ -46,6 +47,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     private val imageInputMap: MutableList<String> = mutableListOf()
     private var thumbnailUri: Uri? = null
+
+    private enum class Algo {
+        SR, DEHAZE
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -93,6 +98,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     private fun assignViews(view: View) {
         constraintLayout = view.findViewById(R.id.constraintLayout)
+        algoIndicatorLayout = view.findViewById(R.id.algoIndicatorLayout)
         textureView = view.findViewById(R.id.textureView)
         progressBar = view.findViewById(R.id.progressBar)
         loadingText = view.findViewById(R.id.loadingText)
@@ -109,13 +115,44 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         val superResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
         val dehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
 
+        val activeAlgos = mutableListOf<Algo>()
+
         if (superResolutionEnabled) {
-//            constraintLayout.setBackgroundColor(Color.GREEN);
-        } else if (dehazeEnabled) {
-//            constraintLayout.setBackgroundColor(Color.BLUE);
-        } else {
-//            constraintLayout.setBackgroundColor(Color.BLACK);
+            activeAlgos.add(Algo.SR)
         }
+
+        if (dehazeEnabled) {
+            activeAlgos.add(Algo.DEHAZE)
+        }
+
+        updateAlgoIndicators(activeAlgos)
+    }
+
+    private fun updateAlgoIndicators(activeAlgos: List<Algo>) {
+        algoIndicatorLayout.removeAllViews()
+
+        for (algo in activeAlgos) {
+            val imageView = ImageView(context)
+            imageView.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = 8.dpToPx()
+            }
+            imageView.setImageResource(getAlgoIcon(algo))
+            algoIndicatorLayout.addView(imageView)
+        }
+    }
+
+    private fun getAlgoIcon(algo: Algo): Int {
+        return when (algo) {
+            Algo.SR -> R.drawable.ic_super_resolution
+            Algo.DEHAZE -> R.drawable.ic_dehaze
+        }
+    }
+
+    private fun Int.dpToPx(): Int {
+        return (this * resources.displayMetrics.density).toInt()
     }
 
     private fun addEventListeners(view: View) {
@@ -183,10 +220,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 editor.putBoolean("super_resolution_enabled", true)
                 editor.putBoolean("dehaze_enabled", false)
                 switch2.isChecked = false
-//                constraintLayout.setBackgroundColor(Color.GREEN);
+                updateAlgoIndicators(listOf(Algo.SR))
             } else {
                 editor.putBoolean("super_resolution_enabled", false)
-//                constraintLayout.setBackgroundColor(Color.BLACK);
+                updateAlgoIndicators(emptyList())
             }
             editor.apply()
         }
@@ -197,10 +234,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 editor.putBoolean("dehaze_enabled", true)
                 editor.putBoolean("super_resolution_enabled", false)
                 switch1.isChecked = false
-//                constraintLayout.setBackgroundColor(Color.BLUE);
+                updateAlgoIndicators(listOf(Algo.DEHAZE))
             } else {
                 editor.putBoolean("dehaze_enabled", false)
-//                constraintLayout.setBackgroundColor(Color.BLACK);
+                updateAlgoIndicators(emptyList())
             }
             editor.apply()
         }
