@@ -1,5 +1,6 @@
 package com.wangGang.eagleEye.ui.fragments
 
+import CameraViewModel
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -22,6 +23,8 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.io.FileImageWriter
@@ -52,6 +55,8 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         SR, DEHAZE
     }
 
+    private val viewModel: CameraViewModel by viewModels()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -66,6 +71,14 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         FileImageWriter.setOnImageSavedListener(this)
 
         return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        viewModel.loadingText.observe(viewLifecycleOwner, Observer { text ->
+            loadingText.text = text
+        })
     }
 
     override fun onResume() {
@@ -174,7 +187,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun initializeCamera() {
-        CameraController.initialize(requireContext())
+        CameraController.initialize(requireContext(), viewModel)
         concreteSuperResolution = ConcreteSuperResolution()
 
         imageReaderManager = ImageReaderManager(
@@ -201,6 +214,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         } else {
             Log.e("CameraFragment", "thumbnailUri is null, cannot open PhotoActivity")
         }
+    }
+
+    fun updateLoadingText(text: String) {
+        loadingText.text = text
     }
 
     private fun showPopupMenu() {

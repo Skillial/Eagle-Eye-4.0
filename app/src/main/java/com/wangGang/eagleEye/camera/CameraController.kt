@@ -1,5 +1,6 @@
 package com.wangGang.eagleEye.camera
 
+import CameraViewModel
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -25,7 +26,7 @@ import android.view.TextureView
 import android.view.View
 import android.widget.LinearLayout
 
-class CameraController(private val context: Context) {
+class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
 
     companion object {
         // Constants
@@ -34,9 +35,9 @@ class CameraController(private val context: Context) {
         @Volatile
         private var instance: CameraController? = null
 
-        fun initialize(context: Context): CameraController {
+        fun initialize(context: Context, viewModel: CameraViewModel): CameraController {
             return instance ?: synchronized(this) {
-                instance ?: CameraController(context).also {
+                instance ?: CameraController(context, viewModel).also {
                     it.initializeCamera()
                     instance = it
                 }
@@ -69,6 +70,8 @@ class CameraController(private val context: Context) {
         val totalCaptures = if (isSuperResolutionEnabled) maxNumberOfBurstImages else 1
         val captureList = mutableListOf<CaptureRequest>()
 
+        viewModel.updateLoadingText("Capturing Images...")
+
         for (i in 0 until totalCaptures) {
             val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             captureRequest.addTarget(imageReader.surface)
@@ -79,7 +82,7 @@ class CameraController(private val context: Context) {
 
         playShutterSound()
 
-        (context as Activity).runOnUiThread {
+        loadingBox.post {
             loadingBox.visibility = View.VISIBLE
         }
 
