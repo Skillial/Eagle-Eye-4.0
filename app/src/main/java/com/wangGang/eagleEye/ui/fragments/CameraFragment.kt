@@ -119,11 +119,11 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         val dehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
 
         if (superResolutionEnabled) {
-            constraintLayout.setBackgroundColor(Color.GREEN);
+//            constraintLayout.setBackgroundColor(Color.GREEN);
         } else if (dehazeEnabled) {
-            constraintLayout.setBackgroundColor(Color.BLUE);
+//            constraintLayout.setBackgroundColor(Color.BLUE);
         } else {
-            constraintLayout.setBackgroundColor(Color.BLACK);
+//            constraintLayout.setBackgroundColor(Color.BLACK);
         }
     }
 
@@ -192,10 +192,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 editor.putBoolean("super_resolution_enabled", true)
                 editor.putBoolean("dehaze_enabled", false)
                 switch2.isChecked = false
-                constraintLayout.setBackgroundColor(Color.GREEN);
+//                constraintLayout.setBackgroundColor(Color.GREEN);
             } else {
                 editor.putBoolean("super_resolution_enabled", false)
-                constraintLayout.setBackgroundColor(Color.BLACK);
+//                constraintLayout.setBackgroundColor(Color.BLACK);
             }
             editor.apply()
         }
@@ -206,10 +206,10 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 editor.putBoolean("dehaze_enabled", true)
                 editor.putBoolean("super_resolution_enabled", false)
                 switch1.isChecked = false
-                constraintLayout.setBackgroundColor(Color.BLUE);
+//                constraintLayout.setBackgroundColor(Color.BLUE);
             } else {
                 editor.putBoolean("dehaze_enabled", false)
-                constraintLayout.setBackgroundColor(Color.BLACK);
+//                constraintLayout.setBackgroundColor(Color.BLACK);
             }
             editor.apply()
         }
