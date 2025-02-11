@@ -113,14 +113,14 @@ class ConcreteSuperResolution : SuperResolutionTemplate() {
         debugMode: Boolean
     ) {
         // Perform denoising on original input list
-        val denoisingOperator = DenoisingOperator(rgbInputMatList)
-        denoisingOperator.perform()
-
-        // Use var to allow reassignment
-        val updatedMatList = denoisingOperator.getResult()
+        // Note: Commented this out since Eagle Eye 2.0 does not
+        // use denoising by default
+        //val denoisingOperator = DenoisingOperator(rgbInputMatList)
+        //denoisingOperator.perform()
+        //val updatedMatList = denoisingOperator.getResult()
 
         // Pass updatedMatList to the next method
-        this.performFullSRMode(updatedMatList, inputIndices, imageInputMap, bestIndex, debugMode)
+        this.performFullSRMode(rgbInputMatList, inputIndices, imageInputMap, bestIndex, debugMode)
     }
 
     private fun performMedianAlignment(imagesToAlignList: Array<Mat>, resultNames: Array<String>) {
