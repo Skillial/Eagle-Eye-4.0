@@ -198,7 +198,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     private fun initializeCamera() {
         CameraController.initialize(requireContext(), viewModel)
-        concreteSuperResolution = ConcreteSuperResolution()
+        concreteSuperResolution = ConcreteSuperResolution(viewModel)
 
         imageReaderManager = ImageReaderManager(
             requireContext(),

@@ -90,6 +90,7 @@ class ImageReaderManager(
 
     private fun handleSuperResolutionImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
+            viewModel.updateLoadingText("Saving Images...")
             val saveJob = launch {
                 FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
                     viewModel.addImageInput(it)
