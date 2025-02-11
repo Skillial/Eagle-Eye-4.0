@@ -1,14 +1,11 @@
 package com.bgcoding.camera2api
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.enableEdgeToEdge
+
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ContentValues
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
@@ -19,11 +16,11 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.TotalCaptureResult
 import android.media.ImageReader
-import android.os.Build
-import android.os.Environment
+import android.media.MediaActionSound
+import android.os.Bundle
+import android.os.Debug
 import android.os.Handler
 import android.os.HandlerThread
-import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
 import android.view.TextureView
@@ -33,29 +30,27 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import org.opencv.android.OpenCVLoader
 import org.opencv.android.Utils
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Size
-import org.opencv.imgproc.Imgproc
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.nio.ByteBuffer
-import android.media.MediaActionSound
 import org.opencv.imgcodecs.Imgcodecs
-
-
-import android.app.ActivityManager
-import android.media.MediaScannerConnection
-import android.os.Debug
-import org.opencv.core.Core
+import org.opencv.imgproc.Imgproc
 
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        init {
+            System.loadLibrary("camera2api")
+        }
+    }
+
     private var processedImagesCounter = 0
     lateinit var captureRequest: CaptureRequest.Builder
     lateinit var handler: Handler
@@ -70,6 +65,17 @@ class MainActivity : ComponentActivity() {
     lateinit var loadingBox: LinearLayout
     lateinit var cameraId: String
     private var sensorOrientation: Int = 0
+    // Declare the native method in Kotlin, matching the C++ signature
+    external fun interpolate(
+        context: Context,
+        filenames: Array<String>,  // or List<String> if you prefer using a list
+        divisionFactor: Int,
+        interpolationValue: Int,
+        quadrantWidth: Int,
+        quadrantHeight: Int,
+        outputFilePath: String  // Added the output file path for saving the image
+    )
+
 
     fun getAppMemoryUsage(): Long {
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -81,6 +87,19 @@ class MainActivity : ComponentActivity() {
 
         val usedMemory = memoryInfoArray[0].getTotalPss() * 1024L // in bytes
         return usedMemory
+    }
+
+    fun getMemoryInfo(context: Context) {
+        val activityManager = context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo: ActivityManager.MemoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val totalMemory: Long = memoryInfo.totalMem // Total physical memory
+        val availableMemory: Long = memoryInfo.availMem // Available memory
+
+        // Print the results (in bytes)
+        Log.d("MemoryInfo", "Total Memory: $totalMemory bytes")
+        Log.d("MemoryInfo", "Available Memory: $availableMemory bytes")
     }
 
     private val permissionsRequest =
@@ -218,8 +237,8 @@ class MainActivity : ComponentActivity() {
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2RGB)
                 Log.d("Time test - orientation/color", "${System.currentTimeMillis()-startTime}")
                 Log.d("Memory test - orientation/color","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                val divisionFactor = 1   // set division factor
-
+                val divisionFactor = 4   // set division factor
+                val interpolationValue = 4
                 val quadrantWidth = width / divisionFactor
                 val remainderWidth = width % divisionFactor
                 val quadrantHeight = height / divisionFactor
@@ -253,7 +272,7 @@ class MainActivity : ComponentActivity() {
                 Log.d("Memory test - image split","${getAppMemoryUsage() / (1024 * 1024)} MB")
                 mat.release()
 
-                val interpolationValue = 8
+
 
                 // apply bicubic interpolation to each image
                 for (i in filenames.indices) {
@@ -277,84 +296,92 @@ class MainActivity : ComponentActivity() {
                 Log.d("Time test - interpolation", "${System.currentTimeMillis()-startTime}")
 
                 // create an empty Mat to store the final merged image
-                val mergedImage = Mat.zeros(
-                    height * interpolationValue,
-                    width * interpolationValue,
-                    CvType.CV_8UC3
-                )
+//                val mergedImage = Mat.zeros(
+//                    height * interpolationValue,
+//                    width * interpolationValue,
+//                    CvType.CV_8UC3
+//                )
 
-                // calculate image location
-                for (i in filenames.indices) {
-                    val quadrant = Imgcodecs.imread(filenames[i])
-                    val row = i / divisionFactor
-                    val col = i % divisionFactor
+                val context : Context = this@MainActivity
+                val nativeHeapSize = Debug.getNativeHeapSize() // Total native heap size
+                Log.d("MemoryInfo", "Native Heap Size: $nativeHeapSize bytes")
 
-                    val rowOffset = row * quadrantHeight * interpolationValue
-                    val colOffset = col * quadrantWidth * interpolationValue
-                    // Copy the resized quadrant into the correct position in the merged image
-                    quadrant.copyTo(
-                        mergedImage.submat(
-                            rowOffset, rowOffset + quadrant.rows(),
-                            colOffset, colOffset + quadrant.cols()
-                        )
-                    )
-                    // Release resources
-                    Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
-                    quadrant.release()
-
-                    val file = File(filenames[i])
-                    if (file.exists()) {
-                        file.delete()
-                    }
-                }
-                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
-
-
-                // Save the final merged image
-                val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
+                                val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
                 val finalFilePath = getExternalFilesDir(null)?.absolutePath + "/" + finalFilename
-                Imgcodecs.imwrite(finalFilePath, mergedImage)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val contentValues = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, finalFilename)
-                        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                    }
-
-                    val uri = contentResolver.insert(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        contentValues
-                    )
-                    contentResolver.openOutputStream(uri!!)?.use { outputStream ->
-                        val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
-                        mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                        mergedBitmap.recycle()
-                    }
-                } else {
-                    // API 28 and below, save directly to external storage
-                    val picturesDir =
-                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                    val imageFile = File(picturesDir, finalFilename)
-
-                    try {
-                        FileOutputStream(imageFile).use { outputStream ->
-                            val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
-                            mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                            mergedBitmap.recycle()
-                        }
-                        // Trigger a media scan to add the image to the gallery
-                        MediaScannerConnection.scanFile(
-                            this@MainActivity,  // Pass the correct context reference
-                            arrayOf(imageFile.absolutePath),
-                            arrayOf("image/jpeg")
-                        ) { path, _ ->
-                            Log.d("MediaScanner", "Image saved to gallery: $path")
-                        }
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    }
-                }
-                mergedImage.release()
+                Log.d("JNI", "Calling interpolate function");
+                interpolate(context, filenames, divisionFactor, interpolationValue, quadrantWidth, quadrantHeight, finalFilePath)
+                // calculate image location
+//                for (i in filenames.indices) {
+//                    val quadrant = Imgcodecs.imread(filenames[i])
+//                    val row = i / divisionFactor
+//                    val col = i % divisionFactor
+//
+//                    val rowOffset = row * quadrantHeight * interpolationValue
+//                    val colOffset = col * quadrantWidth * interpolationValue
+//                    // Copy the resized quadrant into the correct position in the merged image
+//                    quadrant.copyTo(
+//                        mergedImage.submat(
+//                            rowOffset, rowOffset + quadrant.rows(),
+//                            colOffset, colOffset + quadrant.cols()
+//                        )
+//                    )
+//                    // Release resources
+//                    Log.d("Memory test - per merge","${getAppMemoryUsage() / (1024 * 1024)} MB")
+//                    quadrant.release()
+//
+//                    val file = File(filenames[i])
+//                    if (file.exists()) {
+//                        file.delete()
+//                    }
+//                }
+//                Log.d("Time test - merge", "${System.currentTimeMillis()-startTime}")
+//
+//
+//                // Save the final merged image
+//                val finalFilename = "merged_image_${System.currentTimeMillis()}.jpg"
+//                val finalFilePath = getExternalFilesDir(null)?.absolutePath + "/" + finalFilename
+//                Imgcodecs.imwrite(finalFilePath, mergedImage)
+//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                    val contentValues = ContentValues().apply {
+//                        put(MediaStore.MediaColumns.DISPLAY_NAME, finalFilename)
+//                        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+//                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+//                    }
+//
+//                    val uri = contentResolver.insert(
+//                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+//                        contentValues
+//                    )
+//                    contentResolver.openOutputStream(uri!!)?.use { outputStream ->
+//                        val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
+//                        mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+//                        mergedBitmap.recycle()
+//                    }
+//                } else {
+//                    // API 28 and below, save directly to external storage
+//                    val picturesDir =
+//                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+//                    val imageFile = File(picturesDir, finalFilename)
+//
+//                    try {
+//                        FileOutputStream(imageFile).use { outputStream ->
+//                            val mergedBitmap = BitmapFactory.decodeFile(finalFilePath)
+//                            mergedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+//                            mergedBitmap.recycle()
+//                        }
+//                        // Trigger a media scan to add the image to the gallery
+//                        MediaScannerConnection.scanFile(
+//                            this@MainActivity,  // Pass the correct context reference
+//                            arrayOf(imageFile.absolutePath),
+//                            arrayOf("image/jpeg")
+//                        ) { path, _ ->
+//                            Log.d("MediaScanner", "Image saved to gallery: $path")
+//                        }
+//                    } catch (e: IOException) {
+//                        e.printStackTrace()
+//                    }
+//                }
+//                mergedImage.release()
                 Log.d("Time test - save", "${System.currentTimeMillis()-startTime}")
 
                 processedImagesCounter += 1
