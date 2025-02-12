@@ -3,23 +3,27 @@ package com.wangGang.eagleEye.processing.dehaze
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.util.Log
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
+import com.wangGang.eagleEye.ui.fragments.CameraViewModel
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
+import org.opencv.core.MatOfByte
 import org.opencv.core.Scalar
+import org.opencv.core.Size
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
 
-class SynthDehaze(private val context: android.content.Context) {
-    private fun loadAndResize(bitmap: Bitmap, size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
+class SynthDehaze(private val context: Context, private val viewModel: CameraViewModel) {
+    private fun loadAndResize(bitmap: Bitmap, size: Size): Pair<Size, Mat> {
         val matrix = Matrix()
         matrix.postRotate(90f)
         val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
@@ -31,7 +35,7 @@ class SynthDehaze(private val context: android.content.Context) {
             throw IllegalArgumentException("Image conversion failed")
         }
 
-        val imSize = org.opencv.core.Size(img.cols().toDouble(), img.rows().toDouble())
+        val imSize = Size(img.cols().toDouble(), img.rows().toDouble())
 
         Imgproc.resize(img, img, size)
 
@@ -39,7 +43,7 @@ class SynthDehaze(private val context: android.content.Context) {
     }
 
 
-    private fun loadAndResizeFromAssets (size: org.opencv.core.Size): Pair<org.opencv.core.Size, Mat> {
+    private fun loadAndResizeFromAssets (size: Size): Pair<Size, Mat> {
         val inputStream: InputStream
         try {
             inputStream = context.assets.open("test/dehaze/try.png")
@@ -47,14 +51,14 @@ class SynthDehaze(private val context: android.content.Context) {
             throw IllegalArgumentException("Image not found in assets")
         }
         val byteArray = inputStream.readBytes()
-        val matOfByte = org.opencv.core.MatOfByte(*byteArray)
+        val matOfByte = MatOfByte(*byteArray)
         val img = Imgcodecs.imdecode(matOfByte, Imgcodecs.IMREAD_COLOR)
 
         if (img.empty()) {
             throw IllegalArgumentException("Image decoding failed")
         }
 
-        val imSize = org.opencv.core.Size(img.cols().toDouble(), img.rows().toDouble())
+        val imSize = Size(img.cols().toDouble(), img.rows().toDouble())
         Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
         Imgproc.resize(img, img, size)
 
@@ -75,12 +79,18 @@ class SynthDehaze(private val context: android.content.Context) {
             addConfigEntry("session.use_device_memory_mapping", "1")
             addConfigEntry("session.enable_stream_execution", "1")
         }
+
+        viewModel.updateLoadingText("Loading Albedo Model...")
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
 
-//        val (imSize, hazyImg) = loadAndResize(bitmap, org.opencv.core.Size(512.0, 512.0))
-        val (imSize, hazyImg) = loadAndResizeFromAssets(org.opencv.core.Size(512.0, 512.0))
+//        val (imSize, hazyImg) = loadAndResize(bitmap, Size(512.0, 512.0))
+        viewModel.updateLoadingText("Loading and Resizing Image...")
+        val (imSize, hazyImg) = loadAndResizeFromAssets(Size(512.0, 512.0))
 
+        viewModel.updateLoadingText("Preprocessing Image...")
         val hazyInput = preprocess(hazyImg, env)
+
+        viewModel.updateLoadingText("Running Albedo Model...")
         val albedoOutput = hazyInput.use { input ->
             ortSessionAlbedo.run(mapOf("input.1" to input)).use { results ->
                 (results.get(0) as OnnxTensor).use { tensor ->
@@ -91,10 +101,12 @@ class SynthDehaze(private val context: android.content.Context) {
 
         Log.d("dehaze", "Albedo output computed successfully")
 
+        viewModel.updateLoadingText("Loading Transmission Model...")
         val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
 
         val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 512, 512))
 
+        viewModel.updateLoadingText("Running Transmission Model...")
         val transmissionOutput = transmissionInput.use { input ->
             ortSessionTransmission.run(mapOf("input.1" to input)).use { results ->
                 (results.get(0) as OnnxTensor).use { tensor ->
@@ -111,15 +123,19 @@ class SynthDehaze(private val context: android.content.Context) {
 
         Log.d("dehaze", "Transmission output computed successfully")
 
+        viewModel.updateLoadingText("Resizing Image...")
         val hazyResized = Mat()
-        Imgproc.resize(hazyImg, hazyResized, org.opencv.core.Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        Imgproc.resize(hazyImg, hazyResized, Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
 
+        viewModel.updateLoadingText("Preprocessing Image...")
         val airlightInput = preprocess(hazyResized, env)
         hazyResized.release()
 
+        viewModel.updateLoadingText("Loading Airlight Model...")
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
         sessionOptions.close()
 
+        viewModel.updateLoadingText("Running Airlight Model...")
         val airlightOutput = airlightInput.use { input ->
             ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
                 (results.get(0) as OnnxTensor).floatBuffer.array()
@@ -132,12 +148,15 @@ class SynthDehaze(private val context: android.content.Context) {
         val airlightGreen = airlightOutput[1]
         val airlightBlue = airlightOutput[2]
 
+        viewModel.updateLoadingText("Normalizing Image...")
         val hazyImgNorm = Mat()
         Core.normalize(hazyImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
         hazyImg.release()
 
+        viewModel.updateLoadingText("Clearing Image...")
         val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3)
 
+        viewModel.updateLoadingText("Processing Image...")
         for (i in 0 until hazyImgNorm.rows()) {
             for (j in 0 until hazyImgNorm.cols()) {
                 val tVal = TResized.get(i, j)[0]
@@ -158,13 +177,16 @@ class SynthDehaze(private val context: android.content.Context) {
         TResized.release()
         hazyImgNorm.release()
 
+        viewModel.updateLoadingText("Resizing Image...")
         val clearImgResized = Mat()
         Imgproc.resize(clearImg, clearImgResized, imSize, 0.0, 0.0, Imgproc.INTER_CUBIC)
         clearImg.release()
 
+        viewModel.updateLoadingText("Converting Image...")
         clearImgResized.convertTo(clearImgResized, CvType.CV_8U)
         Imgproc.cvtColor(clearImgResized, clearImgResized, Imgproc.COLOR_RGB2BGR)
 
+        viewModel.updateLoadingText("Saving Image...")
         FileImageWriter.getInstance()!!.saveMatToUserDir(clearImgResized, ImageFileAttribute.FileType.JPEG)
         clearImgResized.release()
 

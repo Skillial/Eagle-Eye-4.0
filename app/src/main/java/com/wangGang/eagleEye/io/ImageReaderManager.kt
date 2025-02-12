@@ -81,7 +81,7 @@ class ImageReaderManager(
     private fun handleDehazeImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.Main).launch {
             withContext(Dispatchers.IO) {
-                SynthDehaze(context).dehazeImage(bitmap)
+                SynthDehaze(context, viewModel).dehazeImage(bitmap)
             }
             viewModel.setLoadingBoxVisible(false)
         }
