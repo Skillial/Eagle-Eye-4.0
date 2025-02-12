@@ -8,6 +8,7 @@ import android.graphics.Matrix
 import android.media.Image
 import android.media.ImageReader
 import android.os.Handler
+import android.util.Log
 import android.util.Size
 import android.view.View
 import com.wangGang.eagleEye.camera.CameraController
@@ -43,10 +44,14 @@ class ImageReaderManager(
 
     fun setImageReaderListener() {
         val imageReader = cameraController.getImageReader()
-        imageReader.setOnImageAvailableListener({ reader ->
-            val image = reader?.acquireNextImage()
-            image?.let { processImage(it) }
-        }, cameraController.getHandler())
+        val handler = cameraController.getHandler()
+        if (handler != null && handler.looper.thread.isAlive) {
+            Log.d("ImageReaderManager", "Handler is alive")
+            imageReader.setOnImageAvailableListener({ reader ->
+                val image = reader?.acquireNextImage()
+                image?.let { processImage(it) }
+            }, handler)
+        }
     }
 
     private fun processImage(image: Image) {

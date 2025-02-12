@@ -99,6 +99,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     fun openCamera(textureView: TextureView) {
         initializeHandlerThread()
 
+        Log.d("CameraController", "Opening camera")
         cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
