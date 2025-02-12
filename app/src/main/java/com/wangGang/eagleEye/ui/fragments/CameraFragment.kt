@@ -80,9 +80,21 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         })
 
         viewModel.thumbnailUri.observe(viewLifecycleOwner, Observer { uri ->
+            Log.d("CameraFragment", "thumbnailUri: $uri")
             uri?.let {
-                val bitmap = BitmapFactory.decodeStream(requireContext().contentResolver.openInputStream(it))
-                updateThumbnail(bitmap)
+                try {
+                    val inputStream = requireContext().contentResolver.openInputStream(it)
+                    if (inputStream != null) {
+                        val bitmap = BitmapFactory.decodeStream(inputStream)
+                        Log.d("CameraFragment", "onViewCreated bitmap: $bitmap")
+                        thumbnailUri = uri
+                        updateThumbnail(bitmap)
+                    } else {
+                        Log.e("CameraFragment", "Failed to open input stream for URI: $uri")
+                    }
+                } catch (e: Exception) {
+                    Log.e("CameraFragment", "Error decoding bitmap from URI: $uri", e)
+                }
             }
         })
 
@@ -97,10 +109,12 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
         if (textureView.isAvailable) {
             CameraController.getInstance().openCamera(textureView)
+            imageReaderManager.setImageReaderListener()
         } else {
             textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                 override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                     CameraController.getInstance().openCamera(textureView)
+                    imageReaderManager.setImageReaderListener()
                 }
 
                 override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
@@ -110,6 +124,11 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
             }
         }
+
+        // enable all buttons
+        captureButton.isEnabled = true
+        popupButton.isEnabled = true
+        switchCameraButton.isEnabled = true
     }
 
     override fun onStop() {
@@ -117,6 +136,11 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         Log.d("CameraFragment", "onStop")
 
         CameraController.getInstance().closeCamera()
+
+        // disable all buttons
+        captureButton.isEnabled = false
+        popupButton.isEnabled = false
+        switchCameraButton.isEnabled = false
     }
 
     private fun assignViews(view: View) {
@@ -210,6 +234,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun updateThumbnail(bitmap: Bitmap) {
+        Log.d("CameraFragment", "updateThumbnail bitmap: $bitmap")
         thumbnailPreview.setImageBitmap(bitmap)
     }
 

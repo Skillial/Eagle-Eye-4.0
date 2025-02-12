@@ -7,6 +7,7 @@ import android.graphics.ImageFormat
 import android.graphics.Matrix
 import android.media.Image
 import android.media.ImageReader
+import android.os.Handler
 import android.util.Size
 import android.view.View
 import com.wangGang.eagleEye.camera.CameraController
@@ -29,7 +30,6 @@ class ImageReaderManager(
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
         setupImageReader(highestResolution)
-        setImageReaderListener()
     }
 
     private fun setupImageReader(highestResolution: Size?) {
@@ -41,7 +41,7 @@ class ImageReaderManager(
         cameraController.setImageReader(imageReader)
     }
 
-    private fun setImageReaderListener() {
+    fun setImageReaderListener() {
         val imageReader = cameraController.getImageReader()
         imageReader.setOnImageAvailableListener({ reader ->
             val image = reader?.acquireNextImage()
