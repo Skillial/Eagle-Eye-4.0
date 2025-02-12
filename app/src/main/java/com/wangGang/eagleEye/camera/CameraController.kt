@@ -60,6 +60,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private lateinit var handlerThread: HandlerThread
     private lateinit var captureRequest: CaptureRequest.Builder
     private lateinit var cameraCaptureSession: CameraCaptureSession
+    private lateinit var preview: TextureView
     private var cameraId: String = ""
 
     // Methods
@@ -95,8 +96,12 @@ class CameraController(private val context: Context, private val viewModel: Came
         )
     }
 
+    fun setPreview(textureView: TextureView) {
+        preview = textureView
+    }
+
     @SuppressLint("MissingPermission")
-    fun openCamera(textureView: TextureView) {
+    fun openCamera() {
         initializeHandlerThread()
 
         Log.d("CameraController", "Opening camera")
@@ -104,7 +109,7 @@ class CameraController(private val context: Context, private val viewModel: Came
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                val surface = Surface(textureView.surfaceTexture)
+                val surface = Surface(preview.surfaceTexture)
                 captureRequest.addTarget(surface)
 
                 val surfaces = listOf(surface, imageReader.surface)
@@ -186,7 +191,7 @@ class CameraController(private val context: Context, private val viewModel: Came
 
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                openCamera(textureView)
+                openCamera()
             }
 
             override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {}
@@ -199,7 +204,7 @@ class CameraController(private val context: Context, private val viewModel: Came
         }
 
         if (textureView.isAvailable) {
-            openCamera(textureView)
+            openCamera()
         }
     }
 
@@ -286,6 +291,7 @@ class CameraController(private val context: Context, private val viewModel: Came
 
     fun closeCamera() {
         try {
+            Log.d("CameraController", "Closing camera")
             cameraCaptureSession.close()
             cameraDevice.close()
             handlerThread.quitSafely()
@@ -294,9 +300,10 @@ class CameraController(private val context: Context, private val viewModel: Came
         }
     }
 
-    fun reopenCamera(textureView: TextureView) {
+    fun reopenCamera() {
         if (!::cameraDevice.isInitialized) {
-            openCamera(textureView)
+            Log.d("CameraController", "Reopening camera")
+            openCamera()
         }
     }
 }

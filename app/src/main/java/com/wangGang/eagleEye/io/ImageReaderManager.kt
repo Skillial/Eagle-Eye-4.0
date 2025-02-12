@@ -26,6 +26,7 @@ class ImageReaderManager(
     private val concreteSuperResolution: ConcreteSuperResolution,
     private val viewModel: CameraViewModel
 ) {
+    private lateinit var imageReader: ImageReader
 
     fun initializeImageReader() {
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
@@ -34,7 +35,7 @@ class ImageReaderManager(
     }
 
     private fun setupImageReader(highestResolution: Size?) {
-        val imageReader: ImageReader = if (highestResolution != null) {
+        imageReader = if (highestResolution != null) {
             ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
         } else {
             ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
@@ -43,7 +44,7 @@ class ImageReaderManager(
     }
 
     fun setImageReaderListener() {
-        val imageReader = cameraController.getImageReader()
+        imageReader = cameraController.getImageReader()
         val handler = cameraController.getHandler()
         if (handler != null && handler.looper.thread.isAlive) {
             Log.d("ImageReaderManager", "Handler is alive")
@@ -75,6 +76,7 @@ class ImageReaderManager(
         }
     }
     private fun handleNormalImage(bitmap: Bitmap) {
+        cameraController.closeCamera()
         val matrix = Matrix()
         matrix.postRotate(90f)
         val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
@@ -82,12 +84,17 @@ class ImageReaderManager(
             FileImageWriter.getInstance()!!.saveBitmapToUserDir(rotatedBitmap,ImageFileAttribute.FileType.JPEG)
             viewModel.setLoadingBoxVisible(false)
         }
+        cameraController.openCamera()
+        setImageReaderListener()
     }
     private fun handleDehazeImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.Main).launch {
+            cameraController.closeCamera()
             withContext(Dispatchers.IO) {
                 SynthDehaze(context, viewModel).dehazeImage(bitmap)
             }
+            cameraController.openCamera()
+            setImageReaderListener()
             viewModel.setLoadingBoxVisible(false)
         }
     }
@@ -107,9 +114,12 @@ class ImageReaderManager(
             if (viewModel.imageInputMap.value?.size == 10) {
                 // Run super resolution asynchronously
                 launch {
+                    cameraController.closeCamera()
                     concreteSuperResolution.superResolutionImage(viewModel.imageInputMap.value!!)
                     viewModel.setLoadingBoxVisible(false)
                     viewModel.clearImageInputMap()
+                    cameraController.openCamera()
+                    setImageReaderListener()
                 }
             }
         }

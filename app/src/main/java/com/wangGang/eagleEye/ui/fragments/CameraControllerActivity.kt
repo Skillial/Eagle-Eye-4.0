@@ -99,12 +99,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         Log.d("CameraControllerActivity", "onResume")
 
         if (textureView.isAvailable) {
-            CameraController.getInstance().openCamera(textureView)
+            CameraController.getInstance().setPreview(textureView)
+            CameraController.getInstance().openCamera()
             imageReaderManager.setImageReaderListener()
         } else {
             textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                 override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                    CameraController.getInstance().openCamera(textureView)
+                    CameraController.getInstance().setPreview(textureView)
+                    CameraController.getInstance().openCamera()
                     imageReaderManager.setImageReaderListener()
                 }
 
