@@ -76,7 +76,6 @@ class ImageReaderManager(
         }
     }
     private fun handleNormalImage(bitmap: Bitmap) {
-        cameraController.closeCamera()
         val matrix = Matrix()
         matrix.postRotate(90f)
         val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
@@ -84,8 +83,6 @@ class ImageReaderManager(
             FileImageWriter.getInstance()!!.saveBitmapToUserDir(rotatedBitmap,ImageFileAttribute.FileType.JPEG)
             viewModel.setLoadingBoxVisible(false)
         }
-        cameraController.openCamera()
-        setImageReaderListener()
     }
     private fun handleDehazeImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.Main).launch {
