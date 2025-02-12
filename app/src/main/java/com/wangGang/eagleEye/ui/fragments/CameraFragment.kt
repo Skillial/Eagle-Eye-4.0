@@ -100,6 +100,14 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
         viewModel.loadingBoxVisible.observe(viewLifecycleOwner, Observer { visible ->
             loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
+
+            if (visible) {
+                Log.d("CameraFragment", "Disabling UI interactivity")
+                disableUIInteractivity()
+            } else {
+                Log.d("CameraFragment", "Enabling UI interactivity")
+                enableUIInteractivity()
+            }
         })
     }
 
@@ -124,11 +132,22 @@ class CameraFragment : Fragment(), OnImageSavedListener {
                 override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
             }
         }
+    }
 
-        // enable all buttons
+    private fun disableUIInteractivity() {
+        captureButton.isEnabled = false
+        popupButton.isEnabled = false
+        switchCameraButton.isEnabled = false
+        textureView.isEnabled = false
+        thumbnailPreview.isEnabled = false
+    }
+
+    private fun enableUIInteractivity() {
         captureButton.isEnabled = true
         popupButton.isEnabled = true
         switchCameraButton.isEnabled = true
+        textureView.isEnabled = true
+        thumbnailPreview.isEnabled = true
     }
 
     override fun onStop() {
@@ -136,11 +155,6 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         Log.d("CameraFragment", "onStop")
 
         CameraController.getInstance().closeCamera()
-
-        // disable all buttons
-        captureButton.isEnabled = false
-        popupButton.isEnabled = false
-        switchCameraButton.isEnabled = false
     }
 
     private fun assignViews(view: View) {

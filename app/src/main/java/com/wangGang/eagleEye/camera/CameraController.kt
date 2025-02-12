@@ -81,9 +81,7 @@ class CameraController(private val context: Context, private val viewModel: Came
 
         playShutterSound()
 
-        loadingBox.post {
-            loadingBox.visibility = View.VISIBLE
-        }
+        viewModel.setLoadingBoxVisible(true)
 
         cameraCaptureSession.captureBurst(
             captureList,
