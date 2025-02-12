@@ -1,6 +1,7 @@
 package com.wangGang.eagleEye
 
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -11,7 +12,7 @@ import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.model.AttributeHolder
 import com.wangGang.eagleEye.permissions.PermissionsHandler
-import com.wangGang.eagleEye.ui.fragments.CameraFragment
+import com.wangGang.eagleEye.ui.activities.CameraControllerActivity
 import org.opencv.android.OpenCVLoader
 
 
@@ -47,9 +48,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeApp() {
-        supportFragmentManager.commit {
-            replace(R.id.fragment_container, CameraFragment())
-        }
+        val intent = Intent(this, CameraControllerActivity::class.java)
+        startActivity(intent)
     }
 
     private fun loadComponents() {

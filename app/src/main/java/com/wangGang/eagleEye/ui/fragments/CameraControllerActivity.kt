@@ -1,4 +1,4 @@
-package com.wangGang.eagleEye.ui.fragments
+package com.wangGang.eagleEye.ui.activities
 
 import android.content.Context
 import android.content.Intent
@@ -11,43 +11,34 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.ProgressBar
-import android.widget.Switch
-import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import android.widget.*
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
+import com.wangGang.eagleEye.databinding.ActivityCameraControllerBinding
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
 import com.wangGang.eagleEye.io.ImageReaderManager
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
-import com.wangGang.eagleEye.ui.activities.PhotoActivity
+import com.wangGang.eagleEye.ui.fragments.CameraViewModel
 
-class CameraFragment : Fragment(), OnImageSavedListener {
+class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager
     private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
+    // UI
+    private lateinit var binding: ActivityCameraControllerBinding
     private lateinit var algoIndicatorLayout: LinearLayout
     private lateinit var textureView: TextureView
-    private lateinit var progressBar: ProgressBar
     private lateinit var loadingText: TextView
     private lateinit var loadingBox: LinearLayout
     private lateinit var thumbnailPreview: ImageView
     private lateinit var captureButton: ImageButton
     private lateinit var popupButton: Button
     private lateinit var switchCameraButton: ImageButton
-    private lateinit var constraintLayout: ConstraintLayout
 
-    private val imageInputMap: MutableList<String> = mutableListOf()
     private var thumbnailUri: Uri? = null
 
     private enum class Algo {
@@ -56,56 +47,48 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     private val viewModel: CameraViewModel by viewModels()
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        val view = inflater.inflate(R.layout.fragment_camera, container, false)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityCameraControllerBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        assignViews(view)
+        assignViews()
         initializeCamera()
-        addEventListeners(view)
+        addEventListeners()
         setBackground()
-        // used to update the thumbnail preview
         FileImageWriter.setOnImageSavedListener(this)
 
-        return view
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        viewModel.loadingText.observe(viewLifecycleOwner, Observer { text ->
+        viewModel.loadingText.observe(this, Observer { text ->
             loadingText.text = text
         })
 
-        viewModel.thumbnailUri.observe(viewLifecycleOwner, Observer { uri ->
-            Log.d("CameraFragment", "thumbnailUri: $uri")
+        viewModel.thumbnailUri.observe(this, Observer { uri ->
+            Log.d("CameraControllerActivity", "thumbnailUri: $uri")
             uri?.let {
                 try {
-                    val inputStream = requireContext().contentResolver.openInputStream(it)
+                    val inputStream = contentResolver.openInputStream(it)
                     if (inputStream != null) {
                         val bitmap = BitmapFactory.decodeStream(inputStream)
-                        Log.d("CameraFragment", "onViewCreated bitmap: $bitmap")
+                        Log.d("CameraControllerActivity", "onViewCreated bitmap: $bitmap")
                         thumbnailUri = uri
                         updateThumbnail(bitmap)
                     } else {
-                        Log.e("CameraFragment", "Failed to open input stream for URI: $uri")
+                        Log.e("CameraControllerActivity", "Failed to open input stream for URI: $uri")
                     }
                 } catch (e: Exception) {
-                    Log.e("CameraFragment", "Error decoding bitmap from URI: $uri", e)
+                    Log.e("CameraControllerActivity", "Error decoding bitmap from URI: $uri", e)
                 }
             }
         })
 
-        viewModel.loadingBoxVisible.observe(viewLifecycleOwner, Observer { visible ->
+        viewModel.loadingBoxVisible.observe(this, Observer { visible ->
             loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
 
             if (visible) {
-                Log.d("CameraFragment", "Disabling UI interactivity")
+                Log.d("CameraControllerActivity", "Disabling UI interactivity")
                 disableUIInteractivity()
             } else {
-                Log.d("CameraFragment", "Enabling UI interactivity")
+                Log.d("CameraControllerActivity", "Enabling UI interactivity")
                 enableUIInteractivity()
             }
         })
@@ -113,7 +96,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     override fun onResume() {
         super.onResume()
-        Log.d("CameraFragment", "onResume")
+        Log.d("CameraControllerActivity", "onResume")
 
         if (textureView.isAvailable) {
             CameraController.getInstance().openCamera(textureView)
@@ -152,27 +135,24 @@ class CameraFragment : Fragment(), OnImageSavedListener {
 
     override fun onStop() {
         super.onStop()
-        Log.d("CameraFragment", "onStop")
+        Log.d("CameraControllerActivity", "onStop")
 
         CameraController.getInstance().closeCamera()
     }
 
-    private fun assignViews(view: View) {
-        constraintLayout = view.findViewById(R.id.constraintLayout)
-        algoIndicatorLayout = view.findViewById(R.id.algoIndicatorLayout)
-        textureView = view.findViewById(R.id.textureView)
-        progressBar = view.findViewById(R.id.progressBar)
-        loadingText = view.findViewById(R.id.loadingText)
-        loadingBox = view.findViewById(R.id.loadingBox)
-        thumbnailPreview = view.findViewById(R.id.thumbnailPreview)
-        captureButton = view.findViewById(R.id.capture)
-        popupButton = view.findViewById(R.id.button)
-        switchCameraButton = view.findViewById(R.id.switchCamera)
+    private fun assignViews() {
+        algoIndicatorLayout = binding.algoIndicatorLayout
+        textureView = binding.textureView
+        loadingText = binding.loadingText
+        loadingBox = binding.loadingBox
+        thumbnailPreview = binding.thumbnailPreview
+        captureButton = binding.capture
+        popupButton = binding.button
+        switchCameraButton = binding.switchCamera
     }
 
     private fun setBackground() {
-        // get preferences of super_resolution_enabled and dehaze_enabled
-        val sharedPreferences = requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
         val superResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
         val dehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
 
@@ -193,7 +173,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         algoIndicatorLayout.removeAllViews()
 
         for (algo in activeAlgos) {
-            val imageView = ImageView(context)
+            val imageView = ImageView(this)
             imageView.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -216,7 +196,7 @@ class CameraFragment : Fragment(), OnImageSavedListener {
         return (this * resources.displayMetrics.density).toInt()
     }
 
-    private fun addEventListeners(view: View) {
+    private fun addEventListeners() {
         captureButton.setOnClickListener {
             CameraController.getInstance().captureImage(loadingBox)
         }
@@ -235,11 +215,11 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun initializeCamera() {
-        CameraController.initialize(requireContext(), viewModel)
+        CameraController.initialize(this, viewModel)
         concreteSuperResolution = ConcreteSuperResolution(viewModel)
 
         imageReaderManager = ImageReaderManager(
-            requireContext(),
+            this,
             CameraController.getInstance(),
             concreteSuperResolution,
             viewModel
@@ -248,17 +228,17 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun updateThumbnail(bitmap: Bitmap) {
-        Log.d("CameraFragment", "updateThumbnail bitmap: $bitmap")
+        Log.d("CameraControllerActivity", "updateThumbnail bitmap: $bitmap")
         thumbnailPreview.setImageBitmap(bitmap)
     }
 
     private fun showPhotoActivity() {
         if (thumbnailUri != null) {
-            val intent = Intent(requireContext(), PhotoActivity::class.java)
-            intent.putExtra("imageUri", thumbnailUri.toString()) // Use stored URI
+            val intent = Intent(this, PhotoActivity::class.java)
+            intent.putExtra("imageUri", thumbnailUri.toString())
             startActivity(intent)
         } else {
-            Log.e("CameraFragment", "thumbnailUri is null, cannot open PhotoActivity")
+            Log.e("CameraControllerActivity", "thumbnailUri is null, cannot open PhotoActivity")
         }
     }
 
@@ -267,13 +247,13 @@ class CameraFragment : Fragment(), OnImageSavedListener {
     }
 
     private fun showPopupMenu() {
-        val inflater = requireContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_menu, null)
         val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
 
         val switch1: Switch = popupView.findViewById(R.id.switch1)
         val switch2: Switch = popupView.findViewById(R.id.switch2)
-        val sharedPreferences = requireContext().getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
         switch1.isChecked = sharedPreferences.getBoolean("super_resolution_enabled", false)
         switch2.isChecked = sharedPreferences.getBoolean("dehaze_enabled", false)
         switch1.setOnCheckedChangeListener { _, isChecked ->
@@ -304,11 +284,11 @@ class CameraFragment : Fragment(), OnImageSavedListener {
             }
             editor.apply()
         }
-        popupWindow.showAsDropDown(view?.findViewById(R.id.button), 0, 0)
+        popupWindow.showAsDropDown(findViewById(R.id.button), 0, 0)
     }
 
     override fun onImageSaved(uri: Uri) {
-        Log.d("CameraFragment", "onImageSaved: $uri")
+        Log.d("CameraControllerActivity", "onImageSaved: $uri")
         viewModel.updateThumbnailUri(uri)
     }
 }

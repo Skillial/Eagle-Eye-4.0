@@ -40,6 +40,10 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.activities.CameraControllerActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+            />
+        <activity
             android:name=".ui.activities.PhotoActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         />
