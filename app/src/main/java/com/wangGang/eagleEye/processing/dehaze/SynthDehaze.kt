@@ -99,6 +99,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
             }
         }
 
+        // Close the session
+        ortSessionAlbedo.close()
+
         Log.d("dehaze", "Albedo output computed successfully")
 
         viewModel.updateLoadingText("Loading Transmission Model...")
@@ -114,6 +117,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 }
             }
         }
+
+        // Close the session
+        ortSessionTransmission.close()
 
         val T: FloatArray = transmissionOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
 
@@ -141,6 +147,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 (results.get(0) as OnnxTensor).floatBuffer.array()
             }
         }
+
+        // Close the session
+        ortSessionAirlight.close()
 
         Log.d("dehaze", "Airlight output computed successfully")
 

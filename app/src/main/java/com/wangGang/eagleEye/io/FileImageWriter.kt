@@ -142,6 +142,9 @@
             val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
 
+            Log.d(TAG, "saveMatToUserDir")
+            Log.d(TAG, "Saved: ${imageFile.absolutePath}")
+
             refreshImageGallery(imageFile)
         }
 
