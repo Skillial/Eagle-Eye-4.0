@@ -30,6 +30,8 @@ import org.opencv.imgproc.Imgproc
 import java.io.File
 import java.util.concurrent.Semaphore
 
+const val TAG = "ConcreteSuperResolution"
+
 class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperResolutionTemplate() {
 
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
@@ -120,16 +122,15 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         bestIndex: Int,
         debugMode: Boolean
     ) {
-        viewModel.updateLoadingText("Performing Denoising...")
         // Perform denoising on original input list
-        val denoisingOperator = DenoisingOperator(rgbInputMatList)
-        denoisingOperator.perform()
-
-        // Use var to allow reassignment
-        val updatedMatList = denoisingOperator.getResult()
+        // Note: Commented this out since Eagle Eye 2.0 does not
+        // use denoising by default
+        // val denoisingOperator = DenoisingOperator(rgbInputMatList)
+        // denoisingOperator.perform()
+        // val updatedMatList = denoisingOperator.getResult()
 
         // Pass updatedMatList to the next method
-        this.performFullSRMode(updatedMatList, inputIndices, imageInputMap, bestIndex, debugMode)
+        this.performFullSRMode(rgbInputMatList, inputIndices, imageInputMap, bestIndex, debugMode)
     }
 
     private fun performMedianAlignment(imagesToAlignList: Array<Mat>, resultNames: Array<String>) {
@@ -158,7 +159,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     ) {
         viewModel.updateLoadingText("Performing Feature Matching of LR Images...")
         // Perform feature matching of LR images against the first image as reference mat.
-        val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 1)
+        val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 3)
 
         viewModel.updateLoadingText("Performing Perspective Warping and Alignment...")
         // Perform perspective warping and alignment
@@ -167,12 +168,25 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         val medianResultNames = Array(succeedingMatList.size) { i -> "median_align_$i" }
         val warpResultNames = Array(succeedingMatList.size) { i -> "warp_$i" }
 
+
+        // 1 = Best Alignment Technique
+        // 2 = Median Alignment
+        // 3 = Perspective Warping
+        // 3 is default
         when (warpChoice) {
             1 -> {
-                this.performMedianAlignment(rgbInputMatList, medianResultNames)
+                Log.i(TAG, "Performing Best Alignment Technique")
+                this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
+            }
+            2 -> {
+                Log.i(TAG, "Performing Median Alignment")
+                this.performMedianAlignment(rgbInputMatList, medianResultNames)            }
+            3 -> {
+                Log.i(TAG, "Performing Perspective Warping")
                 this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
             }
         }
+
 
         SharpnessMeasure.destroy()
 

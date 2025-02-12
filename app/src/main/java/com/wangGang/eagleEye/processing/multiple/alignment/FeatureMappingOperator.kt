@@ -23,7 +23,7 @@ class FeatureMatchingOperator(
 ) {
     lateinit var refKeypoint: MatOfKeyPoint
         private set
-    private var referenceDescriptor: Mat? = null
+    private var referenceDescriptor: Mat = Mat()
 
     val lrKeypointsList: Array<MatOfKeyPoint?> = arrayOfNulls(
         comparingMatList.size
@@ -72,16 +72,14 @@ class FeatureMatchingOperator(
 
     private fun detectFeaturesInReference() {
         // Find features in reference LR image
-        this.referenceDescriptor = Mat()
         this.refKeypoint = MatOfKeyPoint()
-
-        featureDetector.detect(this.referenceMat, this.refKeypoint)
-        orb.compute(this.referenceMat, this.refKeypoint, this.referenceDescriptor)
+        orb.detectAndCompute(this.referenceMat, Mat(), this.refKeypoint, this.referenceDescriptor)
+        Log.d(TAG, "Number of keypoints detected in reference: ${refKeypoint.size()}")
     }
 
     private inner class FeatureMatcher(
         semaphore: Semaphore,
-        private val refDescriptor: Mat?,
+        private val refDescriptor: Mat,
         private val comparingMat: Mat
     ) : FlaggingThread(semaphore) {
         private val featureDetector: FastFeatureDetector = FastFeatureDetector.create()
@@ -91,36 +89,26 @@ class FeatureMatchingOperator(
 
         var lRKeypoint: MatOfKeyPoint? = null
             private set
-        private var descriptor: Mat? = null
+        private var descriptor: Mat = Mat()
         var matches: MatOfDMatch? = null
             private set
 
         override fun run() {
             // Detect features in comparing mat
-            this.descriptor = Mat()
             this.lRKeypoint = MatOfKeyPoint()
-
-            this.featureDetector.detect(this.comparingMat, this.lRKeypoint)
-            this.orb.compute(this.comparingMat, this.lRKeypoint, this.descriptor)
+            orb.detectAndCompute(this.comparingMat, Mat(), this.lRKeypoint, this.descriptor)
+            Log.d(TAG, "Number of keypoints detected in comparing image: ${lRKeypoint?.size()}")
             this.matches = this.matchFeaturesToReference()
-
+            Log.d(TAG, "Number of matches found: ${matches?.size()}")
             this.finishWork()
         }
 
         private fun matchFeaturesToReference(): MatOfDMatch {
             val initialMatch = MatOfDMatch()
-            Log.d(
-                TAG, "Reference descriptor type: " + CvType.typeToString(
-                    refDescriptor!!.type()
-                ) + " Comparing descriptor type: " + CvType.typeToString(
-                    descriptor!!.type()
-                )
-            )
-            Log.d(
-                TAG,
-                "Reference size: " + refDescriptor.size()
-                    .toString() + " Comparing descriptor size: " + descriptor!!.size().toString()
-            )
+            Log.d(TAG, "Reference descriptor type: ${CvType.typeToString(refDescriptor.type())}")
+            Log.d(TAG, "Comparing descriptor type: ${CvType.typeToString(descriptor.type())}")
+            Log.d(TAG, "Reference descriptor size: ${refDescriptor.size()}")
+            Log.d(TAG, "Comparing descriptor size: ${descriptor.size()}")
             this.matcher.match(this.refDescriptor, this.descriptor, initialMatch)
 
             val minDistance: Float =

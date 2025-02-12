@@ -63,37 +63,18 @@ class WarpResultEvaluator(
 
             if (fileImageReader != null) {
                 Log.d(TAG, "Processing file: ${compareNames[i]}")
-                val maskMat: Mat = fileImageReader.imReadOpenCV(compareNames[i], ImageFileAttribute.FileType.JPEG)
+                val warpedMat: Mat = fileImageReader.imReadOpenCV(compareNames[i], ImageFileAttribute.FileType.JPEG)
 
-// Produce the mask
-                val warpedMat = ImageOperator.produceMask(maskMat)
+                val maskMat = ImageOperator.produceMask(warpedMat)
 
-// Convert to 16-bit type
                 warpedMat.convertTo(warpedMat, CvType.CV_16UC(warpedMat.channels()))
 
-// Ensure the number of channels matches referenceMat
-                if (referenceMat.channels() != warpedMat.channels()) {
-                    if (referenceMat.channels() == 3) {
-                        Imgproc.cvtColor(warpedMat, warpedMat, Imgproc.COLOR_GRAY2RGB) // Convert single-channel to 3-channel
-                    } else if (referenceMat.channels() == 1) {
-                        Imgproc.cvtColor(warpedMat, warpedMat, Imgproc.COLOR_RGB2GRAY) // Convert 3-channel to single-channel
-                    }
-                }
-
-// Log the types
                 Log.e(
                     TAG, "Reference mat type: " + CvType.typeToString(referenceMat.type()) +
                             " Warped mat type: " + CvType.typeToString(warpedMat.type()) +
                             " Warped mat name: " + compareNames[i]
                 )
-
-// Perform addition
-                if (referenceMat.size() == warpedMat.size() && referenceMat.type() == warpedMat.type()) {
-                    Core.add(referenceMat, warpedMat, warpedMat)
-                } else {
-                    Log.e(TAG, "Matrices are incompatible for addition: size or type mismatch.")
-                }
-
+                Core.add(referenceMat, warpedMat, warpedMat)
 
                 maskMat.release()
 
@@ -108,7 +89,6 @@ class WarpResultEvaluator(
                 Log.e(TAG, "FileImageReader instance is null. Cannot process file: ${compareNames[i]}")
             }
         }
-
 
         return warpedDifferenceList
     }
