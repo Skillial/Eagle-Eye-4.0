@@ -19,6 +19,7 @@ import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivityCameraControllerBinding
+import com.wangGang.eagleEye.databinding.PopupMenuBinding
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
 import com.wangGang.eagleEye.io.ImageReaderManager
@@ -262,11 +263,12 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private fun showPopupMenu() {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val popupView = inflater.inflate(R.layout.popup_menu, null)
+        val popupView = LayoutInflater.from(this).inflate(R.layout.popup_menu, null)
         val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
 
-        val switch1: Switch = popupView.findViewById(R.id.switch1)
-        val switch2: Switch = popupView.findViewById(R.id.switch2)
+        val binding = PopupMenuBinding.bind(popupView)
+        val switch1: Switch = binding.switch1
+        val switch2: Switch = binding.switch2
 
         // Use ParameterConfig to get preferences
         switch1.isChecked = ParameterConfig.isSuperResolutionEnabled()
