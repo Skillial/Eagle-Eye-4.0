@@ -10,8 +10,10 @@ import android.media.ImageReader
 import android.util.Log
 import android.util.Size
 import com.wangGang.eagleEye.camera.CameraController
+import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,17 +61,17 @@ class ImageReaderManager(
         buffer.get(bytes)
         image.close()
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-        val isDehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
+        val isSuperResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
+        val isDehazeEnabled = ParameterConfig.isDehazeEnabled()
+
+        Log.d("ImageReaderManager", "isSuperResolutionEnabled: $isSuperResolutionEnabled")
+        Log.d("ImageReaderManager", "isDehazeEnabled: $isDehazeEnabled")
+
         if (isSuperResolutionEnabled) {
-            viewModel.updateLoadingText("Processing Super Resolution")
             handleSuperResolutionImage(bitmap)
         } else if (isDehazeEnabled) {
-            viewModel.updateLoadingText("Processing Dehaze")
             handleDehazeImage(bitmap)
         } else {
-            viewModel.updateLoadingText("Processing Normal Image")
             handleNormalImage(bitmap)
         }
     }
@@ -107,6 +109,8 @@ class ImageReaderManager(
             saveJob.join() // Ensures the file is saved before checking the count
 
             if (viewModel.imageInputMap.value?.size == 10) {
+                ProgressManager.getInstance().incrementProgress("Saving Images")
+
                 // Run super resolution asynchronously
                 launch {
                     cameraController.closeCamera()

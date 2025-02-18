@@ -18,9 +18,16 @@ class CameraViewModel : ViewModel() {
     private val _loadingBoxVisible = MutableLiveData<Boolean>()
     val loadingBoxVisible: LiveData<Boolean> get() = _loadingBoxVisible
 
+    private val _progress = MutableLiveData<Int>()
+    val progress: LiveData<Int> get() = _progress
+
     init {
         _imageInputMap.value = mutableListOf()
         _loadingBoxVisible.value = false
+    }
+
+    fun updateProgress(value: Int) {
+        _progress.postValue(value) // Update progress value
     }
 
     fun updateLoadingText(text: String) {

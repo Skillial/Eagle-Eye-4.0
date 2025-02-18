@@ -1,4 +1,4 @@
-package com.wangGang.eagleEye.ui.activities
+package com.wangGang.eagleEye.ui.utils
 
 import android.content.Context
 import android.graphics.BitmapFactory

@@ -8,6 +8,7 @@ import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.databinding.ActivityPhotoBinding
+import com.wangGang.eagleEye.ui.utils.PhotoActivityHelper
 
 
 class PhotoActivity() : AppCompatActivity() {

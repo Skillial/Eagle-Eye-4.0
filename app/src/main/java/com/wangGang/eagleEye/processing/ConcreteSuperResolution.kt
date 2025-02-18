@@ -19,6 +19,7 @@ import com.wangGang.eagleEye.processing.multiple.alignment.WarpResultEvaluator
 import com.wangGang.eagleEye.processing.multiple.enhancement.UnsharpMaskOperator
 import com.wangGang.eagleEye.processing.multiple.fusion.MeanFusionOperator
 import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -55,11 +56,16 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             // Wait for all semaphores to release
             energySem.acquire(energyInputMatList.size)
 
+            ProgressManager.getInstance().incrementProgress("Reading energy")
+
             viewModel.updateLoadingText("Copying Results")
+            Log.d("ProgressBar", "Copying Results")
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
                 energyInputMatList[i] = energyReaders[i].outputMat
             }
+
+            ProgressManager.getInstance().incrementProgress("Copying Results")
 
         } catch (e: InterruptedException) {
             e.printStackTrace()
@@ -85,6 +91,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         val sharpnessResult = SharpnessMeasure.getSharedInstance().measureSharpness(filteredMatList)
         val inputIndices: Array<Int> = SharpnessMeasure.getSharedInstance().trimMatList(imageInputMap.size, sharpnessResult, 0.0)
 
+        ProgressManager.getInstance().incrementProgress("Measuring Sharpness")
+
         val rgbInputMatList = Array(inputIndices.size) { Mat() }
         val bestIndex = inputIndices.indexOf(sharpnessResult.bestIndex)
 
@@ -105,6 +113,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         viewModel.updateLoadingText("Interpolating Images")
         // Super-resolution interpolation
         interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
+
+        ProgressManager.getInstance().incrementProgress("Interpolating Images")
         SRProcessManager.getInstance().initialHRProduced()
 
         // Perform actual super-resolution
@@ -156,17 +166,17 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         bestIndex: Int,
         debug: Boolean
     ) {
-        viewModel.updateLoadingText("Performing Feature Matching of LR Images")
+        viewModel.updateLoadingText("Preprocessing Images")
         // Perform feature matching of LR images against the first image as reference mat.
         val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 3)
 
-        viewModel.updateLoadingText("Performing Perspective Warping and Alignment")
         // Perform perspective warping and alignment
         val succeedingMatList = rgbInputMatList.sliceArray(1 until rgbInputMatList.size)
 
         val medianResultNames = Array(succeedingMatList.size) { i -> "median_align_$i" }
         val warpResultNames = Array(succeedingMatList.size) { i -> "warp_$i" }
 
+        ProgressManager.getInstance().incrementProgress("Preprocessing Images")
 
         // 1 = Best Alignment Technique
         // 2 = Median Alignment
@@ -174,14 +184,18 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         // 3 is default
         when (warpChoice) {
             1 -> {
-                Log.i(TAG, "Performing Best Alignment Technique")
+                viewModel.updateLoadingText("Performing Best Alignment Technique")
                 this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
+                ProgressManager.getInstance().incrementProgress("Performing Best Alignment Technique")
             }
             2 -> {
-                Log.i(TAG, "Performing Median Alignment")
-                this.performMedianAlignment(rgbInputMatList, medianResultNames)            }
+                viewModel.updateLoadingText("Performing Median Alignment")
+                this.performMedianAlignment(rgbInputMatList, medianResultNames)
+                ProgressManager.getInstance().incrementProgress("Performing Median Alignment")
+            }
             3 -> {
-                Log.i(TAG, "Performing Perspective Warping")
+                viewModel.updateLoadingText("Performing Perspective Warping")
+                ProgressManager.getInstance().incrementProgress("Performing Perspective Warping")
                 this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
             }
         }
@@ -189,14 +203,19 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         SharpnessMeasure.destroy()
 
+        viewModel.updateLoadingText("Assessing Image Warp Results")
+
         val numImages = AttributeHolder.getSharedInstance()!!.getValue("WARPED_IMAGES_LENGTH_KEY", 0)
         val warpedImageNames = Array(numImages) { i -> "warp_$i" }
         val medianAlignedNames = Array(numImages) { i -> "median_align_$i" }
 
         val alignedImageNames = assessImageWarpResults(inputIndices[0], warpChoice, imageInputMap, warpedImageNames, medianAlignedNames, debug)
 
+        ProgressManager.getInstance().incrementProgress("Assessing Image Warp Results")
+
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
 
+        // TODO: Check if this block is needed
         try {
             Thread.sleep(3000)
         } catch (e: InterruptedException) {
@@ -270,7 +289,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         debugMode: Boolean
     ) {
         if (alignedImageNames.size == 1) {
-            viewModel.updateLoadingText("Skipping Mean Fusion")
+            viewModel.updateLoadingText("Skipping Mean Fusion, Interpolate Selected Best Image")
             val resultMat: Mat = if (debugMode) {
                 FileImageReader.getInstance()?.imReadOpenCV(
                     "input_$bestIndex",
@@ -281,13 +300,20 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                     imageInputMap[bestIndex]
                 ) ?: throw IllegalStateException("FileImageReader instance is null")
             }
+
             // No need to perform image fusion, just use the best image.
             val interpolatedMat = ImageOperator.performInterpolation(
                 resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC
             )
+
+            ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
+
+            viewModel.updateLoadingText("Saving Results")
             FileImageWriter.getInstance()?.saveMatrixToImage(
                 interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
             )
+
+            ProgressManager.getInstance().incrementProgress("Saving Results")
 
             Log.d("ConcreteSuperResolution", "saveHRResultToUserDir 1")
 
@@ -319,6 +345,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
             fusionOperator.perform()
 
+            ProgressManager.getInstance().incrementProgress("Performing Mean Fusion")
+
             viewModel.updateLoadingText("Saving Results")
             FileImageWriter.getInstance()?.apply {
                 Log.d("ConcreteSuperResolution", "saveMatrixToImage")
@@ -331,6 +359,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                     fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
                 )
             }
+
+            ProgressManager.getInstance().incrementProgress("Saving Results")
 
             fusionOperator.getResult()!!.release()
         }

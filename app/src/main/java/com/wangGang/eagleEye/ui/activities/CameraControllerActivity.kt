@@ -19,6 +19,7 @@ import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
+import com.wangGang.eagleEye.constants.ImageEnhancementType
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivityCameraControllerBinding
 import com.wangGang.eagleEye.databinding.PopupMenuBinding
@@ -26,6 +27,7 @@ import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
 import com.wangGang.eagleEye.io.ImageReaderManager
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
@@ -43,12 +45,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var captureButton: ImageButton
     private lateinit var popupButton: Button
     private lateinit var switchCameraButton: ImageButton
+    private lateinit var progressManager: ProgressManager
+    private lateinit var progressBar: ProgressBar
 
     private var thumbnailUri: Uri? = null
-
-    private enum class Algo {
-        SR, DEHAZE
-    }
 
     private val viewModel: CameraViewModel by viewModels()
 
@@ -58,12 +58,16 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         activityCameraControllerBinding = ActivityCameraControllerBinding.inflate(layoutInflater)
         setContentView(activityCameraControllerBinding.root)
 
+        progressManager = ProgressManager.getInstance()
+
         assignViews()
         initializeCamera()
         addEventListeners()
         setBackground()
-        FileImageWriter.setOnImageSavedListener(this)
+        setupObservers()
+    }
 
+    private fun setupObservers() {
         viewModel.loadingText.observe(this, Observer { text ->
             loadingText.text = text
         })
@@ -79,7 +83,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                         thumbnailUri = uri
                         updateThumbnail()
                     } else {
-                        Log.e("CameraControllerActivity", "Failed to open input stream for URI: $uri")
+                        Log.e(
+                            "CameraControllerActivity",
+                            "Failed to open input stream for URI: $uri"
+                        )
                     }
                 } catch (e: Exception) {
                     Log.e("CameraControllerActivity", "Error decoding bitmap from URI: $uri", e)
@@ -98,6 +105,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                 enableUIInteractivity()
             }
         })
+
+        /*progressManager.progress.observe(this, Observer { progress ->
+            Log.d("ProgressBar", "New Progress: $progress")
+            if (progress > 0) {
+                progressBar.visibility = View.VISIBLE
+                progressBar.progress = progress
+            }
+        })*/
     }
 
     override fun onResume() {
@@ -128,13 +143,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     override fun onStop() {
         super.onStop()
         Log.d("CameraControllerActivity", "onStop")
-
-        CameraController.getInstance().closeCamera()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d("CameraControllerActivity", "onDestroy")
+        CameraController.getInstance().closeCamera()
+        ProgressManager.destroyInstance() // Cleanup
     }
 
     override fun onImageSaved(uri: Uri) {
@@ -172,10 +187,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         thumbnailPreview.isEnabled = true
     }
 
-    private fun getAlgoIcon(algo: Algo): Int {
+    private fun getAlgoIcon(algo: ImageEnhancementType): Int {
         return when (algo) {
-            Algo.SR -> R.drawable.ic_super_resolution
-            Algo.DEHAZE -> R.drawable.ic_dehaze
+            ImageEnhancementType.SUPER_RESOLUTION -> R.drawable.ic_super_resolution
+            ImageEnhancementType.DEHAZE -> R.drawable.ic_dehaze
         }
     }
 
@@ -185,7 +200,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private fun addEventListeners() {
         captureButton.setOnClickListener {
-            CameraController.getInstance().captureImage(loadingBox)
+            resetProgressBarBasedOnImageEnhancementType()
+            CameraController.getInstance().captureImage()
         }
 
         popupButton.setOnClickListener {
@@ -199,6 +215,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         thumbnailPreview.setOnClickListener {
             showPhotoActivity()
         }
+
+        FileImageWriter.setOnImageSavedListener(this)
     }
 
     private fun assignViews() {
@@ -210,6 +228,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         captureButton = activityCameraControllerBinding.capture
         popupButton = activityCameraControllerBinding.button
         switchCameraButton = activityCameraControllerBinding.switchCamera
+        progressBar = activityCameraControllerBinding.progressBar
     }
 
     private fun setBackground() {
@@ -217,23 +236,23 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         val superResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
         val dehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
 
-        val activeAlgos = mutableListOf<Algo>()
+        val activeImageEnhancementTechniques = mutableListOf<ImageEnhancementType>()
 
         if (superResolutionEnabled) {
-            activeAlgos.add(Algo.SR)
+            activeImageEnhancementTechniques.add(ImageEnhancementType.SUPER_RESOLUTION)
         }
 
         if (dehazeEnabled) {
-            activeAlgos.add(Algo.DEHAZE)
+            activeImageEnhancementTechniques.add(ImageEnhancementType.DEHAZE)
         }
 
-        updateAlgoIndicators(activeAlgos)
+        updateAlgoIndicators(activeImageEnhancementTechniques)
     }
 
-    private fun updateAlgoIndicators(activeAlgos: List<Algo>) {
+    private fun updateAlgoIndicators(activeImageEnhancementTechniques: List<ImageEnhancementType>) {
         algoIndicatorLayout.removeAllViews()
 
-        for (algo in activeAlgos) {
+        for (algo in activeImageEnhancementTechniques) {
             val imageView = ImageView(this)
             imageView.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -283,7 +302,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             if (isChecked) {
                 ParameterConfig.setDehazeEnabled(false)
                 switch2.isChecked = false
-                updateAlgoIndicators(listOf(Algo.SR))
+                updateAlgoIndicators(listOf(ImageEnhancementType.SUPER_RESOLUTION))
             } else {
                 updateAlgoIndicators(emptyList())
             }
@@ -294,12 +313,23 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             if (isChecked) {
                 ParameterConfig.setSuperResolutionEnabled(false)
                 switch1.isChecked = false
-                updateAlgoIndicators(listOf(Algo.DEHAZE))
+                updateAlgoIndicators(listOf(ImageEnhancementType.DEHAZE))
             } else {
                 updateAlgoIndicators(emptyList())
             }
         }
 
         popupWindow.showAsDropDown(findViewById(R.id.button), 0, 0)
+    }
+
+    // Other methods
+    private fun resetProgressBarBasedOnImageEnhancementType() {
+        if (ParameterConfig.isSuperResolutionEnabled()) {
+            progressManager.resetProgress(ImageEnhancementType.SUPER_RESOLUTION)
+        } else if (ParameterConfig.isDehazeEnabled()) {
+            progressManager.resetProgress(ImageEnhancementType.DEHAZE)
+        } else {
+            progressManager.resetProgress()
+        }
     }
 }

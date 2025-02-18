@@ -21,7 +21,7 @@ import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
-import android.widget.LinearLayout
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 
 class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
@@ -63,7 +63,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private var cameraId: String = ""
 
     // Methods
-    fun captureImage(loadingBox: LinearLayout) {
+    fun captureImage() {
         val sharedPreferences = context.getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
         val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
         val totalCaptures = if (isSuperResolutionEnabled) maxNumberOfBurstImages else 1
@@ -82,6 +82,7 @@ class CameraController(private val context: Context, private val viewModel: Came
         playShutterSound()
 
         viewModel.setLoadingBoxVisible(true)
+        ProgressManager.getInstance().incrementProgress("Capturing Images")
 
         cameraCaptureSession.captureBurst(
             captureList,
