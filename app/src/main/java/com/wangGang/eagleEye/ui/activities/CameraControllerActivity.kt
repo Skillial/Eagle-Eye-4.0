@@ -47,6 +47,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private val viewModel: CameraViewModel by viewModels()
 
+    /* ===== Lifecycle Methods ===== */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCameraControllerBinding.inflate(layoutInflater)
@@ -119,6 +120,37 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        Log.d("CameraControllerActivity", "onStop")
+
+        CameraController.getInstance().closeCamera()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("CameraControllerActivity", "onDestroy")
+    }
+
+    override fun onImageSaved(uri: Uri) {
+        Log.d("CameraControllerActivity", "onImageSaved: $uri")
+        viewModel.updateThumbnailUri(uri)
+    }
+
+    private fun initializeCamera() {
+        CameraController.initialize(this, viewModel)
+        concreteSuperResolution = ConcreteSuperResolution(viewModel)
+
+        imageReaderManager = ImageReaderManager(
+            this,
+            CameraController.getInstance(),
+            concreteSuperResolution,
+            viewModel
+        )
+        imageReaderManager.initializeImageReader()
+    }
+
+    /* ===== UI Methods ===== */
     private fun disableUIInteractivity() {
         captureButton.isEnabled = false
         popupButton.isEnabled = false
@@ -135,11 +167,33 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         thumbnailPreview.isEnabled = true
     }
 
-    override fun onStop() {
-        super.onStop()
-        Log.d("CameraControllerActivity", "onStop")
+    private fun getAlgoIcon(algo: Algo): Int {
+        return when (algo) {
+            Algo.SR -> R.drawable.ic_super_resolution
+            Algo.DEHAZE -> R.drawable.ic_dehaze
+        }
+    }
 
-        CameraController.getInstance().closeCamera()
+    private fun Int.dpToPx(): Int {
+        return (this * resources.displayMetrics.density).toInt()
+    }
+
+    private fun addEventListeners() {
+        captureButton.setOnClickListener {
+            CameraController.getInstance().captureImage(loadingBox)
+        }
+
+        popupButton.setOnClickListener {
+            showPopupMenu()
+        }
+
+        switchCameraButton.setOnClickListener {
+            CameraController.getInstance().switchCamera(textureView)
+        }
+
+        thumbnailPreview.setOnClickListener {
+            showPhotoActivity()
+        }
     }
 
     private fun assignViews() {
@@ -187,48 +241,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
     }
 
-    private fun getAlgoIcon(algo: Algo): Int {
-        return when (algo) {
-            Algo.SR -> R.drawable.ic_super_resolution
-            Algo.DEHAZE -> R.drawable.ic_dehaze
-        }
-    }
-
-    private fun Int.dpToPx(): Int {
-        return (this * resources.displayMetrics.density).toInt()
-    }
-
-    private fun addEventListeners() {
-        captureButton.setOnClickListener {
-            CameraController.getInstance().captureImage(loadingBox)
-        }
-
-        popupButton.setOnClickListener {
-            showPopupMenu()
-        }
-
-        switchCameraButton.setOnClickListener {
-            CameraController.getInstance().switchCamera(textureView)
-        }
-
-        thumbnailPreview.setOnClickListener {
-            showPhotoActivity()
-        }
-    }
-
-    private fun initializeCamera() {
-        CameraController.initialize(this, viewModel)
-        concreteSuperResolution = ConcreteSuperResolution(viewModel)
-
-        imageReaderManager = ImageReaderManager(
-            this,
-            CameraController.getInstance(),
-            concreteSuperResolution,
-            viewModel
-        )
-        imageReaderManager.initializeImageReader()
-    }
-
     private fun updateThumbnail() {
         Log.d("CameraControllerActivity", "updateThumbnail uri: $thumbnailUri")
         Glide.with(this)
@@ -245,10 +257,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         } else {
             Log.e("CameraControllerActivity", "thumbnailUri is null, cannot open PhotoActivity")
         }
-    }
-
-    fun updateLoadingText(text: String) {
-        loadingText.text = text
     }
 
     private fun showPopupMenu() {
@@ -290,15 +298,5 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             editor.apply()
         }
         popupWindow.showAsDropDown(findViewById(R.id.button), 0, 0)
-    }
-
-    override fun onImageSaved(uri: Uri) {
-        Log.d("CameraControllerActivity", "onImageSaved: $uri")
-        viewModel.updateThumbnailUri(uri)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d("CameraControllerActivity", "onDestroy")
     }
 }
