@@ -1,5 +1,6 @@
 package com.wangGang.eagleEye.ui.activities
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -13,6 +14,7 @@ import android.view.View
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.R
@@ -31,7 +33,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
     // UI
-    private lateinit var binding: ActivityCameraControllerBinding
+    private lateinit var activityCameraControllerBinding: ActivityCameraControllerBinding
+    private lateinit var activityPopupMenuBinding: PopupMenuBinding
     private lateinit var algoIndicatorLayout: LinearLayout
     private lateinit var textureView: TextureView
     private lateinit var loadingText: TextView
@@ -52,8 +55,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     /* ===== Lifecycle Methods ===== */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityCameraControllerBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        activityCameraControllerBinding = ActivityCameraControllerBinding.inflate(layoutInflater)
+        setContentView(activityCameraControllerBinding.root)
 
         assignViews()
         initializeCamera()
@@ -199,14 +202,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     }
 
     private fun assignViews() {
-        algoIndicatorLayout = binding.algoIndicatorLayout
-        textureView = binding.textureView
-        loadingText = binding.loadingText
-        loadingBox = binding.loadingBox
-        thumbnailPreview = binding.thumbnailPreview
-        captureButton = binding.capture
-        popupButton = binding.button
-        switchCameraButton = binding.switchCamera
+        algoIndicatorLayout = activityCameraControllerBinding.algoIndicatorLayout
+        textureView = activityCameraControllerBinding.textureView
+        loadingText = activityCameraControllerBinding.loadingText
+        loadingBox = activityCameraControllerBinding.loadingBox
+        thumbnailPreview = activityCameraControllerBinding.thumbnailPreview
+        captureButton = activityCameraControllerBinding.capture
+        popupButton = activityCameraControllerBinding.button
+        switchCameraButton = activityCameraControllerBinding.switchCamera
     }
 
     private fun setBackground() {
@@ -261,14 +264,15 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
     }
 
+    @SuppressLint("InflateParams")
     private fun showPopupMenu() {
-        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = LayoutInflater.from(this).inflate(R.layout.popup_menu, null)
         val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
 
-        val binding = PopupMenuBinding.bind(popupView)
-        val switch1: Switch = binding.switch1
-        val switch2: Switch = binding.switch2
+        // setup views
+        activityPopupMenuBinding = PopupMenuBinding.bind(popupView)
+        val switch1: SwitchCompat = activityPopupMenuBinding.switchSuperResolution
+        val switch2: SwitchCompat = activityPopupMenuBinding.switchDehaze
 
         // Use ParameterConfig to get preferences
         switch1.isChecked = ParameterConfig.isSuperResolutionEnabled()

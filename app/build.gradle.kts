@@ -75,4 +75,6 @@ dependencies {
 
     // glide
     implementation(libs.glide)
+
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }

@@ -3,4 +3,6 @@
     <string name="popup_photo">Photo</string>
     <string name="back">Back Button</string>
     <string name="thumbnail_photo">Full-Sized Thumbnail Photo</string>
+    <string name="switch_super_resolution">Super Resolution</string>
+    <string name="switch_dehaze">Dehaze</string>
 </resources>
