@@ -18,6 +18,7 @@
     import java.net.URI
     import java.text.SimpleDateFormat
     import java.util.Date
+    import android.view.Gravity
 
     class FileImageWriter private constructor(private val context: Context) {
 
@@ -189,8 +190,11 @@
             Log.d("FileImageWriter", "Saved HR image: ${imageFile.absolutePath}")
 
             val message = "Super HD image saved at: ${imageFile.path}"
+
             (context as Activity).runOnUiThread {
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                val toast = Toast.makeText(context, message, Toast.LENGTH_LONG)
+                toast.setGravity(Gravity.TOP, 0, 300)
+                toast.show()
             }
 
             refreshImageGallery(imageFile)

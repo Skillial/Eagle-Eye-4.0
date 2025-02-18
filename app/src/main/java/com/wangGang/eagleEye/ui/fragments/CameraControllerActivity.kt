@@ -15,6 +15,7 @@ import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.databinding.ActivityCameraControllerBinding
@@ -71,7 +72,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                         val bitmap = BitmapFactory.decodeStream(inputStream)
                         Log.d("CameraControllerActivity", "onViewCreated bitmap: $bitmap")
                         thumbnailUri = uri
-                        updateThumbnail(bitmap)
+                        updateThumbnail()
                     } else {
                         Log.e("CameraControllerActivity", "Failed to open input stream for URI: $uri")
                     }
@@ -229,9 +230,12 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         imageReaderManager.initializeImageReader()
     }
 
-    private fun updateThumbnail(bitmap: Bitmap) {
-        Log.d("CameraControllerActivity", "updateThumbnail bitmap: $bitmap")
-        thumbnailPreview.setImageBitmap(bitmap)
+    private fun updateThumbnail() {
+        Log.d("CameraControllerActivity", "updateThumbnail uri: $thumbnailUri")
+        Glide.with(this)
+            .load(thumbnailUri)
+            .fitCenter()
+            .into(thumbnailPreview)
     }
 
     private fun showPhotoActivity() {
@@ -292,5 +296,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     override fun onImageSaved(uri: Uri) {
         Log.d("CameraControllerActivity", "onImageSaved: $uri")
         viewModel.updateThumbnailUri(uri)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("CameraControllerActivity", "onDestroy")
     }
 }
