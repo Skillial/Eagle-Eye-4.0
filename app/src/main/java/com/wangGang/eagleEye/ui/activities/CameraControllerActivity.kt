@@ -106,13 +106,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             }
         })
 
-        /*progressManager.progress.observe(this, Observer { progress ->
+        progressManager.progress.observe(this, Observer { progress ->
             Log.d("ProgressBar", "New Progress: $progress")
             if (progress > 0) {
                 progressBar.visibility = View.VISIBLE
                 progressBar.progress = progress
             }
-        })*/
+        })
     }
 
     override fun onResume() {

@@ -14,7 +14,7 @@ class ProgressManager private constructor() {
 
         // Constants
         private val TASKS_SUPER_RESOLUTION = 11
-        private val TASKS_DEHAZE = 16
+        private val TASKS_DEHAZE = 15
 
         fun getInstance(): ProgressManager {
             return INSTANCE ?: synchronized(this) {

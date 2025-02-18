@@ -64,9 +64,6 @@ class ImageReaderManager(
         val isSuperResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
         val isDehazeEnabled = ParameterConfig.isDehazeEnabled()
 
-        Log.d("ImageReaderManager", "isSuperResolutionEnabled: $isSuperResolutionEnabled")
-        Log.d("ImageReaderManager", "isDehazeEnabled: $isDehazeEnabled")
-
         if (isSuperResolutionEnabled) {
             handleSuperResolutionImage(bitmap)
         } else if (isDehazeEnabled) {
@@ -109,8 +106,6 @@ class ImageReaderManager(
             saveJob.join() // Ensures the file is saved before checking the count
 
             if (viewModel.imageInputMap.value?.size == 10) {
-                ProgressManager.getInstance().incrementProgress("Saving Images")
-
                 // Run super resolution asynchronously
                 launch {
                     cameraController.closeCamera()
