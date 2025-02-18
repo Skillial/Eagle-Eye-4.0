@@ -50,14 +50,17 @@
 
     <LinearLayout
         android:id="@+id/loadingBox"
-        android:layout_width="413dp"
-        android:layout_height="734dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:background="#AA000000"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
-        tools:ignore="MissingConstraints">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -67,10 +70,15 @@
         <TextView
             android:id="@+id/loadingText"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_marginTop="8dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:textAlignment="center"
             android:textColor="#FFFFFF"
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:minWidth="300dp" />
     </LinearLayout>
 
     <ImageButton

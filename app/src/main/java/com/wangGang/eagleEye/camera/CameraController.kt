@@ -69,7 +69,7 @@ class CameraController(private val context: Context, private val viewModel: Came
         val totalCaptures = if (isSuperResolutionEnabled) maxNumberOfBurstImages else 1
         val captureList = mutableListOf<CaptureRequest>()
 
-        viewModel.updateLoadingText("Capturing Images...")
+        viewModel.updateLoadingText("Capturing Images")
 
         for (i in 0 until totalCaptures) {
             val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)

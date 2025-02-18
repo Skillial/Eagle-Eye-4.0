@@ -63,13 +63,13 @@ class ImageReaderManager(
         val isSuperResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
         val isDehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
         if (isSuperResolutionEnabled) {
-            viewModel.updateLoadingText("Processing Super Resolution...")
+            viewModel.updateLoadingText("Processing Super Resolution")
             handleSuperResolutionImage(bitmap)
         } else if (isDehazeEnabled) {
-            viewModel.updateLoadingText("Processing Dehaze...")
+            viewModel.updateLoadingText("Processing Dehaze")
             handleDehazeImage(bitmap)
         } else {
-            viewModel.updateLoadingText("Processing Normal Image...")
+            viewModel.updateLoadingText("Processing Normal Image")
             handleNormalImage(bitmap)
         }
     }
@@ -97,7 +97,7 @@ class ImageReaderManager(
 
     private fun handleSuperResolutionImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
-            viewModel.updateLoadingText("Saving Images...")
+            viewModel.updateLoadingText("Saving Images")
             val saveJob = launch {
                 FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
                     viewModel.addImageInput(it)

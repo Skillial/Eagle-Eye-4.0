@@ -34,7 +34,7 @@ const val TAG = "ConcreteSuperResolution"
 class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperResolutionTemplate() {
 
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
-        viewModel.updateLoadingText("Reading energy...")
+        viewModel.updateLoadingText("Reading energy")
 
         val energyInputMatList: Array<Mat> = Array(imageInputMap.size) { Mat() }
         val energyReaders: MutableList<InputImageEnergyReader> = mutableListOf()
@@ -55,7 +55,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             // Wait for all semaphores to release
             energySem.acquire(energyInputMatList.size)
 
-            viewModel.updateLoadingText("Copying Results...")
+            viewModel.updateLoadingText("Copying Results")
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
                 energyInputMatList[i] = energyReaders[i].outputMat
@@ -69,7 +69,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     }
 
     override fun applyFilter(energyInputMatList: Array<Mat>): Array<Mat> {
-        viewModel.updateLoadingText("Applying filter...")
+        viewModel.updateLoadingText("Applying filter")
 
         val yangFilter = YangFilter(energyInputMatList)
         yangFilter.perform()
@@ -81,14 +81,14 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     }
 
     override fun performSuperResolution(filteredMatList: Array<Mat>, imageInputMap: List<String>) {
-        viewModel.updateLoadingText("Measuring Sharpness...")
+        viewModel.updateLoadingText("Measuring Sharpness")
         val sharpnessResult = SharpnessMeasure.getSharedInstance().measureSharpness(filteredMatList)
         val inputIndices: Array<Int> = SharpnessMeasure.getSharedInstance().trimMatList(imageInputMap.size, sharpnessResult, 0.0)
 
         val rgbInputMatList = Array(inputIndices.size) { Mat() }
         val bestIndex = inputIndices.indexOf(sharpnessResult.bestIndex)
 
-        viewModel.updateLoadingText("Performing Unsharp Masking...")
+        viewModel.updateLoadingText("Performing Unsharp Masking")
 
         // Run image processing in parallel
         runBlocking {
@@ -102,7 +102,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }.awaitAll()
         }
 
-        viewModel.updateLoadingText("Interpolating Images...")
+        viewModel.updateLoadingText("Interpolating Images")
         // Super-resolution interpolation
         interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
         SRProcessManager.getInstance().initialHRProduced()
@@ -156,11 +156,11 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         bestIndex: Int,
         debug: Boolean
     ) {
-        viewModel.updateLoadingText("Performing Feature Matching of LR Images...")
+        viewModel.updateLoadingText("Performing Feature Matching of LR Images")
         // Perform feature matching of LR images against the first image as reference mat.
         val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 3)
 
-        viewModel.updateLoadingText("Performing Perspective Warping and Alignment...")
+        viewModel.updateLoadingText("Performing Perspective Warping and Alignment")
         // Perform perspective warping and alignment
         val succeedingMatList = rgbInputMatList.sliceArray(1 until rgbInputMatList.size)
 
@@ -270,7 +270,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         debugMode: Boolean
     ) {
         if (alignedImageNames.size == 1) {
-            viewModel.updateLoadingText("Skipping Mean Fusion...")
+            viewModel.updateLoadingText("Skipping Mean Fusion")
             val resultMat: Mat = if (debugMode) {
                 FileImageReader.getInstance()?.imReadOpenCV(
                     "input_$bestIndex",
@@ -293,7 +293,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
             resultMat.release()
         } else {
-            viewModel.updateLoadingText("Performing Mean Fusion...")
+            viewModel.updateLoadingText("Performing Mean Fusion")
 
             val imagePathList = mutableListOf<String>()
             // Add initial input HR image
@@ -319,7 +319,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
             fusionOperator.perform()
 
-            viewModel.updateLoadingText("Saving Results...")
+            viewModel.updateLoadingText("Saving Results")
             FileImageWriter.getInstance()?.apply {
                 Log.d("ConcreteSuperResolution", "saveMatrixToImage")
                 saveMatrixToImage(
