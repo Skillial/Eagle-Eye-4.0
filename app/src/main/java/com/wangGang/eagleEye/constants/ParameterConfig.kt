@@ -93,6 +93,27 @@ class ParameterConfig private constructor(appContext: Context) {
         fun getPrefsFloat(key: String, defaultValue: Float): Float {
             return sharedInstance?.sharedPrefs?.getFloat(key, defaultValue) ?: defaultValue
         }
+
+        @JvmStatic
+        fun isSuperResolutionEnabled(): Boolean {
+            return getPrefsBoolean("super_resolution_enabled", false)
+        }
+
+        @JvmStatic
+        fun setSuperResolutionEnabled(enabled: Boolean) {
+            setPrefs("super_resolution_enabled", enabled)
+        }
+
+        @JvmStatic
+        fun isDehazeEnabled(): Boolean {
+            return getPrefsBoolean("dehaze_enabled", false)
+        }
+
+        @JvmStatic
+        fun setDehazeEnabled(enabled: Boolean) {
+            setPrefs("dehaze_enabled", enabled)
+        }
+
     }
 
     enum class SRTechnique {

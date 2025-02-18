@@ -17,6 +17,7 @@ import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
+import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivityCameraControllerBinding
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
@@ -266,37 +267,33 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
         val switch1: Switch = popupView.findViewById(R.id.switch1)
         val switch2: Switch = popupView.findViewById(R.id.switch2)
-        val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        switch1.isChecked = sharedPreferences.getBoolean("super_resolution_enabled", false)
-        switch2.isChecked = sharedPreferences.getBoolean("dehaze_enabled", false)
+
+        // Use ParameterConfig to get preferences
+        switch1.isChecked = ParameterConfig.isSuperResolutionEnabled()
+        switch2.isChecked = ParameterConfig.isDehazeEnabled()
+
         switch1.setOnCheckedChangeListener { _, isChecked ->
-            val editor = sharedPreferences.edit()
-            editor.putBoolean("super_resolution_enabled", isChecked)
+            ParameterConfig.setSuperResolutionEnabled(isChecked)
             if (isChecked) {
-                editor.putBoolean("super_resolution_enabled", true)
-                editor.putBoolean("dehaze_enabled", false)
+                ParameterConfig.setDehazeEnabled(false)
                 switch2.isChecked = false
                 updateAlgoIndicators(listOf(Algo.SR))
             } else {
-                editor.putBoolean("super_resolution_enabled", false)
                 updateAlgoIndicators(emptyList())
             }
-            editor.apply()
         }
+
         switch2.setOnCheckedChangeListener { _, isChecked ->
-            val editor = sharedPreferences.edit()
-            editor.putBoolean("dehaze_enabled", isChecked)
+            ParameterConfig.setDehazeEnabled(isChecked)
             if (isChecked) {
-                editor.putBoolean("dehaze_enabled", true)
-                editor.putBoolean("super_resolution_enabled", false)
+                ParameterConfig.setSuperResolutionEnabled(false)
                 switch1.isChecked = false
                 updateAlgoIndicators(listOf(Algo.DEHAZE))
             } else {
-                editor.putBoolean("dehaze_enabled", false)
                 updateAlgoIndicators(emptyList())
             }
-            editor.apply()
         }
+
         popupWindow.showAsDropDown(findViewById(R.id.button), 0, 0)
     }
 }
