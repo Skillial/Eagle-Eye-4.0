@@ -6,7 +6,7 @@
     android:background="#000000">
 
     <ImageButton
-        android:id="@+id/backButton"
+        android:id="@+id/btn_back"
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:contentDescription="@string/back"
@@ -14,7 +14,7 @@
         android:background="@android:color/transparent" />
 
     <ImageView
-        android:id="@+id/testImageView"
+        android:id="@+id/iv_thumbnail_photo"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"

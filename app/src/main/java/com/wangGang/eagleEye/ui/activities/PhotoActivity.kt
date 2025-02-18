@@ -1,6 +1,5 @@
 package com.wangGang.eagleEye.ui.activities
 
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -8,13 +7,12 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.ImageViewTarget
 import com.wangGang.eagleEye.databinding.ActivityPhotoBinding
 
 
 class PhotoActivity() : AppCompatActivity() {
 
-    private lateinit var ivPreview: ImageView
+    private lateinit var ivThumbnailPhoto: ImageView
     private lateinit var backButton: ImageButton
     private lateinit var binding: ActivityPhotoBinding
     private val photoActivityHelper: PhotoActivityHelper = PhotoActivityHelper()
@@ -34,8 +32,8 @@ class PhotoActivity() : AppCompatActivity() {
     }
 
     private fun assignViews() {
-        backButton = binding.backButton
-        ivPreview = binding.testImageView
+        backButton = binding.btnBack
+        ivThumbnailPhoto = binding.ivThumbnailPhoto
     }
 
     private fun setupListeners() {
@@ -61,6 +59,6 @@ class PhotoActivity() : AppCompatActivity() {
         Glide.with(this)
             .load(Uri.parse(imageUri))
             .dontAnimate()
-            .into(ivPreview)
+            .into(ivThumbnailPhoto)
     }
 }
