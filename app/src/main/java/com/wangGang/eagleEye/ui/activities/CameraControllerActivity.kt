@@ -2,7 +2,6 @@ package com.wangGang.eagleEye.ui.activities
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.SurfaceTexture
 import android.net.Uri
@@ -23,7 +22,7 @@ import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
 import com.wangGang.eagleEye.io.ImageReaderManager
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
-import com.wangGang.eagleEye.ui.fragments.CameraViewModel
+import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager

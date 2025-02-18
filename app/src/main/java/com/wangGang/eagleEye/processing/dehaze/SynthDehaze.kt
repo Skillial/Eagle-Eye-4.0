@@ -9,7 +9,7 @@ import android.graphics.Matrix
 import android.util.Log
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
-import com.wangGang.eagleEye.ui.fragments.CameraViewModel
+import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType

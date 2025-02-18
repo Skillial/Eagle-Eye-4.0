@@ -7,14 +7,12 @@ import android.graphics.ImageFormat
 import android.graphics.Matrix
 import android.media.Image
 import android.media.ImageReader
-import android.os.Handler
 import android.util.Log
 import android.util.Size
-import android.view.View
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
-import com.wangGang.eagleEye.ui.fragments.CameraViewModel
+import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

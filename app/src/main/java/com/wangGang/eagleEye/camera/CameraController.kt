@@ -21,9 +21,8 @@ import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
-import android.view.View
 import android.widget.LinearLayout
-import com.wangGang.eagleEye.ui.fragments.CameraViewModel
+import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 
 class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
 

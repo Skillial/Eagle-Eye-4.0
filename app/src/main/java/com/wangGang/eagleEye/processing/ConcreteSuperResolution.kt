@@ -18,9 +18,8 @@ import com.wangGang.eagleEye.processing.multiple.alignment.MedianAlignmentOperat
 import com.wangGang.eagleEye.processing.multiple.alignment.WarpResultEvaluator
 import com.wangGang.eagleEye.processing.multiple.enhancement.UnsharpMaskOperator
 import com.wangGang.eagleEye.processing.multiple.fusion.MeanFusionOperator
-import com.wangGang.eagleEye.processing.multiple.refinement.DenoisingOperator
 import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
-import com.wangGang.eagleEye.ui.fragments.CameraViewModel
+import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

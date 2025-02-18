@@ -9,21 +9,16 @@
         android:id="@+id/backButton"
         android:layout_width="50dp"
         android:layout_height="50dp"
+        android:contentDescription="@string/back"
         android:src="@drawable/ic_back"
         android:background="@android:color/transparent" />
-
-    <!--<com.wangGang.eagleEye.ui.views.ZoomableImageView
-        android:id="@+id/photoView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:scaleType="centerInside" />-->
 
     <ImageView
         android:id="@+id/testImageView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:contentDescription="@string/thumbnail_photo"
         android:scaleType="centerInside" />
 
 </LinearLayout>

@@ -1,67 +1,66 @@
 package com.wangGang.eagleEye.ui.activities
 
-import android.content.Context
-import android.graphics.BitmapFactory
+import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageButton
 import android.widget.ImageView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
-import com.wangGang.eagleEye.R
-import java.io.File
+import com.bumptech.glide.request.target.ImageViewTarget
+import com.wangGang.eagleEye.databinding.ActivityPhotoBinding
 
 
-class PhotoActivity : AppCompatActivity() {
+class PhotoActivity() : AppCompatActivity() {
+
+    private lateinit var ivPreview: ImageView
+    private lateinit var backButton: ImageButton
+    private lateinit var binding: ActivityPhotoBinding
+    private val photoActivityHelper: PhotoActivityHelper = PhotoActivityHelper()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_photo)
+        binding = ActivityPhotoBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-//        val imageView: ZoomableImageView = findViewById(R.id.photoView)
-        val backButton: ImageButton = findViewById(R.id.backButton)
-        val testImageView: ImageView = findViewById(R.id.testImageView)
+        setupView()
+        loadPhoto()
+    }
 
-        // Retrieve the image URI from intent
-        val imageUri = intent.getStringExtra("imageUri")
-        Log.d("PhotoActivity", "Loading: $imageUri");
+    private fun setupView() {
+        assignViews()
+        setupListeners()
+    }
 
-        // Log image size
-        val imageSize = getImageSize(this, Uri.parse(imageUri))
-        Log.d("PhotoActivity", "Image size: $imageSize")
+    private fun assignViews() {
+        backButton = binding.backButton
+        ivPreview = binding.testImageView
+    }
 
-        Glide.with(this)
-            .load(Uri.parse(imageUri))
-            .dontAnimate()
-            .into(testImageView)
-
+    private fun setupListeners() {
         backButton.setOnClickListener {
             finish()
         }
     }
 
-    private fun getImageSize(context: Context, uri: Uri): Pair<Int, Int> {
-        return try {
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true // Prevents loading the full image
-            }
-
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                BitmapFactory.decodeStream(inputStream, null, options)
-            }
-
-            val imageWidth = options.outWidth
-            val imageHeight = options.outHeight
-            Log.d("PhotoActivity", "getImageSize() - Image width: $imageWidth, Image height: $imageHeight")
-
-            Pair(imageWidth, imageHeight)
-        } catch (e: Exception) {
-            Log.e("PhotoActivity", "Failed to get image size: ${e.message}")
-            Pair(0, 0) // Return 0,0 if the operation fails
-        }
+    private fun getImageUri(): String? {
+        // Retrieve the image URI from intent
+        val imageUri = intent.getStringExtra("imageUri")
+        Log.d("PhotoActivity", "Loading: $imageUri")
+        return imageUri
     }
 
+    private fun loadPhoto() {
+        val imageUri = getImageUri()
+
+        // Log image size
+        val imageSize = photoActivityHelper.getImageSize(this, Uri.parse(imageUri))
+        Log.d("PhotoActivity", "Image size: $imageSize")
+
+        Glide.with(this)
+            .load(Uri.parse(imageUri))
+            .dontAnimate()
+            .into(ivPreview)
+    }
 }
