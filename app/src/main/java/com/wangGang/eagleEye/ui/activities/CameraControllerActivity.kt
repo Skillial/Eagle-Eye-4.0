@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.SurfaceTexture
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -15,6 +17,7 @@ import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.R
@@ -65,54 +68,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         addEventListeners()
         setBackground()
         setupObservers()
-    }
-
-    private fun setupObservers() {
-        viewModel.loadingText.observe(this, Observer { text ->
-            loadingText.text = text
-        })
-
-        viewModel.thumbnailUri.observe(this, Observer { uri ->
-            Log.d("CameraControllerActivity", "thumbnailUri: $uri")
-            uri?.let {
-                try {
-                    val inputStream = contentResolver.openInputStream(it)
-                    if (inputStream != null) {
-                        val bitmap = BitmapFactory.decodeStream(inputStream)
-                        Log.d("CameraControllerActivity", "onViewCreated bitmap: $bitmap")
-                        thumbnailUri = uri
-                        updateThumbnail()
-                    } else {
-                        Log.e(
-                            "CameraControllerActivity",
-                            "Failed to open input stream for URI: $uri"
-                        )
-                    }
-                } catch (e: Exception) {
-                    Log.e("CameraControllerActivity", "Error decoding bitmap from URI: $uri", e)
-                }
-            }
-        })
-
-        viewModel.loadingBoxVisible.observe(this, Observer { visible ->
-            loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
-
-            if (visible) {
-                Log.d("CameraControllerActivity", "Disabling UI interactivity")
-                disableUIInteractivity()
-            } else {
-                Log.d("CameraControllerActivity", "Enabling UI interactivity")
-                enableUIInteractivity()
-            }
-        })
-
-        progressManager.progress.observe(this, Observer { progress ->
-            Log.d("ProgressBar", "New Progress: $progress")
-            if (progress > 0) {
-                progressBar.visibility = View.VISIBLE
-                progressBar.progress = progress
-            }
-        })
+        updateScreenBorder()
     }
 
     override fun onResume() {
@@ -249,6 +205,29 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         updateAlgoIndicators(activeImageEnhancementTechniques)
     }
 
+    private fun updateScreenBorder() {
+        val rootView = activityCameraControllerBinding.root
+
+        val srEnabled = ParameterConfig.isSuperResolutionEnabled()
+        val dehazeEnabled = ParameterConfig.isDehazeEnabled()
+
+        // TODO: update this once chaining is supported
+        val borderColor = when {
+            /*srEnabled && dehazeEnabled -> {
+                ColorUtils.blendARGB(Color.GREEN, Color.YELLOW, 0.5f)
+            }*/
+            srEnabled -> Color.GREEN
+            dehazeEnabled -> Color.YELLOW
+            else -> Color.TRANSPARENT
+        }
+
+        val borderDrawable = GradientDrawable().apply {
+            setColor(Color.BLACK)
+            setStroke(8.dpToPx(), borderColor)
+        }
+        rootView.background = borderDrawable
+    }
+
     private fun updateAlgoIndicators(activeImageEnhancementTechniques: List<ImageEnhancementType>) {
         algoIndicatorLayout.removeAllViews()
 
@@ -306,6 +285,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             } else {
                 updateAlgoIndicators(emptyList())
             }
+
+            updateScreenBorder()
         }
 
         switch2.setOnCheckedChangeListener { _, isChecked ->
@@ -317,6 +298,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             } else {
                 updateAlgoIndicators(emptyList())
             }
+
+            updateScreenBorder()
         }
 
         popupWindow.showAsDropDown(findViewById(R.id.button), 0, 0)
@@ -331,5 +314,53 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         } else {
             progressManager.resetProgress()
         }
+    }
+
+    private fun setupObservers() {
+        viewModel.loadingText.observe(this, Observer { text ->
+            loadingText.text = text
+        })
+
+        viewModel.thumbnailUri.observe(this, Observer { uri ->
+            Log.d("CameraControllerActivity", "thumbnailUri: $uri")
+            uri?.let {
+                try {
+                    val inputStream = contentResolver.openInputStream(it)
+                    if (inputStream != null) {
+                        val bitmap = BitmapFactory.decodeStream(inputStream)
+                        Log.d("CameraControllerActivity", "onViewCreated bitmap: $bitmap")
+                        thumbnailUri = uri
+                        updateThumbnail()
+                    } else {
+                        Log.e(
+                            "CameraControllerActivity",
+                            "Failed to open input stream for URI: $uri"
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("CameraControllerActivity", "Error decoding bitmap from URI: $uri", e)
+                }
+            }
+        })
+
+        viewModel.loadingBoxVisible.observe(this, Observer { visible ->
+            loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
+
+            if (visible) {
+                Log.d("CameraControllerActivity", "Disabling UI interactivity")
+                disableUIInteractivity()
+            } else {
+                Log.d("CameraControllerActivity", "Enabling UI interactivity")
+                enableUIInteractivity()
+            }
+        })
+
+        progressManager.progress.observe(this, Observer { progress ->
+            Log.d("ProgressBar", "New Progress: $progress")
+            if (progress > 0) {
+                progressBar.visibility = View.VISIBLE
+                progressBar.progress = progress
+            }
+        })
     }
 }
