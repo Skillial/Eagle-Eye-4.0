@@ -1,48 +1,38 @@
-package com.wangGang.eagleEye.assessment;
+package com.wangGang.eagleEye.assessment
 
-import android.util.Log;
+import android.util.Log
+import com.wangGang.eagleEye.processing.ColorSpaceOperator.convertRGBToYUV
+import com.wangGang.eagleEye.thread.FlaggingThread
+import org.opencv.core.Mat
+import org.opencv.core.Size
+import org.opencv.imgcodecs.Imgcodecs
+import org.opencv.imgproc.Imgproc
+import java.util.concurrent.Semaphore
 
-import com.wangGang.eagleEye.processing.ColorSpaceOperator;
-import com.wangGang.eagleEye.thread.FlaggingThread;
+class InputImageEnergyReader(semaphore: Semaphore?, private val inputImagePath: String) :
+    FlaggingThread(semaphore!!) {
+    var outputMat: Mat? = null
+        private set
 
-import org.opencv.core.Mat;
-import org.opencv.core.Size;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+    override fun run() {
+        Log.d(TAG, "Started energy reading for " + this.inputImagePath)
 
-import java.util.concurrent.Semaphore;
+        val inputMat = Imgcodecs.imread(this.inputImagePath)
+        Imgproc.resize(inputMat, inputMat, Size(), 0.125, 0.125, Imgproc.INTER_AREA) // downsampled
 
-public class InputImageEnergyReader extends FlaggingThread {
-    private final static String TAG = "InputImageEnergyReader";
-    private final String inputImagePath;
-    private Mat outputMat;
+        val yuvMat = convertRGBToYUV(inputMat)
 
-    public InputImageEnergyReader(Semaphore semaphore, String inputImagePath) {
-        super(semaphore);
-        this.inputImagePath = inputImagePath;
-    }
+        this.outputMat = yuvMat[0]
+        Log.d(TAG, "Output mat size: " + this.outputMat)
+        inputMat.release()
 
-    @Override
-    public void run() {
-        Log.d(TAG, "Started energy reading for " +this.inputImagePath);
+        this.finishWork()
 
-        Mat inputMat = Imgcodecs.imread(this.inputImagePath);
-        Imgproc.resize(inputMat, inputMat, new Size(), 0.125f, 0.125f, Imgproc.INTER_AREA); // downsampled
-
-        Mat[] yuvMat = ColorSpaceOperator.convertRGBToYUV(inputMat);
-
-        this.outputMat = yuvMat[0];
-        inputMat.release();
-
-        this.finishWork();
-
-        Log.d(TAG, "Ended energy reading! Success!");
-    }
-
-    public Mat getOutputMat() {
-        return this.outputMat;
+        Log.d(TAG, "Ended energy reading! Success!")
     }
 
 
-
+    companion object {
+        private const val TAG = "InputImageEnergyReader"
+    }
 }

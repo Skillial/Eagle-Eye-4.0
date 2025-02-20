@@ -59,7 +59,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             viewModel.updateLoadingText("Copying Results...")
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
-                energyInputMatList[i] = energyReaders[i].outputMat
+                energyInputMatList[i] = energyReaders[i].outputMat!!
             }
 
         } catch (e: InterruptedException) {
