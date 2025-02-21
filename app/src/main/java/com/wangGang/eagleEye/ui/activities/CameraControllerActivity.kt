@@ -88,9 +88,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                 }
 
                 override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
-
                 override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean = false
-
                 override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
             }
         }
@@ -218,12 +216,12 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             }*/
             srEnabled -> Color.GREEN
             dehazeEnabled -> Color.YELLOW
-            else -> Color.TRANSPARENT
+            else -> Color.BLACK
         }
 
         val borderDrawable = GradientDrawable().apply {
             setColor(Color.BLACK)
-            setStroke(8.dpToPx(), borderColor)
+            setStroke(4.dpToPx(), borderColor)
         }
         rootView.background = borderDrawable
     }
