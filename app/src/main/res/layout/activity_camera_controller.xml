@@ -5,40 +5,54 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#040404"
+    android:padding="4dp"
     tools:context=".ui.activities.CameraControllerActivity">
 
     <LinearLayout
-        android:id="@+id/algoIndicatorLayout"
-        android:layout_width="wrap_content"
+        android:id="@+id/topBarLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/textureView"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        tools:layout_editor_absoluteX="4dp"
+        tools:ignore="MissingConstraints">
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="38dp"
-        android:layout_height="47dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginEnd="16dp"
-        android:background="#00FFFFFF"
-        android:drawableStart="@drawable/ic_settings"
-        android:drawablePadding="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <!-- Left view: algoIndicatorLayout -->
+        <LinearLayout
+            android:id="@+id/algoIndicatorLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+
+        <!-- Spacer for “space‐between” effect -->
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Right view: The settings Button -->
+        <Button
+            android:id="@+id/btn_settings"
+            android:layout_width="38dp"
+            android:layout_height="47dp"
+            android:background="#00FFFFFF"
+            android:drawableStart="@drawable/ic_settings"
+            android:drawablePadding="8dp" />
+    </LinearLayout>
+
 
     <TextureView
         android:id="@+id/textureView"
         android:layout_width="413dp"
         android:layout_height="546dp"
-        android:layout_marginTop="20dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button" />
+        app:layout_constraintTop_toBottomOf="@+id/topBarLayout" />
 
     <com.wangGang.eagleEye.ui.views.GridOverlayView
         android:layout_width="0dp"
@@ -57,10 +71,10 @@
         android:orientation="vertical"
         android:padding="16dp"
         android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -70,70 +84,81 @@
             android:max="100"
             android:progress="0"
             android:progressTint="#199f85"
-            android:visibility="gone"/>
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/loadingText"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:layout_marginTop="8dp"
-            android:maxLines="2"
             android:ellipsize="end"
             android:gravity="center"
+            android:maxLines="2"
+            android:minWidth="300dp"
             android:textAlignment="center"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:minWidth="300dp" />
+            android:textSize="18sp" />
     </LinearLayout>
 
-    <ImageButton
-        android:id="@+id/capture"
-        android:layout_width="58dp"
-        android:layout_height="80dp"
-        android:background="#00FFFFFF"
-        android:scaleType="fitCenter"
-        android:src="@drawable/shutter_button"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/bottomBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textureView"
-        app:layout_constraintVertical_bias="0.22000003" />
+        android:paddingVertical="32dp">
 
-    <ImageButton
-        android:id="@+id/switchCamera"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:background="@drawable/circle_shape"
-        android:clickable="true"
-        android:rotation="43"
-        android:scaleType="fitCenter"
-        android:src="@drawable/switch_camera"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.77"
-        app:layout_constraintStart_toEndOf="@+id/capture"
-        app:layout_constraintTop_toBottomOf="@+id/textureView"
-        app:layout_constraintVertical_bias="0.26"
-        app:maxImageSize="30dp" />
+        <!-- Thumbnail Preview Card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/thumbnailPreviewCard"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            app:cardCornerRadius="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/capture"
+            app:layout_constraintHorizontal_chainStyle="spread"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        app:cardCornerRadius="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/capture"
-        app:layout_constraintHorizontal_bias="0.25"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textureView"
-        app:layout_constraintVertical_bias="0.25">
+            <ImageView
+                android:id="@+id/thumbnailPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#E0E0E0"
+                android:scaleType="centerCrop" />
+        </androidx.cardview.widget.CardView>
 
-        <ImageView
-            android:id="@+id/thumbnailPreview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#E0E0E0"
-            android:scaleType="centerCrop"
-            tools:src="@tools:sample/avatars" />
-    </androidx.cardview.widget.CardView>
+        <!-- Capture Button -->
+        <ImageButton
+            android:id="@+id/capture"
+            android:layout_width="58dp"
+            android:layout_height="80dp"
+            android:background="#00FFFFFF"
+            android:scaleType="fitCenter"
+            android:src="@drawable/shutter_button"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/switchCamera"
+            app:layout_constraintStart_toEndOf="@id/thumbnailPreviewCard"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Switch Camera Button -->
+        <ImageButton
+            android:id="@+id/switchCamera"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/circle_shape"
+            android:clickable="true"
+            android:rotation="43"
+            android:scaleType="fitCenter"
+            android:src="@drawable/switch_camera"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/capture"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

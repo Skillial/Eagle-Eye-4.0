@@ -1,7 +1,6 @@
 package com.wangGang.eagleEye.ui.activities
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -17,7 +16,6 @@ import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
-import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.wangGang.eagleEye.R
@@ -180,15 +178,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         loadingBox = activityCameraControllerBinding.loadingBox
         thumbnailPreview = activityCameraControllerBinding.thumbnailPreview
         captureButton = activityCameraControllerBinding.capture
-        popupButton = activityCameraControllerBinding.button
+        popupButton = activityCameraControllerBinding.btnSettings
         switchCameraButton = activityCameraControllerBinding.switchCamera
         progressBar = activityCameraControllerBinding.progressBar
     }
 
     private fun setBackground() {
-        val sharedPreferences = getSharedPreferences("MySharedPrefs", Context.MODE_PRIVATE)
-        val superResolutionEnabled = sharedPreferences.getBoolean("super_resolution_enabled", false)
-        val dehazeEnabled = sharedPreferences.getBoolean("dehaze_enabled", false)
+        val superResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
+        val dehazeEnabled = ParameterConfig.isDehazeEnabled()
 
         val activeImageEnhancementTechniques = mutableListOf<ImageEnhancementType>()
 
@@ -300,7 +297,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateScreenBorder()
         }
 
-        popupWindow.showAsDropDown(findViewById(R.id.button), 0, 0)
+        popupWindow.showAsDropDown(findViewById(R.id.btn_settings), 0, 0)
     }
 
     // Other methods
