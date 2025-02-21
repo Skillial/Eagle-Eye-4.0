@@ -114,6 +114,15 @@ class ParameterConfig private constructor(appContext: Context) {
             setPrefs("dehaze_enabled", enabled)
         }
 
+        @JvmStatic
+        fun setGridOverlayEnabled(enabled: Boolean) {
+            setPrefs("grid_overlay_enabled", enabled)
+        }
+
+        @JvmStatic
+        fun isGridOverlayEnabled(): Boolean {
+            return getPrefsBoolean("grid_overlay_enabled", false)
+        }
     }
 
     enum class SRTechnique {

@@ -14,8 +14,8 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         tools:layout_editor_absoluteX="4dp"
@@ -40,8 +40,7 @@
             android:layout_width="38dp"
             android:layout_height="47dp"
             android:background="#00FFFFFF"
-            android:drawableStart="@drawable/ic_settings"
-            android:drawablePadding="8dp" />
+            android:drawableStart="@drawable/ic_settings"/>
     </LinearLayout>
 
 
@@ -55,8 +54,10 @@
         app:layout_constraintTop_toBottomOf="@+id/topBarLayout" />
 
     <com.wangGang.eagleEye.ui.views.GridOverlayView
+        android:id="@+id/gridOverlayView"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/textureView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

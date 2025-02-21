@@ -30,6 +30,7 @@ import com.wangGang.eagleEye.io.ImageReaderManager
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
+import com.wangGang.eagleEye.ui.views.GridOverlayView
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var imageReaderManager: ImageReaderManager
@@ -37,14 +38,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     // UI
     private lateinit var activityCameraControllerBinding: ActivityCameraControllerBinding
-    private lateinit var activityPopupMenuBinding: PopupMenuBinding
+    private lateinit var gridOverLayView: GridOverlayView
     private lateinit var algoIndicatorLayout: LinearLayout
     private lateinit var textureView: TextureView
     private lateinit var loadingText: TextView
     private lateinit var loadingBox: LinearLayout
     private lateinit var thumbnailPreview: ImageView
     private lateinit var captureButton: ImageButton
-    private lateinit var popupButton: Button
+    private lateinit var settingsButton: Button
     private lateinit var switchCameraButton: ImageButton
     private lateinit var progressManager: ProgressManager
     private lateinit var progressBar: ProgressBar
@@ -64,14 +65,20 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         assignViews()
         initializeCamera()
         addEventListeners()
-        setBackground()
         setupObservers()
-        updateScreenBorder()
+    }
+
+    private fun setGridOverlay() {
+        gridOverLayView.visibility = if (ParameterConfig.isGridOverlayEnabled()) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
         super.onResume()
         Log.d("CameraControllerActivity", "onResume")
+
+        setGridOverlay()
+        setBackground()
+        updateScreenBorder()
 
         if (textureView.isAvailable) {
             CameraController.getInstance().setPreview(textureView)
@@ -125,7 +132,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     /* ===== UI Methods ===== */
     private fun disableUIInteractivity() {
         captureButton.isEnabled = false
-        popupButton.isEnabled = false
+        settingsButton.isEnabled = false
         switchCameraButton.isEnabled = false
         textureView.isEnabled = false
         thumbnailPreview.isEnabled = false
@@ -133,7 +140,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private fun enableUIInteractivity() {
         captureButton.isEnabled = true
-        popupButton.isEnabled = true
+        settingsButton.isEnabled = true
         switchCameraButton.isEnabled = true
         textureView.isEnabled = true
         thumbnailPreview.isEnabled = true
@@ -156,16 +163,17 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             CameraController.getInstance().captureImage()
         }
 
-        popupButton.setOnClickListener {
-            showPopupMenu()
-        }
-
         switchCameraButton.setOnClickListener {
             CameraController.getInstance().switchCamera(textureView)
         }
 
         thumbnailPreview.setOnClickListener {
             showPhotoActivity()
+        }
+
+        settingsButton.setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
         }
 
         FileImageWriter.setOnImageSavedListener(this)
@@ -178,9 +186,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         loadingBox = activityCameraControllerBinding.loadingBox
         thumbnailPreview = activityCameraControllerBinding.thumbnailPreview
         captureButton = activityCameraControllerBinding.capture
-        popupButton = activityCameraControllerBinding.btnSettings
+        settingsButton = activityCameraControllerBinding.btnSettings
         switchCameraButton = activityCameraControllerBinding.switchCamera
         progressBar = activityCameraControllerBinding.progressBar
+        gridOverLayView = activityCameraControllerBinding.gridOverlayView
     }
 
     private fun setBackground() {
@@ -255,49 +264,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         } else {
             Log.e("CameraControllerActivity", "thumbnailUri is null, cannot open PhotoActivity")
         }
-    }
-
-    @SuppressLint("InflateParams")
-    private fun showPopupMenu() {
-        val popupView = LayoutInflater.from(this).inflate(R.layout.popup_menu, null)
-        val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
-
-        // setup views
-        activityPopupMenuBinding = PopupMenuBinding.bind(popupView)
-        val switch1: SwitchCompat = activityPopupMenuBinding.switchSuperResolution
-        val switch2: SwitchCompat = activityPopupMenuBinding.switchDehaze
-
-        // Use ParameterConfig to get preferences
-        switch1.isChecked = ParameterConfig.isSuperResolutionEnabled()
-        switch2.isChecked = ParameterConfig.isDehazeEnabled()
-
-        switch1.setOnCheckedChangeListener { _, isChecked ->
-            ParameterConfig.setSuperResolutionEnabled(isChecked)
-            if (isChecked) {
-                ParameterConfig.setDehazeEnabled(false)
-                switch2.isChecked = false
-                updateAlgoIndicators(listOf(ImageEnhancementType.SUPER_RESOLUTION))
-            } else {
-                updateAlgoIndicators(emptyList())
-            }
-
-            updateScreenBorder()
-        }
-
-        switch2.setOnCheckedChangeListener { _, isChecked ->
-            ParameterConfig.setDehazeEnabled(isChecked)
-            if (isChecked) {
-                ParameterConfig.setSuperResolutionEnabled(false)
-                switch1.isChecked = false
-                updateAlgoIndicators(listOf(ImageEnhancementType.DEHAZE))
-            } else {
-                updateAlgoIndicators(emptyList())
-            }
-
-            updateScreenBorder()
-        }
-
-        popupWindow.showAsDropDown(findViewById(R.id.btn_settings), 0, 0)
     }
 
     // Other methods

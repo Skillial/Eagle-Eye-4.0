@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settingsRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:contentDescription="@string/back"
+        android:src="@drawable/ic_back"
+        android:background="@android:color/transparent"
+        android:tint="@android:color/black" />
+
+    <LinearLayout
+        android:id="@+id/settingsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Switches here -->
+        <Switch
+            android:id="@+id/switchSuperResolution"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Super Resolution"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:paddingEnd="16dp" />
+
+        <Switch
+            android:id="@+id/switchDehaze"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Dehaze"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:paddingEnd="16dp" />
+
+        <Switch
+            android:id="@+id/switchGridOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Grid Overlay"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:paddingEnd="16dp" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@android:color/darker_gray" />
+
+        <!-- Container for the slider -->
+        <LinearLayout
+            android:id="@+id/scalingContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scale Factor:"
+                android:layout_marginEnd="16dp"/>
+
+            <SeekBar
+                android:id="@+id/scaleSeekbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="4"
+                android:progress="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scale Factor:"
+                android:layout_marginEnd="16dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>
