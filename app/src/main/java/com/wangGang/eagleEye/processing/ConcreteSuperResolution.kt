@@ -59,7 +59,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             viewModel.updateLoadingText("Copying Results...")
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
-                energyInputMatList[i] = energyReaders[i].outputMat
+                energyInputMatList[i] = energyReaders[i].outputMat!!
             }
 
         } catch (e: InterruptedException) {
@@ -105,14 +105,14 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         viewModel.updateLoadingText("Interpolating Images...")
         // Super-resolution interpolation
-        interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
-        SRProcessManager.getInstance().initialHRProduced()
+//        interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
+//        SRProcessManager.getInstance().initialHRProduced()
 
         // Perform actual super-resolution
         performActualSuperres(rgbInputMatList, inputIndices, imageInputMap, bestIndex, false)
 
         // Mark process as completed
-        SRProcessManager.getInstance().srProcessCompleted()
+//        SRProcessManager.getInstance().srProcessCompleted()
     }
 
     private fun performActualSuperres(
@@ -198,11 +198,11 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
 
-        try {
-            Thread.sleep(3000)
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
+//        try {
+//            Thread.sleep(3000)
+//        } catch (e: InterruptedException) {
+//            e.printStackTrace()
+//        }
 
     }
 
@@ -283,14 +283,11 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                 ) ?: throw IllegalStateException("FileImageReader instance is null")
             }
             // No need to perform image fusion, just use the best image.
-            val interpolatedMat = ImageOperator.performInterpolation(
-                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC
+            val savePath = FileImageWriter.getInstance()?.getHRResultPath(ImageFileAttribute.FileType.JPEG)
+                ?: throw IllegalStateException("Failed to get output file path")
+             ImageOperator.performJNIInterpolationWithMerge(
+                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath
             )
-            FileImageWriter.getInstance()?.saveMatrixToImage(
-                interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
-            )
-
-            Log.d("ConcreteSuperResolution", "saveHRResultToUserDir 1")
 
             resultMat.release()
         } else {
@@ -320,20 +317,20 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
             fusionOperator.perform()
 
-            viewModel.updateLoadingText("Saving Results...")
-            FileImageWriter.getInstance()?.apply {
-                Log.d("ConcreteSuperResolution", "saveMatrixToImage")
-                saveMatrixToImage(
-                    fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
-                )
-
-                Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
-                saveHRResultToUserDir(
-                    fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
-                )
-            }
-
-            fusionOperator.getResult()!!.release()
+//            viewModel.updateLoadingText("Saving Results...")
+//            FileImageWriter.getInstance()?.apply {
+//                Log.d("ConcreteSuperResolution", "saveMatrixToImage")
+//                saveMatrixToImage(
+//                    fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
+//                )
+//
+//                Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
+//                saveHRResultToUserDir(
+//                    fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
+//                )
+//            }
+//
+//            fusionOperator.getResult()!!.release()
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.wangGang.eagleEye.processing.multiple.fusion
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
@@ -27,6 +28,16 @@ class MeanFusionOperator(
         private const val TAG = "OptimizedFusionOperator"
     }
 
+    external fun meanFuse(
+        filenames: Array<Array<String>>,
+        outputFilePath: String,
+        quadrantNames: Array<String>,
+        divisionFactor: Int,
+        scale: Int,
+        quadrantWidth: Int,
+        quadrantHeight: Int
+    )
+
     private var outputMat: Mat? = null
 
     fun perform() {
@@ -41,8 +52,11 @@ class MeanFusionOperator(
         outputMat = Mat()
         initialMat.convertTo(initialMat, CvType.CV_16UC(initialMat.channels())) // Convert to CV_16UC
         Log.d(TAG, "Initial image for fusion Size: ${initialMat.size()} Scale: $scale")
-
-        val sumMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_LINEAR) // Linear interpolation
+        var quadrantWidth = initialMat.width() / 4
+        var quadrantHeight = initialMat.height() / 4
+//        val sumMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_CUBIC) // Linear interpolation
+        var fileList = mutableListOf<Array<String>>()
+        fileList.add(ImageOperator.performJNIInterpolation(initialMat, scale, Imgproc.INTER_CUBIC, 1))
         initialMat.release()
         outputMat?.release()
 
@@ -50,28 +64,52 @@ class MeanFusionOperator(
             // Load the next Mat
             initialMat = FileImageReader.getInstance()?.imReadOpenCV(imagePath, ImageFileAttribute.FileType.JPEG)
                 ?: throw IllegalStateException("Failed to read image: $imagePath")
-
             // Delete file as it is no longer needed
             FileImageWriter.getInstance()?.deleteImage(imagePath, ImageFileAttribute.FileType.JPEG)
             Log.d(TAG, "Initial image for fusion. Name: $imagePath Size: ${initialMat.size()} Scale: $scale")
-
+            fileList.add(ImageOperator.performJNIInterpolation(initialMat, scale, Imgproc.INTER_CUBIC, fileList.size +1))
 
             // Perform interpolation
-            initialMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_CUBIC) // Cubic interpolation
-            val maskMat = ImageOperator.produceMask(initialMat)
-
-            Core.add(sumMat, initialMat, sumMat, maskMat, CvType.CV_16UC(initialMat.channels()))
-            Log.d(TAG, "sumMat size: ${sumMat.size()}")
-
+//            initialMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_CUBIC) // Cubic interpolation
+//            val maskMat = ImageOperator.produceMask(initialMat)
+//
+//            Core.add(sumMat, initialMat, sumMat, maskMat, CvType.CV_16UC(initialMat.channels()))
+//            Log.d(TAG, "sumMat size: ${sumMat.size()}")
+//
             initialMat.release()
-            maskMat.release()
+//            maskMat.release()
             MatMemory.cleanMemory()
         }
+        val outputFilePath = FileImageWriter.getInstance()?.getHRResultPath(ImageFileAttribute.FileType.JPEG)
+            ?: throw IllegalStateException("Failed to get output file path")
+        Log.d(TAG, "Output file path: $outputFilePath")
+        val fileList2D: Array<Array<String>> = fileList.map{it}.toTypedArray()
+        val rowCount = fileList2D.size         // Number of rows in the original array
+        val colCount = fileList2D[0].size      // Number of columns in the original array
 
-        Core.divide(sumMat, Scalar.all(imageMatPathList.size + 1.0), sumMat)
-        sumMat.convertTo(outputMat, CvType.CV_8UC(sumMat.channels()))
-        sumMat.release()
+        val fileList2dTransposed = Array(colCount) { Array(rowCount) { "" } }
+
+        for (i in 0 until rowCount) {
+            for (j in 0 until colCount) {
+                fileList2dTransposed[j][i] = fileList2D[i][j]
+            }
+        }
+        var divisionFactor  = 4;
+        // initialize filenames
+        val initQuadrantFilenames = Array(divisionFactor * divisionFactor) { index ->
+            "/quadrant${index + 1}"
+        }
+        val quadrantsNames = FileImageWriter.getInstance()?.getPath(initQuadrantFilenames, ImageFileAttribute.FileType.JPEG)!!
+        for (each in quadrantsNames){
+            Log.d(TAG, "Quadrant name: $each")
+        }
+        meanFuse(fileList2dTransposed, outputFilePath, quadrantsNames, divisionFactor, scale.toInt(), quadrantWidth, quadrantHeight)
+
+//        Core.divide(sumMat, Scalar.all(imageMatPathList.size + 1.0), sumMat)
+//        sumMat.convertTo(outputMat, CvType.CV_8UC(sumMat.channels()))
+//        sumMat.release()
     }
+
 
     fun getResult(): Mat? {
         return outputMat
