@@ -198,11 +198,11 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
 
-        try {
-            Thread.sleep(3000)
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
+//        try {
+//            Thread.sleep(3000)
+//        } catch (e: InterruptedException) {
+//            e.printStackTrace()
+//        }
 
     }
 

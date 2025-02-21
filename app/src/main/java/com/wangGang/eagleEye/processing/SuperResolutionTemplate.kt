@@ -12,7 +12,7 @@ abstract class SuperResolutionTemplate {
     fun superResolutionImage(imageInputMap: List<String>) {
         val filteredMatList = initialize(imageInputMap)
         performSuperResolution(filteredMatList, imageInputMap)
-        finalizeProcess()
+//        finalizeProcess()
     }
 
     open fun initialize(imageInputMap: List<String>): Array<Mat> {
