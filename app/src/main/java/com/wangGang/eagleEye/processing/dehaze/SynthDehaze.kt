@@ -42,6 +42,57 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         return Pair(imSize, img)
     }
 
+    private fun loadAndResizeWithOverlap(bitmap: Bitmap, size: Int, overlap: Int): Triple<Mat, Pair<Int, Int>, List<Mat>> {
+        val newSize = size - overlap
+
+        val matrix = Matrix()
+        matrix.postRotate(90f)
+        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+        val img = Mat()
+        val realImg = Mat()
+        Utils.bitmapToMat(rotatedBitmap, img)
+        Utils.bitmapToMat(rotatedBitmap, realImg)
+
+        // Get image size as (width, height)
+        val imSize = Pair(img.cols(), img.rows())
+
+        val patches = mutableListOf<Mat>()
+
+        // Loop over the image with step newSize
+        for (i in 0 until img.rows() step newSize) {
+            for (j in 0 until img.cols() step newSize) {
+                var rowStart = i - (overlap / 2)
+                var rowEnd = i + (overlap / 2) + newSize
+                var colStart = j - (overlap / 2)
+                var colEnd = j + (overlap / 2) + newSize
+
+                if (i == 0) {
+                    rowStart = 0
+                    rowEnd = newSize + overlap
+                }
+                if (j == 0) {
+                    colStart = 0
+                    colEnd = newSize + overlap
+                }
+                if (i + newSize + overlap >= img.rows()) {
+                    rowStart = img.rows() - newSize - overlap
+                    rowEnd = img.rows()
+                }
+                if (j + newSize + overlap >= img.cols()) {
+                    colStart = img.cols() - newSize - overlap
+                    colEnd = img.cols()
+                }
+
+                // Extract the submatrix (patch)
+                val patch = img.submat(rowStart, rowEnd, colStart, colEnd)
+                patches.add(patch)
+                println("Patch size: ${patch.rows()} x ${patch.cols()}")
+            }
+        }
+
+        return Triple(realImg, imSize, patches)
+    }
 
     private fun loadAndResizeFromAssets (size: Size): Pair<Size, Mat> {
         val inputStream: InputStream
@@ -72,7 +123,35 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         }
     }
 
-    fun dehazeImage(bitmap: Bitmap) {
+    private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
+        val imgFloat = Mat()
+        img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0)
+
+        Core.subtract(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)
+        Core.divide(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)
+
+        Imgproc.cvtColor(imgFloat, imgFloat, Imgproc.COLOR_BGR2RGB)
+
+        val chwData = FloatArray(3 * img.rows() * img.cols())
+        val channels = mutableListOf(Mat(), Mat(), Mat())
+        Core.split(imgFloat, channels)
+
+        val height = img.rows()
+        val width = img.cols()
+
+        for (i in 0 until height) {
+            for (j in 0 until width) {
+                chwData[i * width + j] = channels[0].get(i, j)[0].toFloat()
+                chwData[height * width + i * width + j] = channels[1].get(i, j)[0].toFloat()
+                chwData[2 * height * width + i * width + j] = channels[2].get(i, j)[0].toFloat()
+            }
+        }
+        Log.d("size",""+img.rows().toLong()+ "" + img.cols().toLong())
+        val inputShape = longArrayOf(1, 3, img.rows().toLong(), img.cols().toLong())
+        return OnnxTensor.createTensor(env, FloatBuffer.wrap(chwData), inputShape)
+    }
+
+    fun oldDehazeImage(bitmap: Bitmap) {
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions().apply {
             setMemoryPatternOptimization(true)
@@ -202,35 +281,6 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
     }
 
-    private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
-        val imgFloat = Mat()
-        img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0)
-
-        Core.subtract(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)
-        Core.divide(imgFloat, Scalar(0.5, 0.5, 0.5), imgFloat)
-
-        Imgproc.cvtColor(imgFloat, imgFloat, Imgproc.COLOR_BGR2RGB)
-
-        val chwData = FloatArray(3 * img.rows() * img.cols())
-        val channels = mutableListOf(Mat(), Mat(), Mat())
-        Core.split(imgFloat, channels)
-
-        val height = img.rows()
-        val width = img.cols()
-
-        for (i in 0 until height) {
-            for (j in 0 until width) {
-                chwData[i * width + j] = channels[0].get(i, j)[0].toFloat()
-                chwData[height * width + i * width + j] = channels[1].get(i, j)[0].toFloat()
-                chwData[2 * height * width + i * width + j] = channels[2].get(i, j)[0].toFloat()
-            }
-        }
-        Log.d("size",""+img.rows().toLong()+ "" + img.cols().toLong())
-        val inputShape = longArrayOf(1, 3, img.rows().toLong(), img.cols().toLong())
-        return OnnxTensor.createTensor(env, FloatBuffer.wrap(chwData), inputShape)
-    }
-
-
     fun slowDehazeImage(bitmap: Bitmap) {
         val size = 256
         val overlap = 150
@@ -331,64 +381,8 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         Imgproc.cvtColor(clearImg, clearImg, Imgproc.COLOR_RGB2BGR)
         FileImageWriter.getInstance()!!.saveMatToUserDir(clearImg, ImageFileAttribute.FileType.JPEG)
     }
-    private fun loadAndResizeWithOverlap(bitmap: Bitmap, size: Int, overlap: Int): Triple<Mat, Pair<Int, Int>, List<Mat>> {
-        val newSize = size - overlap
 
-        val matrix = Matrix()
-        matrix.postRotate(90f)
-        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-
-        val img = Mat()
-        val realImg = Mat()
-        Utils.bitmapToMat(rotatedBitmap, img)
-        Utils.bitmapToMat(rotatedBitmap, realImg)
-
-        // Get image size as (width, height)
-        val imSize = Pair(img.cols(), img.rows())
-
-        val patches = mutableListOf<Mat>()
-
-        // Loop over the image with step newSize
-        for (i in 0 until img.rows() step newSize) {
-            for (j in 0 until img.cols() step newSize) {
-                var rowStart = i - (overlap / 2)
-                var rowEnd = i + (overlap / 2) + newSize
-                var colStart = j - (overlap / 2)
-                var colEnd = j + (overlap / 2) + newSize
-
-                if (i == 0) {
-                    rowStart = 0
-                    rowEnd = newSize + overlap
-                }
-                if (j == 0) {
-                    colStart = 0
-                    colEnd = newSize + overlap
-                }
-                if (i + newSize + overlap >= img.rows()) {
-                    rowStart = img.rows() - newSize - overlap
-                    rowEnd = img.rows()
-                }
-                if (j + newSize + overlap >= img.cols()) {
-                    colStart = img.cols() - newSize - overlap
-                    colEnd = img.cols()
-                }
-
-                // Extract the submatrix (patch)
-                val patch = img.submat(rowStart, rowEnd, colStart, colEnd)
-                patches.add(patch)
-                println("Patch size: ${patch.rows()} x ${patch.cols()}")
-            }
-        }
-
-        return Triple(realImg, imSize, patches)
-    }
-
-    private fun reconstructImage(
-        patches: List<Mat>,
-        imSize: Pair<Int, Int>, // (width, height)
-        size: Int,
-        overlap: Int
-    ): Mat {
+    private fun reconstructImage(patches: List<Mat>, imSize: Pair<Int, Int>, size: Int, overlap: Int): Mat {
         val newSize = size - overlap  // e.g. 256 when size == 512 and overlap == 256
         val W = imSize.first   // width
         val H = imSize.second  // height
@@ -443,5 +437,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         // Element-wise division: rec = rec / count
         Core.divide(rec, count, rec)
         return rec
+    }
+
+    fun fastDehazeImage(bitmap: Bitmap){
+
     }
 }
