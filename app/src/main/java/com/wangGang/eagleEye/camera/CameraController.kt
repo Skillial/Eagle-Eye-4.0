@@ -21,7 +21,6 @@ import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
-import android.widget.LinearLayout
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
@@ -30,7 +29,7 @@ class CameraController(private val context: Context, private val viewModel: Came
 
     companion object {
         // Constants
-        const val maxNumberOfBurstImages = 10
+        const val MAX_BURST_IMAGES = 10
 
         @Volatile
         private var instance: CameraController? = null
@@ -67,7 +66,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     // Methods
     fun captureImage() {
         val isSuperResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
-        val totalCaptures = if (isSuperResolutionEnabled) maxNumberOfBurstImages else 1
+        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
         val captureList = mutableListOf<CaptureRequest>()
 
         viewModel.updateLoadingText("Capturing Images")
@@ -160,9 +159,11 @@ class CameraController(private val context: Context, private val viewModel: Came
             }
 
             override fun onDisconnected(p0: CameraDevice) {
+                Log.e("CameraController", "Camera disconnected")
             }
 
             override fun onError(camera: CameraDevice, error: Int) {
+                Log.e("CameraController", "Error opening camera: $error")
             }
         }, handler)
     }
@@ -301,10 +302,4 @@ class CameraController(private val context: Context, private val viewModel: Came
         }
     }
 
-    fun reopenCamera() {
-        if (!::cameraDevice.isInitialized) {
-            Log.d("CameraController", "Reopening camera")
-            openCamera()
-        }
-    }
 }
