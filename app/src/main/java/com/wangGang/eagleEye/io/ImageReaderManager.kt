@@ -36,6 +36,7 @@ class ImageReaderManager(
 
     private fun setupImageReader(highestResolution: Size?) {
         imageReader = if (highestResolution != null) {
+            Log.d("ImageReaderManager", "Setting up image reader with resolution: ${highestResolution.width}x${highestResolution.height}")
             ImageReader.newInstance(highestResolution.width, highestResolution.height, ImageFormat.JPEG, 20)
         } else {
             ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
@@ -71,6 +72,8 @@ class ImageReaderManager(
         } else {
             handleNormalImage(bitmap)
         }
+
+        Log.d("ImageReaderManager", "Image processed")
     }
     private fun handleNormalImage(bitmap: Bitmap) {
         val matrix = Matrix()
