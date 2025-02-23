@@ -160,7 +160,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         }
 
         viewModel.updateLoadingText("Loading Albedo Model...")
-        val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/512-256/albedo_model.onnx")
+        val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/512/albedo_model.onnx")
 
 
         viewModel.updateLoadingText("Loading and Resizing Image...")
@@ -185,7 +185,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         Log.d("dehaze", "Albedo output computed successfully")
 
         viewModel.updateLoadingText("Loading Transmission Model...")
-        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/512-256/transmission_model.onnx")
+        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/512/transmission_model.onnx")
 
         val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 512, 512))
 
@@ -218,7 +218,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         hazyResized.release()
 
         viewModel.updateLoadingText("Loading Airlight Model...")
-        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/512-256/airlight_model.onnx")
+        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/512/airlight_model.onnx")
         sessionOptions.close()
 
         viewModel.updateLoadingText("Running Airlight Model...")
