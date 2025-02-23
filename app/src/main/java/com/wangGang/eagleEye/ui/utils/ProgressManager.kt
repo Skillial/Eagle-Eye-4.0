@@ -12,7 +12,7 @@ class ProgressManager private constructor() {
         private var INSTANCE: ProgressManager? = null
 
         // Constants
-        private val TASKS_SUPER_RESOLUTION = 11
+        private val TASKS_SUPER_RESOLUTION = 10
         private val TASKS_DEHAZE = 15
 
         fun getInstance(): ProgressManager {
