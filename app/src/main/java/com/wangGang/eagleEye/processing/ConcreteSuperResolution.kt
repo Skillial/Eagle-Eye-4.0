@@ -5,6 +5,7 @@ import android.util.Log
 import com.wangGang.eagleEye.processing.multiple.alignment.LRWarpingOperator
 import com.wangGang.eagleEye.assessment.InputImageEnergyReader
 import com.wangGang.eagleEye.constants.ParameterConfig
+import com.wangGang.eagleEye.io.DirectoryStorage
 import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
@@ -153,7 +154,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         val inputMat = FileImageReader.getInstance()!!.imReadFullPath(imageInputMap[index])
 
         val outputMat = ImageOperator.performInterpolation(inputMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_LINEAR)
-        FileImageWriter.getInstance()?.saveMatrixToImage(outputMat, "linear", ImageFileAttribute.FileType.JPEG)
+        FileImageWriter.getInstance()?.saveMatrixToImage(outputMat, DirectoryStorage.SR_ALBUM_NAME_PREFIX, "linear", ImageFileAttribute.FileType.JPEG)
         outputMat.release()
 
         inputMat.release()
@@ -216,12 +217,18 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
 
+        // TODO: launch activity here to preview before and after images, call these in the new activity
+        val beforeAndAfter = FileImageReader.getInstance()?.getBeforeAndAfterImages(ImageFileAttribute.FileType.JPEG)
+        Log.d(TAG, "Before image: $beforeAndAfter.first")
+        Log.d(TAG, "After image: $beforeAndAfter.second")
+
         // TODO: Check if this block is needed
         try {
             Thread.sleep(3000)
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
+
 
     }
 

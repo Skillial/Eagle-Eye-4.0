@@ -1,4 +1,5 @@
 package com.wangGang.eagleEye.processing.multiple.enhancement
+import com.wangGang.eagleEye.io.DirectoryStorage
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import org.opencv.core.Core
@@ -17,6 +18,7 @@ class UnsharpMaskOperator(private val inputMat: Mat, private val index: Int)  {
 
         Core.addWeighted(this.inputMat, 2.25, blurMat, -1.25, 0.0, this.outputMat, CvType.CV_8UC(this.inputMat.channels()))
         FileImageWriter.getInstance()?.debugSaveMatrixToImage(this.outputMat,
+            DirectoryStorage.SR_ALBUM_NAME_PREFIX,
             "sharpen_$index", ImageFileAttribute.FileType.JPEG)
 
         blurMat.release()

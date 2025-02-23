@@ -92,8 +92,20 @@ class FileImageReader private constructor(private var context: Context?) {
         return file.exists()
     }
 
+    fun getBeforeAndAfterImages(fileType: ImageFileAttribute.FileType): Pair<Bitmap, Bitmap> {
+        val before = loadBitmapFromDirectory(DirectoryStorage.getSharedInstance().getResultFilePath(), ResultType.BEFORE.toString(), fileType)
+        val after = loadBitmapFromDirectory(DirectoryStorage.getSharedInstance().getResultFilePath(), ResultType.AFTER.toString(), fileType)
+        return Pair(before, after)
+    }
+
     private fun loadBitmapFromFile(fileName: String, fileType: ImageFileAttribute.FileType): Bitmap {
         val completeFilePath = "${FileImageWriter.getInstance()?.getFilePath()}/$fileName${ImageFileAttribute.getFileExtension(fileType)}"
+        Log.d(TAG, "Filepath for loading bitmap: $completeFilePath")
+        return BitmapFactory.decodeFile(completeFilePath)
+    }
+
+    private fun loadBitmapFromDirectory(directory: String, fileName: String, fileType: ImageFileAttribute.FileType): Bitmap {
+        val completeFilePath = "$directory/$fileName${ImageFileAttribute.getFileExtension(fileType)}"
         Log.d(TAG, "Filepath for loading bitmap: $completeFilePath")
         return BitmapFactory.decodeFile(completeFilePath)
     }

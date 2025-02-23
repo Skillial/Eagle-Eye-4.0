@@ -27,7 +27,7 @@
             private const val ALBUM_EXTERNAL_NAME = "EagleEye Results"
 
             // Albums
-            const val SR_ALBUM_NAME_PREFIX = "/SR"
+            const val ROOT_ALBUM_NAME_PREFIX = "/EagleEye"
             const val RESULTS_ALBUM_NAME_PREFIX = "/Results"
 
 
@@ -51,6 +51,15 @@
             @JvmStatic
             fun recreateDirectory(path: String) {
                 val dirFile = File(path)
+                deleteRecursive(dirFile)
+                if (!dirFile.mkdirs()) {
+                    dirFile.mkdir()
+                }
+            }
+
+            @JvmStatic
+            fun recreateSubDirectory(path: String, subDir: String) {
+                val dirFile = File("$path/$subDir")
                 deleteRecursive(dirFile)
                 if (!dirFile.mkdirs()) {
                     dirFile.mkdir()
@@ -141,7 +150,7 @@
         fun saveMatrixToResultsDir(mat: Mat, fileType: ImageFileAttribute.FileType, resultType: ResultType) {
 //            val albumDir = getAlbumStorageDir(RESULTS_ALBUM_NAME_PREFIX)
             val imageFileName = resultType.toString()
-            val imageFile = File(proposedPath, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
 
             Log.d(TAG, "saveMatToResultsDir")
@@ -154,13 +163,14 @@
 
         @Synchronized
         fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType, resultType: ResultType) {
-//            val albumDir = getAlbumStorageDir(RESULTS_ALBUM_NAME_PREFIX)
             val imageFileName = resultType.toString()
-            val imageFile = File(proposedPath, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+
+            val rotatedBitmap = ImageUtils.rotateBitmap(bitmap, 90f)
 
             try {
                 FileOutputStream(imageFile).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
                 }
                 Log.d(TAG, "Saved: ${imageFile.absolutePath}")
             } catch (e: IOException) {
@@ -197,6 +207,14 @@
         @Synchronized
         fun debugSaveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {
             val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+            Imgcodecs.imwrite(imageFile.absolutePath, mat)
+            Log.d(TAG, "debugSaveMatrixToImage")
+            Log.d(TAG, "Saved ${imageFile.absolutePath}")
+        }
+
+        @Synchronized
+        fun debugSaveMatrixToImage(mat: Mat, directory: String, fileName: String, fileType: ImageFileAttribute.FileType) {
+            val imageFile = File("$proposedPath/$directory", "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
             Log.d(TAG, "debugSaveMatrixToImage")
             Log.d(TAG, "Saved ${imageFile.absolutePath}")

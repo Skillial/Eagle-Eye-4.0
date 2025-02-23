@@ -7,9 +7,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.util.Log
+import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
+import com.wangGang.eagleEye.io.ImageUtils
 import com.wangGang.eagleEye.io.ResultType
+import com.wangGang.eagleEye.processing.TAG
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import org.opencv.android.Utils
@@ -26,9 +29,8 @@ import java.nio.FloatBuffer
 
 class SynthDehaze(private val context: Context, private val viewModel: CameraViewModel) {
     private fun loadAndResize(bitmap: Bitmap, size: Size): Pair<Size, Mat> {
-        val matrix = Matrix()
-        matrix.postRotate(90f)
-        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+        val rotatedBitmap = ImageUtils.rotateBitmap(bitmap, 90f)
 
         val img = Mat()
         Utils.bitmapToMat(rotatedBitmap, img)
@@ -64,11 +66,14 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         }
 
         val imSize = Size(img.cols().toDouble(), img.rows().toDouble())
-        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
-        Imgproc.resize(img, img, size)
 
         // Save before image
         FileImageWriter.getInstance()!!.saveMatrixToResultsDir(img, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+
+        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
+        Imgproc.resize(img, img, size)
+
+
 
         return Pair(imSize, img)
     }
@@ -218,10 +223,14 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         ProgressManager.getInstance().incrementProgress("Converting Image to an 8-bit format")
 
         viewModel.updateLoadingText("Saving Image")
-        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImgResized, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImgResized, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
         clearImgResized.release()
         ProgressManager.getInstance().incrementProgress("Saving Image")
 
+        // TODO: launch activity here to preview before and after images
+        val beforeAndAfter = FileImageReader.getInstance()?.getBeforeAndAfterImages(ImageFileAttribute.FileType.JPEG)
+        Log.d(TAG, "Before image: $beforeAndAfter.first")
+        Log.d(TAG, "After image: $beforeAndAfter.second")
     }
 
     private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
