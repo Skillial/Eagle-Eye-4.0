@@ -5,4 +5,5 @@
     <string name="thumbnail_photo">Full-Sized Thumbnail Photo</string>
     <string name="switch_super_resolution">Super Resolution</string>
     <string name="switch_dehaze">Dehaze</string>
+    <string name="drag_handle">Drag Handle</string>
 </resources>

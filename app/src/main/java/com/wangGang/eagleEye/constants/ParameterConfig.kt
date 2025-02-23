@@ -75,6 +75,16 @@ class ParameterConfig private constructor(appContext: Context) {
         }
 
         @JvmStatic
+        fun setPrefs(key: String, value: String) {
+            sharedInstance?.editorPrefs?.putString(key, value)?.apply()
+        }
+
+        @JvmStatic
+        fun getPrefsString(key: String, defaultValue: String): String {
+            return sharedInstance?.sharedPrefs?.getString(key, defaultValue) ?: defaultValue
+        }
+
+        @JvmStatic
         fun getPrefsBoolean(key: String, defaultValue: Boolean): Boolean {
             return sharedInstance?.sharedPrefs?.getBoolean(key, defaultValue) ?: defaultValue
         }
@@ -92,6 +102,19 @@ class ParameterConfig private constructor(appContext: Context) {
         @JvmStatic
         fun getPrefsFloat(key: String, defaultValue: Float): Float {
             return sharedInstance?.sharedPrefs?.getFloat(key, defaultValue) ?: defaultValue
+        }
+
+        @JvmStatic
+        fun getAlgoOrder(): List<String> {
+            val defaultOrder = "Super Resolution,Dehaze"
+            val stored = getPrefsString("algo_order", defaultOrder)
+            return stored.split(",")
+        }
+
+        @JvmStatic
+        fun setAlgoOrder(algoOrderList: List<String>) {
+            val algoOrder = algoOrderList.joinToString(",")
+            setPrefs("algo_order", algoOrder)
         }
 
         @JvmStatic

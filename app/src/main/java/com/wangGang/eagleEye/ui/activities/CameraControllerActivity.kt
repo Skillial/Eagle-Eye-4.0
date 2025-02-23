@@ -102,12 +102,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     override fun onStop() {
         super.onStop()
         Log.d("CameraControllerActivity", "onStop")
+        Log.d("CameraControllerActivity", "Closing camera")
+        CameraController.getInstance().closeCamera()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d("CameraControllerActivity", "onDestroy")
-        CameraController.getInstance().closeCamera()
         ProgressManager.destroyInstance() // Cleanup
     }
 

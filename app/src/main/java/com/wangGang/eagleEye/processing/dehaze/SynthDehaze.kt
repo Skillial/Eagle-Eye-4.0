@@ -85,9 +85,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
         ProgressManager.getInstance().incrementProgress("Loading Albedo Model")
 
-//        val (imSize, hazyImg) = loadAndResize(bitmap, Size(512.0, 512.0))
         viewModel.updateLoadingText("Loading and Resizing Image")
-        val (imSize, hazyImg) = loadAndResizeFromAssets(Size(512.0, 512.0))
+        val (imSize, hazyImg) = loadAndResize(bitmap, Size(512.0, 512.0))
+//        val (imSize, hazyImg) = loadAndResizeFromAssets(Size(512.0, 512.0))
         ProgressManager.getInstance().incrementProgress()
 
         viewModel.updateLoadingText("Preprocessing Image")

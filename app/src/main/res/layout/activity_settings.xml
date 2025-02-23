@@ -25,7 +25,7 @@
         android:gravity="center_vertical">
 
         <!-- Switches here -->
-        <Switch
+        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchSuperResolution"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
             android:layout_marginBottom="4dp"
             android:paddingEnd="16dp" />
 
-        <Switch
+        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchDehaze"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -43,7 +43,7 @@
             android:layout_marginBottom="4dp"
             android:paddingEnd="16dp" />
 
-        <Switch
+        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchGridOverlay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -65,28 +65,39 @@
             android:id="@+id/scalingContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingVertical="16dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <TextView
+                android:id="@+id/scalingLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Scale Factor:"
                 android:layout_marginEnd="16dp"/>
 
+            <!-- SeekBar that we’ll treat like a discrete slider for [1, 2, 4, 8, 16] -->
             <SeekBar
                 android:id="@+id/scaleSeekbar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:max="4"
                 android:progress="1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Scale Factor:"
-                android:layout_marginEnd="16dp"/>
         </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@android:color/darker_gray" />
+
+        <!-- Draggable list for algorithms -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/draggableAlgoList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
     </LinearLayout>
 </LinearLayout>
