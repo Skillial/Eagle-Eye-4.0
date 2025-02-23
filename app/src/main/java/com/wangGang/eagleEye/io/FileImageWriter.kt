@@ -15,7 +15,6 @@
     import java.io.File
     import java.io.FileOutputStream
     import java.io.IOException
-    import java.net.URI
     import java.text.SimpleDateFormat
     import java.util.Date
     import android.view.Gravity
@@ -25,8 +24,13 @@
         companion object {
             private const val TAG = "SR_ImageWriter"
             private var sharedInstance: FileImageWriter? = null
-            const val ALBUM_NAME_PREFIX = "/SR"
             private const val ALBUM_EXTERNAL_NAME = "EagleEye Results"
+
+            // Albums
+            const val SR_ALBUM_NAME_PREFIX = "/SR"
+            const val RESULTS_ALBUM_NAME_PREFIX = "/Results"
+
+
 
             fun getInstance(): FileImageWriter? {
                 return sharedInstance
@@ -59,8 +63,6 @@
                 }
                 fileOrDirectory.delete()
             }
-
-
 
             interface OnImageSavedListener {
                 fun onImageSaved(uri: Uri)
@@ -136,6 +138,39 @@
         }
 
         @Synchronized
+        fun saveMatrixToResultsDir(mat: Mat, fileType: ImageFileAttribute.FileType, resultType: ResultType) {
+//            val albumDir = getAlbumStorageDir(RESULTS_ALBUM_NAME_PREFIX)
+            val imageFileName = resultType.toString()
+            val imageFile = File(proposedPath, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            Imgcodecs.imwrite(imageFile.absolutePath, mat)
+
+            Log.d(TAG, "saveMatToResultsDir")
+            Log.d(TAG, "Saved: ${imageFile.absolutePath}")
+
+            if (resultType == ResultType.AFTER) {
+                refreshImageGallery(imageFile)
+            }
+        }
+
+        @Synchronized
+        fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType, resultType: ResultType) {
+//            val albumDir = getAlbumStorageDir(RESULTS_ALBUM_NAME_PREFIX)
+            val imageFileName = resultType.toString()
+            val imageFile = File(proposedPath, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+
+            try {
+                FileOutputStream(imageFile).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                }
+                Log.d(TAG, "Saved: ${imageFile.absolutePath}")
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+
+            refreshImageGallery(imageFile)
+        }
+
+        @Synchronized
         fun saveMatToUserDir(mat: Mat, fileType: ImageFileAttribute.FileType) {
             val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
             val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
@@ -156,9 +191,7 @@
             Log.d(TAG, "saveMatrixToImage")
             Log.d(TAG, "Saved ${imageFile.absolutePath}")
 
-            if (fileName.equals("result")) {
-                refreshImageGallery(imageFile)
-            }
+            refreshImageGallery(imageFile)
         }
 
         @Synchronized
@@ -203,14 +236,19 @@
 
         }
 
-        private fun refreshImageGallery(srFile: File) {
+        private fun refreshImageGallery(imageFile: File) {
             MediaScannerConnection.scanFile(
                 context,
-                arrayOf(srFile.toString()), null
+                arrayOf(imageFile.toString()), null
             ) { path, uri ->
                 Log.i("ExternalStorage", "Scanned $path")
                 Log.i("ExternalStorage", "-> uri=$uri")
-                onImageSavedListener?.onImageSaved(uri)
+
+                if (imageFile.name.contains(ResultType.AFTER.toString())) {
+                    Log.d(TAG, "onImageSavedListener + ${ResultType.AFTER}")
+                    Log.d(TAG, "onImageSavedListener File: ${imageFile.absolutePath}")
+                    onImageSavedListener?.onImageSaved(uri)
+                }
             }
         }
 

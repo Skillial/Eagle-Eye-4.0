@@ -104,8 +104,11 @@ class ImageReaderManager(
                 FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
                     viewModel.addImageInput(it)
                 }
-            }
 
+                if (viewModel.imageInputMap.value?.size == 1) {
+                    FileImageWriter.getInstance()?.saveBitmapToResultsDir(bitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+                }
+            }
             saveJob.join() // Ensures the file is saved before checking the count
 
             if (viewModel.imageInputMap.value?.size == 10) {

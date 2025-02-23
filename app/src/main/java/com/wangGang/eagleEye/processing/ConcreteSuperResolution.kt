@@ -8,6 +8,7 @@ import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
+import com.wangGang.eagleEye.io.ResultType
 import com.wangGang.eagleEye.model.AttributeHolder
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure.SharpnessResult
@@ -37,12 +38,12 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
         viewModel.updateLoadingText("Reading energy")
 
-        val energyInputMatList: Array<Mat> = Array(imageInputMap.size) { Mat() }
+        val inputMatList: Array<Mat> = Array(imageInputMap.size) { Mat() }
         val energyReaders: MutableList<InputImageEnergyReader> = mutableListOf()
         val energySem = Semaphore(0)
 
         try {
-            for (i in energyInputMatList.indices) {
+            for (i in inputMatList.indices) {
                 val reader = InputImageEnergyReader(energySem, imageInputMap[i])
                 energyReaders.add(reader)
                 // Assuming each reader is run on a separate thread or coroutines
@@ -54,7 +55,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
 
             // Wait for all semaphores to release
-            energySem.acquire(energyInputMatList.size)
+            energySem.acquire(inputMatList.size)
 
             ProgressManager.getInstance().incrementProgress("Reading energy")
 
@@ -62,7 +63,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             Log.d("ProgressBar", "Copying Results")
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
-                energyInputMatList[i] = energyReaders[i].outputMat
+                inputMatList[i] = energyReaders[i].outputMat
             }
 
             ProgressManager.getInstance().incrementProgress("Copying Results")
@@ -71,7 +72,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             e.printStackTrace()
         }
 
-        return energyInputMatList
+        return inputMatList
     }
 
     override fun applyFilter(energyInputMatList: Array<Mat>): Array<Mat> {
@@ -309,9 +310,11 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
 
             viewModel.updateLoadingText("Saving Results")
-            FileImageWriter.getInstance()?.saveMatrixToImage(
+            /*FileImageWriter.getInstance()?.saveMatrixToImage(
                 interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
-            )
+            )*/
+
+            FileImageWriter.getInstance()?.saveMatrixToResultsDir(interpolatedMat, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
 
             ProgressManager.getInstance().incrementProgress("Saving Results")
 
@@ -350,14 +353,16 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             viewModel.updateLoadingText("Saving Results")
             FileImageWriter.getInstance()?.apply {
                 Log.d("ConcreteSuperResolution", "saveMatrixToImage")
-                saveMatrixToImage(
+                /*saveMatrixToImage(
                     fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
-                )
+                )*/
 
-                Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
+                saveMatrixToResultsDir(fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+
+                /*Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
                 saveHRResultToUserDir(
                     fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
-                )
+                )*/
             }
 
             ProgressManager.getInstance().incrementProgress("Saving Results")

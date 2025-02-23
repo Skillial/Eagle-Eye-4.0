@@ -9,6 +9,7 @@ import android.graphics.Matrix
 import android.util.Log
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
+import com.wangGang.eagleEye.io.ResultType
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import org.opencv.android.Utils
@@ -40,6 +41,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         Imgproc.resize(img, img, size)
 
+        // Save before image
+        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(img, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+
         return Pair(imSize, img)
     }
 
@@ -62,6 +66,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         val imSize = Size(img.cols().toDouble(), img.rows().toDouble())
         Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
         Imgproc.resize(img, img, size)
+
+        // Save before image
+        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(img, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
 
         return Pair(imSize, img)
     }
@@ -211,7 +218,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         ProgressManager.getInstance().incrementProgress("Converting Image to an 8-bit format")
 
         viewModel.updateLoadingText("Saving Image")
-        FileImageWriter.getInstance()!!.saveMatToUserDir(clearImgResized, ImageFileAttribute.FileType.JPEG)
+        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImgResized, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
         clearImgResized.release()
         ProgressManager.getInstance().incrementProgress("Saving Image")
 
