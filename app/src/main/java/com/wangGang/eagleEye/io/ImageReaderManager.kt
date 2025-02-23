@@ -88,7 +88,7 @@ class ImageReaderManager(
         CoroutineScope(Dispatchers.Main).launch {
             cameraController.closeCamera()
             withContext(Dispatchers.IO) {
-                SynthDehaze(context, viewModel).dehazeImage(bitmap)
+                SynthDehaze(context, viewModel).slowDehazeImage(bitmap)
             }
             cameraController.openCamera()
             setImageReaderListener()
