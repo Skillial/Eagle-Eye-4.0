@@ -21,6 +21,8 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
+import kotlin.math.max
+import kotlin.math.min
 
 class SynthDehaze(private val context: Context, private val viewModel: CameraViewModel) {
     private fun loadAndResize(bitmap: Bitmap, size: Size): Pair<Size, Mat> {
@@ -42,7 +44,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         return Pair(imSize, img)
     }
 
-    private fun loadAndResizeWithOverlap(bitmap: Bitmap, size: Int, overlap: Int): Triple<Mat, Pair<Int, Int>, List<Mat>> {
+    private fun loadAndDivideWithOverlap(bitmap: Bitmap, size: Int, overlap: Int): Triple<Mat, Pair<Int, Int>, List<Mat>> {
         val newSize = size - overlap
 
         val matrix = Matrix()
@@ -92,6 +94,43 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         }
 
         return Triple(realImg, imSize, patches)
+    }
+
+    private fun loadAndDivide(bitmap: Bitmap, size: Int): Triple<Mat, Mat, List<Mat>>{
+        val matrix = Matrix()
+        matrix.postRotate(90f)
+        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+        val img = Mat()
+        Utils.bitmapToMat(rotatedBitmap, img)
+        val H = img.rows()
+        val W = img.cols()
+        val patches = mutableListOf<Mat>()
+
+        // Step size for sliding window.
+
+        // Loop over image to extract patches.
+        for (i in 0 until H step size) {
+            for (j in 0 until W step size) {
+                // Calculate end indices ensuring we do not go out of bounds.
+                val rowEnd = min(i + size, H)
+                val colEnd = min(j + size, W)
+
+                // Extract the submatrix.
+                val patchSubMat = img.submat(i, rowEnd, j, colEnd)
+
+                // Resize the patch to (size x size) using cubic interpolation.
+                val patch = Mat()
+                Imgproc.resize(patchSubMat, patch, Size(size.toDouble(), size.toDouble()), 0.0, 0.0, Imgproc.INTER_CUBIC)
+                patches.add(patch)
+            }
+        }
+
+        // Resize the full original image to (size x size).
+        val fullImgResized = Mat()
+        Imgproc.resize(img, fullImgResized, Size(size.toDouble(), size.toDouble()), 0.0, 0.0, Imgproc.INTER_CUBIC)
+
+        return Triple(img, fullImgResized, patches)
     }
 
     private fun loadAndResizeFromAssets (size: Size): Pair<Size, Mat> {
@@ -146,7 +185,6 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 chwData[2 * height * width + i * width + j] = channels[2].get(i, j)[0].toFloat()
             }
         }
-        Log.d("size",""+img.rows().toLong()+ "" + img.cols().toLong())
         val inputShape = longArrayOf(1, 3, img.rows().toLong(), img.cols().toLong())
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(chwData), inputShape)
     }
@@ -293,7 +331,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         viewModel.updateLoadingText("Loading Albedo Model...")
 
-        val (img,imSize, hazyImgList) = loadAndResizeWithOverlap(bitmap, size, overlap)
+        val (img,imSize, hazyImgList) = loadAndDivideWithOverlap(bitmap, size, overlap)
         viewModel.updateLoadingText("Preprocessing Image...")
         val processedPatches = mutableListOf<Mat>()
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
@@ -330,6 +368,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 }
             }
             processedPatches.add(mat)
+            Log.d("dehaze", "Processed patch ${processedPatches.size}/${hazyImgList.size}")
         }
         ortSessionAlbedo.close()
         ortSessionTransmission.close()
@@ -393,18 +432,20 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         var patchIndex = 0
 
+        val newOverlap = overlap - 22;
+
         for (i in 0 until H step newSize) {
             for (j in 0 until W step newSize) {
                 // Determine the region where the current patch should be placed.
                 val (rowStart, rowEnd) = when {
-                    i == 0 -> Pair(0, newSize + overlap)
-                    i + newSize + overlap >= H -> Pair(H - newSize - overlap, H)
-                    else -> Pair(i - overlap / 2, i - overlap / 2 + newSize + overlap)
+                    i == 0 -> Pair(0, newSize + newOverlap)
+                    i + newSize + newOverlap >= H -> Pair(H - newSize - newOverlap, H)
+                    else -> Pair(i - newOverlap / 2, i - newOverlap / 2 + newSize + newOverlap)
                 }
                 val (colStart, colEnd) = when {
-                    j == 0 -> Pair(0, newSize + overlap)
-                    j + newSize + overlap >= W -> Pair(W - newSize - overlap, W)
-                    else -> Pair(j - overlap / 2, j - overlap / 2 + newSize + overlap)
+                    j == 0 -> Pair(0, newSize + newOverlap)
+                    j + newSize + newOverlap >= W -> Pair(W - newSize - newOverlap, W)
+                    else -> Pair(j - newOverlap / 2, j - newOverlap / 2 + newSize + newOverlap)
                 }
 
                 // Retrieve the patch. It is assumed to be a single-channel CV_32F Mat.
@@ -440,6 +481,99 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
     }
 
     fun fastDehazeImage(bitmap: Bitmap){
+        val size = 512
+        val env = OrtEnvironment.getEnvironment()
+        val sessionOptions = OrtSession.SessionOptions().apply {
+            setMemoryPatternOptimization(true)
+            addConfigEntry("session.use_device_memory_mapping", "1")
+            addConfigEntry("session.enable_stream_execution", "1")
+        }
+        viewModel.updateLoadingText("Loading Albedo Model...")
+        val (img, fullImgResized, hazyImgList) = loadAndDivide(bitmap, size)
+        val fullImgInput = preprocess(fullImgResized, env)
+        val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/512/albedo_model.onnx")
+        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/512/transmission_model.onnx")
+        val albedoOutput = fullImgInput.use { input ->
+            ortSessionAlbedo.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).use { tensor ->
+                    FloatArray(tensor.floatBuffer.remaining()).also { tensor.floatBuffer.get(it) }
+                }
+            }
+        }
+        ortSessionAlbedo.close()
+        val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 512, 512))
+
+        viewModel.updateLoadingText("Running Transmission Model...")
+        val transmissionOutput = transmissionInput.use { input ->
+            ortSessionTransmission.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).use { tensor ->
+                    FloatArray(tensor.floatBuffer.remaining()).also { tensor.floatBuffer.get(it) }
+                }
+            }
+        }
+        ortSessionTransmission.close()
+        val reshapedTransmission = Array(size) { FloatArray(size) }
+        for (h in 0 until size) {
+            for (w in 0 until size) {
+                reshapedTransmission[h][w] = transmissionOutput[h * size + w]
+            }
+        }
+        val transmissionMat = Mat(size, size, CvType.CV_32F)
+        for (h in 0 until size) {
+            for (w in 0 until size) {
+                transmissionMat.put(h, w, floatArrayOf(reshapedTransmission[h][w] * 0.5f + 0.5f))  // Wrap the value in a FloatArray
+            }
+        }
+        val TResized = Mat()
+        Imgproc.resize(transmissionMat, TResized, img.size(), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        val processedPatches = mutableListOf<FloatArray>()
+        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/512/airlight_model.onnx")
+
+        for (hazyImg in hazyImgList){
+            val hazyResizedPatch = Mat()
+            Imgproc.resize(hazyImg, hazyResizedPatch, Size(256.0,256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+            val hazyInput = preprocess(hazyResizedPatch, env)
+            val airlightOutputPatched = hazyInput.use { input ->
+                ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
+                    (results.get(0) as OnnxTensor).floatBuffer.array()
+                }
+            }
+            processedPatches.add(airlightOutputPatched)
+        }
+        val hazyResized = Mat()
+        Imgproc.resize(img, hazyResized, Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        val airlightInput = preprocess(hazyResized, env)
+        val airlightOutput = airlightInput.use { input ->
+            ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).floatBuffer.array()
+            }
+        }
+        ortSessionAirlight.close()
+        val airlightOutputNormalize: FloatArray = airlightOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
+        val airlightRed = airlightOutputNormalize[0]
+        val airlightGreen = airlightOutputNormalize[1]
+        val airlightBlue = airlightOutputNormalize[2]
+        val hazyImgNorm = Mat()
+        Core.normalize(img, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
+        img.release()
+
+        val eps = 0.001f
+        val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3)
+        for (i in 0 until hazyImgNorm.rows()) {
+            for (j in 0 until hazyImgNorm.cols()) {
+                val pixel = hazyImgNorm.get(i, j)
+                val Tval = TResized.get(i, j)[0].toFloat()
+                val red = ((pixel[0].toFloat() - airlightRed * (1 - Tval)) / max(Tval, eps)).coerceIn(0f, 1f)
+                val green = ((pixel[1].toFloat() - airlightGreen * (1 - Tval)) / max(Tval, eps)).coerceIn(0f, 1f)
+                val blue = ((pixel[2].toFloat() - airlightBlue * (1 - Tval)) / max(Tval, eps)).coerceIn(0f, 1f)
+                clearImg.put(i, j, red.toDouble() * 255, green.toDouble()* 255, blue.toDouble()* 255)
+            }
+        }
+        clearImg.convertTo(clearImg, CvType.CV_8U)
+        Imgproc.cvtColor(clearImg, clearImg, Imgproc.COLOR_RGB2BGR)
+
+        FileImageWriter.getInstance()!!.saveMatToUserDir(clearImg, ImageFileAttribute.FileType.JPEG)
+        clearImg.release()
 
     }
 }
