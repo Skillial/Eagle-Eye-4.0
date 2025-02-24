@@ -1,6 +1,8 @@
 // ConcreteSuperResolution.kt
 package com.wangGang.eagleEye.processing
 
+import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.wangGang.eagleEye.processing.multiple.alignment.LRWarpingOperator
 import com.wangGang.eagleEye.assessment.InputImageEnergyReader
@@ -21,6 +23,7 @@ import com.wangGang.eagleEye.processing.multiple.alignment.WarpResultEvaluator
 import com.wangGang.eagleEye.processing.multiple.enhancement.UnsharpMaskOperator
 import com.wangGang.eagleEye.processing.multiple.fusion.MeanFusionOperator
 import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
+import com.wangGang.eagleEye.ui.activities.CameraControllerActivity
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.Dispatchers
@@ -217,19 +220,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
 
-        // TODO: launch activity here to preview before and after images, call these in the new activity
-        val beforeAndAfter = FileImageReader.getInstance()?.getBeforeAndAfterImages(ImageFileAttribute.FileType.JPEG)
-        Log.d(TAG, "Before image: $beforeAndAfter.first")
-        Log.d(TAG, "After image: $beforeAndAfter.second")
-
-        // TODO: Check if this block is needed
-        try {
-            Thread.sleep(3000)
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
-
-
+        CameraControllerActivity.launchBeforeAndAfterActivity()
     }
 
     private fun performPerspectiveWarping(
@@ -364,7 +355,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                     fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
                 )*/
 
-                saveMatrixToResultsDir(fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+                val imageUri = saveMatrixToResultsDir(fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+                FileImageReader.getInstance()?.setAfterUri(imageUri!!)
 
                 /*Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
                 saveHRResultToUserDir(

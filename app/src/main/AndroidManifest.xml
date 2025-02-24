@@ -51,6 +51,10 @@
             android:name=".ui.activities.SettingsActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         />
+        <activity
+            android:name=".ui.activities.BeforeAndAfterPreviewActivity"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+        />
     </application>
 
 </manifest>

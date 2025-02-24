@@ -7,6 +7,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.wangGang.eagleEye.databinding.ActivityPhotoBinding
 import com.wangGang.eagleEye.ui.utils.PhotoActivityHelper
 
@@ -59,6 +60,8 @@ class PhotoActivity() : AppCompatActivity() {
 
         Glide.with(this)
             .load(Uri.parse(imageUri))
+            .skipMemoryCache(true)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
             .dontAnimate()
             .into(ivThumbnailPhoto)
     }

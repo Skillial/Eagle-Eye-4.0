@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/settingsRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -53,12 +54,12 @@
             android:paddingEnd="16dp" />
 
         <!-- Divider -->
-        <View
+        <!--<View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="@android:color/darker_gray" />
+            android:background="@android:color/darker_gray" />-->
 
         <!-- Container for the slider -->
         <LinearLayout
@@ -74,7 +75,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Scale Factor:"
-                android:layout_marginEnd="16dp"/>
+                android:layout_marginEnd="16dp"
+                android:textColor="@color/black"
+                />
 
             <!-- SeekBar that we’ll treat like a discrete slider for [1, 2, 4, 8, 16] -->
             <SeekBar
@@ -86,12 +89,20 @@
         </LinearLayout>
 
         <!-- Divider -->
-        <View
+        <!--<View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:background="@android:color/darker_gray" />
+            android:background="@android:color/darker_gray" />-->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Drag and drop to reorder algorithms"
+            android:textColor="@color/black"
+            android:layout_marginBottom="8dp"
+            android:textSize="16sp"/>
 
         <!-- Draggable list for algorithms -->
         <androidx.recyclerview.widget.RecyclerView

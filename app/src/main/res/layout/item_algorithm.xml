@@ -4,20 +4,23 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="16dp">
+    android:padding="8dp">
 
     <!-- Draggable handle icon -->
     <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:layout_marginEnd="8dp"
         android:contentDescription="@string/drag_handle"
-        android:src="@drawable/ic_drag_handle" />
+        android:src="@drawable/ic_drag_handle"
+        android:layout_gravity="center_vertical" />
 
     <!-- Text for the algorithm name -->
     <TextView
         android:id="@+id/algorithmName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="16sp" />
+        android:textColor="@color/black"
+        android:textSize="12sp"
+        android:layout_gravity="center_vertical"/>
 </LinearLayout>

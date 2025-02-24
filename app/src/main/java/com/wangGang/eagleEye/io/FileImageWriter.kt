@@ -147,8 +147,7 @@
         }
 
         @Synchronized
-        fun saveMatrixToResultsDir(mat: Mat, fileType: ImageFileAttribute.FileType, resultType: ResultType) {
-//            val albumDir = getAlbumStorageDir(RESULTS_ALBUM_NAME_PREFIX)
+        fun saveMatrixToResultsDir(mat: Mat, fileType: ImageFileAttribute.FileType, resultType: ResultType): Uri? {
             val imageFileName = resultType.toString()
             val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
@@ -156,13 +155,13 @@
             Log.d(TAG, "saveMatToResultsDir")
             Log.d(TAG, "Saved: ${imageFile.absolutePath}")
 
-            if (resultType == ResultType.AFTER) {
-                refreshImageGallery(imageFile)
-            }
+            refreshImageGallery(imageFile)
+
+            return Uri.fromFile(imageFile)
         }
 
         @Synchronized
-        fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType, resultType: ResultType) {
+        fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType, resultType: ResultType): Uri? {
             val imageFileName = resultType.toString()
             val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
 
@@ -178,6 +177,8 @@
             }
 
             refreshImageGallery(imageFile)
+
+            return Uri.fromFile(imageFile)
         }
 
         @Synchronized

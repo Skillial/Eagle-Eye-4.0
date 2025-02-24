@@ -1,6 +1,7 @@
 package com.wangGang.eagleEye.ui.activities
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -18,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.constants.ImageEnhancementType
@@ -32,6 +34,19 @@ import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import com.wangGang.eagleEye.ui.views.GridOverlayView
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
+
+    companion object {
+        private var instance: CameraControllerActivity? = null
+
+        fun getContext(): Context? {
+            return instance?.applicationContext
+        }
+
+        fun launchBeforeAndAfterActivity() {
+            instance?.launchBeforeAndAfterActivity()
+        }
+    }
+
     private lateinit var imageReaderManager: ImageReaderManager
     private lateinit var concreteSuperResolution: ConcreteSuperResolution
 
@@ -50,12 +65,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var progressBar: ProgressBar
 
     private var thumbnailUri: Uri? = null
-
     private val viewModel: CameraViewModel by viewModels()
+
+    private var doneSetup: Boolean = false
 
     /* ===== Lifecycle Methods ===== */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        instance = this
         activityCameraControllerBinding = ActivityCameraControllerBinding.inflate(layoutInflater)
         setContentView(activityCameraControllerBinding.root)
 
@@ -65,6 +82,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         initializeCamera()
         addEventListeners()
         setupObservers()
+
+        doneSetup = true
     }
 
     private fun setGridOverlay() {
@@ -161,6 +180,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         captureButton.setOnClickListener {
             resetProgressBarBasedOnImageEnhancementType()
             CameraController.getInstance().captureImage()
+            Log.d("CameraControllerActivity", "Capture button clicked")
         }
 
         switchCameraButton.setOnClickListener {
@@ -252,6 +272,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         Log.d("CameraControllerActivity", "updateThumbnail uri: $thumbnailUri")
         Glide.with(this)
             .load(thumbnailUri)
+            .skipMemoryCache(true)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
             .fitCenter()
             .into(thumbnailPreview)
     }
@@ -323,5 +345,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                 progressBar.progress = progress
             }
         })
+    }
+
+    private fun launchBeforeAndAfterActivity() {
+        val intent = Intent(this, BeforeAndAfterPreviewActivity::class.java)
+        startActivity(intent)
     }
 }

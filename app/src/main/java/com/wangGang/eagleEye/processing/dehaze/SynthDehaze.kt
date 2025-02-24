@@ -44,7 +44,8 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         Imgproc.resize(img, img, size)
 
         // Save before image
-        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(img, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+        val imageUri = FileImageWriter.getInstance()!!.saveMatrixToResultsDir(img, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+        FileImageReader.getInstance()?.setBeforeUri(imageUri!!)
 
         return Pair(imSize, img)
     }
@@ -223,7 +224,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         ProgressManager.getInstance().incrementProgress("Converting Image to an 8-bit format")
 
         viewModel.updateLoadingText("Saving Image")
-        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImgResized, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+        val imageUri = FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImgResized, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+        FileImageReader.getInstance()?.setAfterUri(imageUri!!)
+
         clearImgResized.release()
         ProgressManager.getInstance().incrementProgress("Saving Image")
 

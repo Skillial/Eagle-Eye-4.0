@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.ThumbnailUtils
+import android.net.Uri
 import android.util.Log
 import org.opencv.core.Mat
 import org.opencv.imgcodecs.Imgcodecs
@@ -31,6 +32,29 @@ class FileImageReader private constructor(private var context: Context?) {
         fun destroy() {
             sharedInstance = null
         }
+    }
+
+    private var beforeUri: Uri? = null
+    private var afterUri: Uri? = null
+
+    fun setBeforeUri(uri: Uri) {
+        Log.d("FileImageReader", "Setting before URI: $uri")
+        beforeUri = uri
+    }
+
+    fun setAfterUri(uri: Uri) {
+        Log.d("FileImageReader", "Setting after URI: $uri")
+        afterUri = uri
+    }
+
+    fun getBeforeUri(): Uri? {
+        Log.d("FileImageReader", "Getting before URI: $beforeUri")
+        return beforeUri
+    }
+
+    fun getAfterUri(): Uri? {
+        Log.d("FileImageReader", "Getting after URI: $afterUri")
+        return afterUri
     }
 
     fun setContext(context: Context) {
