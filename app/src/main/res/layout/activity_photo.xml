@@ -11,7 +11,8 @@
         android:layout_height="50dp"
         android:contentDescription="@string/back"
         android:src="@drawable/ic_back"
-        android:background="@android:color/transparent" />
+        android:background="@android:color/transparent"
+        android:layout_margin="8dp"/>
 
     <ImageView
         android:id="@+id/iv_thumbnail_photo"

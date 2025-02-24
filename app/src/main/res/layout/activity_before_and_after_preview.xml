@@ -5,8 +5,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
-    >
+    android:background="@color/black">
 
     <!-- Back button -->
     <ImageButton
@@ -15,7 +14,8 @@
         android:layout_height="50dp"
         android:contentDescription="@string/back"
         android:src="@drawable/ic_back"
-        android:background="@android:color/transparent" />
+        android:background="@android:color/transparent"
+        android:layout_margin="8dp"/>
 
     <!-- ViewPager2 to show two images -->
     <androidx.viewpager2.widget.ViewPager2
