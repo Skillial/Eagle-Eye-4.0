@@ -128,11 +128,24 @@
         }
 
         @Synchronized
+        fun getPath(fileNames: Array<String>, fileType: ImageFileAttribute.FileType): Array<String> {
+            var list = mutableListOf<String>()
+            for (fileName in fileNames){
+                val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+                list.add(imageFile.absolutePath)
+            }
+            return list.toTypedArray()
+        }
+
+        @Synchronized
         fun saveBitmapToUserDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType) {
             val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
             val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
             val imageFileName = "IMG_$timeStamp"
-            val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            val imageFile = File(
+                albumDir.path,
+                "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}"
+            )
 
             try {
                 FileOutputStream(imageFile).use { out ->
@@ -206,6 +219,19 @@
         }
 
         @Synchronized
+        fun saveMatrixToImageReturnPath(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType): String {
+            val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+            Imgcodecs.imwrite(imageFile.absolutePath, mat)
+            Log.d(TAG, "saveMatrixToImage")
+            Log.d(TAG, "Saved ${imageFile.absolutePath}")
+
+            if (fileName.equals("result")) {
+                refreshImageGallery(imageFile)
+            }
+            return imageFile.absolutePath
+        }
+
+        @Synchronized
         fun debugSaveMatrixToImage(mat: Mat, fileName: String, fileType: ImageFileAttribute.FileType) {
             val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
@@ -231,6 +257,14 @@
             Imgcodecs.imwrite(imageFile.absolutePath, mat)
         }
 
+        @Synchronized
+        fun getHRResultPath(fileType: ImageFileAttribute.FileType): String {
+            val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
+            val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
+            val imageFileName = "EagleEyeHD_$timeStamp"
+            val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            return imageFile.absolutePath
+        }
         @Synchronized
         fun saveHRResultToUserDir(mat: Mat, fileType: ImageFileAttribute.FileType) {
             val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
@@ -279,6 +313,12 @@
             return file
         }
 
+
+        @Synchronized
+
+        fun getMergedFilePath(count: Int): String {
+            return context.getExternalFilesDir(null)!!.absolutePath + "/merged_" + count + ".jpg"
+        }
         @Synchronized
         fun deleteImage(fileName: String, fileType: ImageFileAttribute.FileType) {
             val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")

@@ -22,6 +22,7 @@ import com.wangGang.eagleEye.processing.multiple.alignment.MedianAlignmentOperat
 import com.wangGang.eagleEye.processing.multiple.alignment.WarpResultEvaluator
 import com.wangGang.eagleEye.processing.multiple.enhancement.UnsharpMaskOperator
 import com.wangGang.eagleEye.processing.multiple.fusion.MeanFusionOperator
+import com.wangGang.eagleEye.processing.multiple.refinement.DenoisingOperator
 import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
 import com.wangGang.eagleEye.ui.activities.CameraControllerActivity
 import com.wangGang.eagleEye.ui.utils.ProgressManager
@@ -67,7 +68,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             Log.d("ProgressBar", "Copying Results")
             // Once all tasks are done, copy results
             for (i in energyReaders.indices) {
-                inputMatList[i] = energyReaders[i].outputMat
+                inputMatList[i] = energyReaders[i].outputMat!!
             }
 
             ProgressManager.getInstance().incrementProgress("Copying Results")
@@ -117,16 +118,16 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         viewModel.updateLoadingText("Interpolating Images")
         // Super-resolution interpolation
-        interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
+//        interpolateImage(sharpnessResult.getOutsideLeastIndex(), imageInputMap)
+//        SRProcessManager.getInstance().initialHRProduced()
 
         ProgressManager.getInstance().incrementProgress("Interpolating Images")
-        SRProcessManager.getInstance().initialHRProduced()
 
         // Perform actual super-resolution
         performActualSuperres(rgbInputMatList, inputIndices, imageInputMap, bestIndex, false)
 
         // Mark process as completed
-        SRProcessManager.getInstance().srProcessCompleted()
+//        SRProcessManager.getInstance().srProcessCompleted()
     }
 
     private fun performActualSuperres(
@@ -200,8 +201,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
             3 -> {
                 viewModel.updateLoadingText("Performing Perspective Warping")
-                ProgressManager.getInstance().incrementProgress("Performing Perspective Warping")
                 this.performPerspectiveWarping(rgbInputMatList[0], succeedingMatList, succeedingMatList, warpResultNames)
+                ProgressManager.getInstance().incrementProgress("Performing Perspective Warping")
             }
         }
 
@@ -219,6 +220,12 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         ProgressManager.getInstance().incrementProgress("Assessing Image Warp Results")
 
         this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
+
+//        try {
+//            Thread.sleep(3000)
+//        } catch (e: InterruptedException) {
+//            e.printStackTrace()
+//        }
 
         CameraControllerActivity.launchBeforeAndAfterActivity()
     }
@@ -301,8 +308,10 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
 
             // No need to perform image fusion, just use the best image.
-            val interpolatedMat = ImageOperator.performInterpolation(
-                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC
+            val savePath = FileImageWriter.getInstance()?.getHRResultPath(ImageFileAttribute.FileType.JPEG)
+                ?: throw IllegalStateException("Failed to get output file path")
+             ImageOperator.performJNIInterpolationWithMerge(
+                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath
             )
 
             ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
@@ -351,17 +360,10 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             viewModel.updateLoadingText("Saving Results")
             FileImageWriter.getInstance()?.apply {
                 Log.d("ConcreteSuperResolution", "saveMatrixToImage")
-                /*saveMatrixToImage(
-                    fusionOperator.getResult()!!, "result", ImageFileAttribute.FileType.JPEG
-                )*/
 
                 val imageUri = saveMatrixToResultsDir(fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
                 FileImageReader.getInstance()?.setAfterUri(imageUri!!)
 
-                /*Log.d("ConcreteSuperResolution", "saveHRResultToUserDir")
-                saveHRResultToUserDir(
-                    fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG
-                )*/
             }
 
             ProgressManager.getInstance().incrementProgress("Saving Results")
