@@ -23,6 +23,7 @@ import java.io.InputStream
 import java.nio.FloatBuffer
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 
 class SynthDehaze(private val context: Context, private val viewModel: CameraViewModel) {
     private fun loadAndResize(bitmap: Bitmap, size: Size): Pair<Size, Mat> {
@@ -527,10 +528,11 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 transmissionMat.put(h, w, floatArrayOf(reshapedTransmission[h][w] * 0.5f + 0.5f))  // Wrap the value in a FloatArray
             }
         }
+        val TFiltered = Mat()
+        Imgproc.resize(transmissionMat, TFiltered, img.size(), 0.0, 0.0, Imgproc.INTER_CUBIC)
         val TResized = Mat()
-        Imgproc.resize(transmissionMat, TResized, img.size(), 0.0, 0.0, Imgproc.INTER_CUBIC)
         TResized.convertTo(TResized, CvType.CV_32F)
-        Imgproc.bilateralFilter(TResized, TResized, 9, 75.0, 75.0)
+        Imgproc.bilateralFilter(TFiltered, TResized, 9, 75.0, 75.0)
         Core.min(TResized, Scalar(1.0), TResized)
         Core.max(TResized, Scalar(T_min), TResized)
         val processedPatches = mutableListOf<FloatArray>()
@@ -547,19 +549,15 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
             }
             processedPatches.add(airlightOutputPatched)
         }
+
+        val redValues = processedPatches.map { it[0] }
+        val greenValues = processedPatches.map { it[1] }
+        val blueValues = processedPatches.map { it[2] }
+        var airlightRed = median(redValues) * 0.5f + 0.5f
+        var airlightGreen = median(greenValues) * 0.5f + 0.5f
+        var airlightBlue = median(blueValues) * 0.5f + 0.5f
         val hazyResized = Mat()
         Imgproc.resize(img, hazyResized, Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
-        val airlightInput = preprocess(hazyResized, env)
-        val airlightOutput = airlightInput.use { input ->
-            ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
-                (results.get(0) as OnnxTensor).floatBuffer.array()
-            }
-        }
-        ortSessionAirlight.close()
-        val airlightOutputNormalize: FloatArray = airlightOutput.map { (it * 0.5f) + 0.5f }.toFloatArray()
-        val airlightRed = airlightOutputNormalize[0]
-        val airlightGreen = airlightOutputNormalize[1]
-        val airlightBlue = airlightOutputNormalize[2]
         val hazyImgNorm = Mat()
         Core.normalize(img, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
         img.release()
@@ -573,14 +571,36 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 val red = ((pixel[0].toFloat() - airlightRed * (1 - Tval)) / max(Tval, eps)).coerceIn(0f, 1f)
                 val green = ((pixel[1].toFloat() - airlightGreen * (1 - Tval)) / max(Tval, eps)).coerceIn(0f, 1f)
                 val blue = ((pixel[2].toFloat() - airlightBlue * (1 - Tval)) / max(Tval, eps)).coerceIn(0f, 1f)
-                clearImg.put(i, j, red.toDouble() * 255, green.toDouble()* 255, blue.toDouble()* 255)
+                val redBrightness = min(red + brightness_offset, 1.0f)
+                val greenBrightness = min(green + brightness_offset, 1.0f)
+                val blueBrightness = min(blue + brightness_offset, 1.0f)
+                val redGamma = redBrightness.pow(1.0f / gamma)
+                val greenGamma = greenBrightness.pow(1.0f / gamma)
+                val blueGamma = blueBrightness.pow(1.0f / gamma)
+                clearImg.put(i, j, redGamma.toDouble() * 255, greenGamma.toDouble()* 255, blueGamma .toDouble()* 255)
             }
         }
-        clearImg.convertTo(clearImg, CvType.CV_8U)
-        Imgproc.cvtColor(clearImg, clearImg, Imgproc.COLOR_RGB2BGR)
 
-        FileImageWriter.getInstance()!!.saveMatToUserDir(clearImg, ImageFileAttribute.FileType.JPEG)
+        val dehazedUint8 = Mat()
+        clearImg.convertTo(dehazedUint8, CvType.CV_8UC3)
+        val blurred = Mat()
+        Imgproc.GaussianBlur(dehazedUint8, blurred, Size(0.0, 0.0), 3.0)
+        val sharpened = Mat()
+        Core.addWeighted(dehazedUint8, 1.5, blurred, -0.5, 0.0, sharpened)
+        val finalImageBGR = Mat()
+        Imgproc.cvtColor(sharpened, finalImageBGR, Imgproc.COLOR_RGB2BGR)
+
+        FileImageWriter.getInstance()!!.saveMatToUserDir(finalImageBGR, ImageFileAttribute.FileType.JPEG)
         clearImg.release()
 
+    }
+    fun median(values: List<Float>): Float {
+        val sorted = values.sorted()
+        val size = sorted.size
+        return if (size % 2 == 1) {
+            sorted[size / 2]
+        } else {
+            (sorted[size / 2 - 1] + sorted[size / 2]) / 2f
+        }
     }
 }
