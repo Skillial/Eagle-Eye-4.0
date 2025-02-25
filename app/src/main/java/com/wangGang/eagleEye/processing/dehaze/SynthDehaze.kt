@@ -481,6 +481,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
     }
 
     fun fastDehazeImage(bitmap: Bitmap){
+        val gamma = 1.0f
+        val T_min = 0.2
+        val brightness_offset = 0.05f
         val size = 512
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions().apply {
@@ -526,6 +529,10 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         }
         val TResized = Mat()
         Imgproc.resize(transmissionMat, TResized, img.size(), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        TResized.convertTo(TResized, CvType.CV_32F)
+        Imgproc.bilateralFilter(TResized, TResized, 9, 75.0, 75.0)
+        Core.min(TResized, Scalar(1.0), TResized)
+        Core.max(TResized, Scalar(T_min), TResized)
         val processedPatches = mutableListOf<FloatArray>()
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/512/airlight_model.onnx")
 
