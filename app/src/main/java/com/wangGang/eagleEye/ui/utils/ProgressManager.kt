@@ -13,7 +13,31 @@ class ProgressManager private constructor() {
 
         // Constants
         private val TASKS_SUPER_RESOLUTION = 9
-        private val TASKS_DEHAZE = 15
+        private val TASKS_DEHAZE = 9
+
+        val fastDehazeSteps = arrayOf(
+            "Capturing Images",
+            "Loading and dividing image",
+            "Loading Albedo Model",
+            "Running Albedo Model",
+            "Loading Transmission Model",
+            "Running Transmission Model",
+            "Loading Airlight Model",
+            "Running Airlight Model",
+            "Saving Image"
+        )
+
+        val slowDehazeSteps = arrayOf(
+            "Capturing Images",
+            "Loading and dividing image with overlap",
+            "Loading Albedo and Transmission Model",
+            "Running Albedo and Transmission Model",
+            "Reconstructing and preprocessing image",
+            "Loading Airlight Model",
+            "Running Airlight Model",
+            "Processing Image",
+            "Saving Image"
+        )
 
         fun getInstance(): ProgressManager {
             return INSTANCE ?: synchronized(this) {
