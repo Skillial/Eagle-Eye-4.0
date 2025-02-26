@@ -1,8 +1,6 @@
 // ConcreteSuperResolution.kt
 package com.wangGang.eagleEye.processing
 
-import android.content.Context
-import android.content.Intent
 import android.util.Log
 import com.wangGang.eagleEye.processing.multiple.alignment.LRWarpingOperator
 import com.wangGang.eagleEye.assessment.InputImageEnergyReader
@@ -22,8 +20,6 @@ import com.wangGang.eagleEye.processing.multiple.alignment.MedianAlignmentOperat
 import com.wangGang.eagleEye.processing.multiple.alignment.WarpResultEvaluator
 import com.wangGang.eagleEye.processing.multiple.enhancement.UnsharpMaskOperator
 import com.wangGang.eagleEye.processing.multiple.fusion.MeanFusionOperator
-import com.wangGang.eagleEye.processing.multiple.refinement.DenoisingOperator
-import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
 import com.wangGang.eagleEye.ui.activities.CameraControllerActivity
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
@@ -226,7 +222,10 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 //        } catch (e: InterruptedException) {
 //            e.printStackTrace()
 //        }
+        // Refresh the gallery
+        FileImageWriter.getInstance()?.refreshThumbnailFolder()
 
+        Log.d("ConcreteSuperResolution", "launchBeforeAndAfterActivity")
         CameraControllerActivity.launchBeforeAndAfterActivity()
     }
 
@@ -308,20 +307,16 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             }
 
             // No need to perform image fusion, just use the best image.
-            val savePath = FileImageWriter.getInstance()?.getHRResultPath(ImageFileAttribute.FileType.JPEG)
+            ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
+
+
+            val savePath = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
                 ?: throw IllegalStateException("Failed to get output file path")
-             ImageOperator.performJNIInterpolationWithMerge(
+            ImageOperator.performJNIInterpolationWithMerge(
                 resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath
             )
 
-            ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
-
-            viewModel.updateLoadingText("Saving Results")
-            /*FileImageWriter.getInstance()?.saveMatrixToImage(
-                interpolatedMat, "result", ImageFileAttribute.FileType.JPEG
-            )*/
-
-            FileImageWriter.getInstance()?.saveMatrixToResultsDir(interpolatedMat, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+            Log.d(TAG, "savePath: $savePath")
 
             ProgressManager.getInstance().incrementProgress("Saving Results")
 
@@ -354,19 +349,12 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                 FileImageWriter.getInstance()?.deleteRecursive(dirFile)
             }
             fusionOperator.perform()
-
             ProgressManager.getInstance().incrementProgress("Performing Mean Fusion")
 
-            viewModel.updateLoadingText("Saving Results")
-            FileImageWriter.getInstance()?.apply {
-                Log.d("ConcreteSuperResolution", "saveMatrixToImage")
 
-                val imageUri = saveMatrixToResultsDir(fusionOperator.getResult()!!, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
-                FileImageReader.getInstance()?.setAfterUri(imageUri!!)
-
+            if (fusionOperator.getResult() == null) {
+                throw IllegalStateException("MeanFusionOperator result is null")
             }
-
-            ProgressManager.getInstance().incrementProgress("Saving Results")
 
             fusionOperator.getResult()!!.release()
         }

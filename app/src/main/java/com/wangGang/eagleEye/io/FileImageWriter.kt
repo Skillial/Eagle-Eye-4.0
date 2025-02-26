@@ -258,6 +258,13 @@
         }
 
         @Synchronized
+        fun getSharedResultPath(fileType: ImageFileAttribute.FileType): String {
+            val imageFileName = ResultType.AFTER.toString()
+            val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            return imageFile.absolutePath
+        }
+
+        @Synchronized
         fun getHRResultPath(fileType: ImageFileAttribute.FileType): String {
             val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
             val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
@@ -265,6 +272,7 @@
             val imageFile = File(albumDir.path, "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
             return imageFile.absolutePath
         }
+
         @Synchronized
         fun saveHRResultToUserDir(mat: Mat, fileType: ImageFileAttribute.FileType) {
             val albumDir = getAlbumStorageDir(ALBUM_EXTERNAL_NAME)
@@ -288,6 +296,23 @@
             Log.d("FileImageWriter", "Saved thumbnail: ${imageFile.absolutePath}")
 
         }
+
+        fun refreshThumbnailFolder() {
+            val afterUri = FileImageReader.getInstance()!!.getAfterUriDefaultResultsFolder()
+            // Extract the proper file path from the URI
+            val afterFile = afterUri.path?.let { File(it) }
+            if (afterFile != null) {
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(afterFile.absolutePath), null
+                ) { path, uri ->
+                    Log.i("refreshedThumbnailFolder", "Scanned $path")
+                    Log.i("refreshedThumbnailFolder", "-> uri=$uri")
+                    onImageSavedListener?.onImageSaved(uri)
+                }
+            }
+        }
+
 
         private fun refreshImageGallery(imageFile: File) {
             MediaScannerConnection.scanFile(

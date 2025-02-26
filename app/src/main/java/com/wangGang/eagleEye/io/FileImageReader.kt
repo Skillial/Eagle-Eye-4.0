@@ -37,6 +37,14 @@ class FileImageReader private constructor(private var context: Context?) {
     private var beforeUri: Uri? = null
     private var afterUri: Uri? = null
 
+    fun getBeforeUriDefaultResultsFolder(): Uri {
+        return Uri.parse("file://${DirectoryStorage.getSharedInstance().getResultFilePath()}/${ResultType.BEFORE}.jpg")
+    }
+
+    fun getAfterUriDefaultResultsFolder(): Uri {
+        return Uri.parse("file://${DirectoryStorage.getSharedInstance().getResultFilePath()}/${ResultType.AFTER}.jpg")
+    }
+
     fun setBeforeUri(uri: Uri) {
         Log.d("FileImageReader", "Setting before URI: $uri")
         beforeUri = uri

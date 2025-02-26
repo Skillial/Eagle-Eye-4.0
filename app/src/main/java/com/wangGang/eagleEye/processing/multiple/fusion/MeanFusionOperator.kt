@@ -80,7 +80,7 @@ class MeanFusionOperator(
 //            maskMat.release()
             MatMemory.cleanMemory()
         }
-        val outputFilePath = FileImageWriter.getInstance()?.getHRResultPath(ImageFileAttribute.FileType.JPEG)
+        val outputFilePath = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
             ?: throw IllegalStateException("Failed to get output file path")
         Log.d(TAG, "Output file path: $outputFilePath")
         val fileList2D: Array<Array<String>> = fileList.map{it}.toTypedArray()
@@ -103,6 +103,8 @@ class MeanFusionOperator(
         for (each in quadrantsNames){
             Log.d(TAG, "Quadrant name: $each")
         }
+
+        Log.d("MeanFusionOperator", "OutputFilePath: $outputFilePath")
         meanFuse(fileList2dTransposed, outputFilePath, quadrantsNames, divisionFactor, scale.toInt(), quadrantWidth, quadrantHeight)
 
 //        Core.divide(sumMat, Scalar.all(imageMatPathList.size + 1.0), sumMat)

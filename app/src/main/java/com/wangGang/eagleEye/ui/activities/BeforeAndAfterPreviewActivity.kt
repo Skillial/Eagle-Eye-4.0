@@ -23,8 +23,8 @@ class BeforeAndAfterPreviewActivity : AppCompatActivity() {
         binding = ActivityBeforeAndAfterPreviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val beforeUri = FileImageReader.getInstance()?.getBeforeUri()
-        val afterUri = FileImageReader.getInstance()?.getAfterUri()
+        val beforeUri = FileImageReader.getInstance()?.getBeforeUriDefaultResultsFolder()
+        val afterUri = FileImageReader.getInstance()?.getAfterUriDefaultResultsFolder()
 
         assignViews()
 
