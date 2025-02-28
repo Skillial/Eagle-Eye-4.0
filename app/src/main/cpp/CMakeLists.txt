@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project("eagleEye")
 
 
-set(OpenCV_DIR "C:/Users/user/code/thesis/jean/Eagle-Eye-4.0/openCV/native/jni")
+set(OpenCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../openCV/native/jni")
 find_package(OpenCV REQUIRED)
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.

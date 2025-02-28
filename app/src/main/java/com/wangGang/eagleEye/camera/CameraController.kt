@@ -76,6 +76,7 @@ class CameraController(private val context: Context, private val viewModel: Came
             captureRequest.addTarget(imageReader.surface)
             captureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
             captureList.add(captureRequest.build())
         }
 
