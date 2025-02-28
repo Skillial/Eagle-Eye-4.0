@@ -1,5 +1,8 @@
 package com.wangGang.eagleEye.ui.activities
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -13,6 +16,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -68,6 +72,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private val viewModel: CameraViewModel by viewModels()
 
     private var doneSetup: Boolean = false
+    private var idleAnimator: ObjectAnimator? = null
+    private val idleDelayMillis = 3000L
 
     /* ===== Lifecycle Methods ===== */
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -247,7 +253,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
         val borderDrawable = GradientDrawable().apply {
             setColor(Color.BLACK)
-            setStroke(4.dpToPx(), borderColor)
+            setStroke(2.dpToPx(), borderColor)
         }
         rootView.background = borderDrawable
     }
@@ -339,12 +345,43 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         })
 
         progressManager.progress.observe(this, Observer { progress ->
-            Log.d("ProgressBar", "New Progress: $progress")
             if (progress > 0) {
                 progressBar.visibility = View.VISIBLE
                 progressBar.progress = progress
+                idleAnimator?.cancel() // Cancel any idle animation if active
+                animateProgressUpdate(progress)
             }
         })
+
+    }
+
+    private fun animateProgressUpdate(newProgress: Int) {
+        // Cancel and Reset
+        idleAnimator?.cancel()
+        progressBar.alpha = 1f
+
+        // For smoothing the progress update
+        val animator = ObjectAnimator.ofInt(progressBar, "progress", progressBar.progress, newProgress).apply {
+            duration = 1000
+            interpolator = AccelerateDecelerateInterpolator()
+        }
+        animator.start()
+
+        // If the progress hasn't updated by "idleDelayMillis", start idle animation
+        progressBar.postDelayed({
+            if (progressBar.progress == newProgress) {
+                startAlphaIdleAnimation()
+            }
+        }, idleDelayMillis)
+    }
+
+    private fun startAlphaIdleAnimation() {
+        idleAnimator = ObjectAnimator.ofFloat(progressBar, "alpha", 1f, 0.5f).apply {
+            duration = 1000
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+        }
+        idleAnimator?.start()
     }
 
     private fun launchBeforeAndAfterActivity() {

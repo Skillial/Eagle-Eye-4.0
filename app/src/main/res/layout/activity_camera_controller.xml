@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#040404"
-    android:padding="4dp"
+    android:padding="2dp"
     tools:context=".ui.activities.CameraControllerActivity">
 
     <LinearLayout
