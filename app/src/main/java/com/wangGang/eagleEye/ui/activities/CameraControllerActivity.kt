@@ -29,6 +29,7 @@ import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.constants.ImageEnhancementType
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivityCameraControllerBinding
+import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.FileImageWriter.Companion.OnImageSavedListener
 import com.wangGang.eagleEye.io.ImageReaderManager
@@ -88,8 +89,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         initializeCamera()
         addEventListeners()
         setupObservers()
+        setupThumbnail()
 
         doneSetup = true
+    }
+
+    private fun setupThumbnail() {
+        thumbnailUri = FileImageReader.getInstance()?.getAfterUriDefaultResultsFolder()
+        updateThumbnail()
     }
 
     private fun setGridOverlay() {

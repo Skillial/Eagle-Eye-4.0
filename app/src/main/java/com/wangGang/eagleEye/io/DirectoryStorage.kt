@@ -38,17 +38,19 @@ class DirectoryStorage private constructor() {
 
     private fun identifyDir() {
         refreshProposedPath()
-        if (isAlbumDirExisting(startingAlbum)) {
+        /*if (isAlbumDirExisting(startingAlbum)) {
             FileImageWriter.recreateDirectory(proposedPath!!)
-        }
+        }*/
 
+        // only recreate subdirectories except for "/Results"
         for (subAlbum in SUB_ALBUM_NAME_PREFIX) {
             val subDir = File(proposedPath + subAlbum)
             if (subDir.exists()) {
 
-                if (subAlbum != "/Results") {
+                if (subAlbum == RESULT_ALBUM_NAME_PREFIX) {
                     continue
                 }
+                Log.d(TAG, "recreating subdirectory: ${subDir.absolutePath}")
                 FileImageWriter.recreateDirectory(subDir.absolutePath)
             }
         }
