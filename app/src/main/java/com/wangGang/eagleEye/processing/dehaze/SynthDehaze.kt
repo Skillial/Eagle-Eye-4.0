@@ -6,6 +6,7 @@ import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import com.wangGang.eagleEye.io.ImageUtils
@@ -273,6 +274,9 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[10])
 
-        CameraControllerActivity.launchBeforeAndAfterActivity()
+        val uriList = FileImageReader.getInstance()
+            ?.let { listOfNotNull(it.getBeforeUriDefaultResultsFolder(), it.getAfterUriDefaultResultsFolder()) }
+        Log.d("ConcreteSuperResolution", "uriList: $uriList")
+        CameraControllerActivity.launchBeforeAndAfterActivity(uriList!!)
     }
 }

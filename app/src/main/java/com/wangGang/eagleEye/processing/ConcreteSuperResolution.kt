@@ -225,7 +225,10 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         FileImageWriter.getInstance()?.refreshThumbnailFolder()
 
         Log.d("ConcreteSuperResolution", "launchBeforeAndAfterActivity")
-        CameraControllerActivity.launchBeforeAndAfterActivity()
+        val uriList = FileImageReader.getInstance()
+            ?.let { listOfNotNull(it.getBeforeUriDefaultResultsFolder(), it.getAfterUriDefaultResultsFolder()) }
+        Log.d("ConcreteSuperResolution", "uriList: $uriList")
+        CameraControllerActivity.launchBeforeAndAfterActivity(uriList!!)
     }
 
     private fun performPerspectiveWarping(

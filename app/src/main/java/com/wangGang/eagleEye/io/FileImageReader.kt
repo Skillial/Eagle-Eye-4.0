@@ -155,4 +155,26 @@ class FileImageReader private constructor(private var context: Context?) {
     fun getDecodedFilePath(fileName: String, fileType: ImageFileAttribute.FileType): String {
         return "${FileImageWriter.getInstance()?.getFilePath()}/$fileName${ImageFileAttribute.getFileExtension(fileType)}"
     }
+
+    fun getFileFromUri(uri: Uri?): File {
+        require(uri != null) { "URI is null." }
+        return when (uri.scheme) {
+            "file" -> {
+                val path = uri.path ?: throw IllegalArgumentException("File path is missing.")
+                File(path)
+            }
+            "content" -> {
+                val resolver = context?.contentResolver ?: throw IllegalStateException("Context resolver is null.")
+                val projection = arrayOf("_data")
+                resolver.query(uri, projection, null, null, null)?.use { cursor ->
+                    val index = cursor.getColumnIndexOrThrow("_data")
+                    if (cursor.moveToFirst()) {
+                        return File(cursor.getString(index))
+                    }
+                }
+                throw IllegalArgumentException("Unable to resolve file path.")
+            }
+            else -> throw IllegalArgumentException("Unsupported Uri scheme: ${uri.scheme}")
+        }
+    }
 }

@@ -78,6 +78,8 @@ class ImageReaderManager(
     private fun handleNormalImage(bitmap: Bitmap) {
         CoroutineScope(Dispatchers.IO).launch {
             FileImageWriter.getInstance()!!.saveBitmapToResultsDir(bitmap,ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+            FileImageWriter.getInstance()!!.deleteImage("${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}/${ResultType.BEFORE}", ImageFileAttribute.FileType.JPEG)
+            // delete "Before" Image
             viewModel.setLoadingBoxVisible(false)
         }
     }

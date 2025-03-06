@@ -381,7 +381,6 @@
 
 
         @Synchronized
-
         fun getMergedFilePath(count: Int): String {
             return context.getExternalFilesDir(null)!!.absolutePath + "/merged_" + count + ".jpg"
         }

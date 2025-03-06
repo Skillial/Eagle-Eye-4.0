@@ -1,9 +1,7 @@
 package com.wangGang.eagleEye.ui.activities
 
-import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -13,14 +11,12 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.TextureView
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.Observer
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -47,8 +43,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             return instance?.applicationContext
         }
 
-        fun launchBeforeAndAfterActivity() {
-            instance?.launchBeforeAndAfterActivity()
+        fun launchBeforeAndAfterActivity(uriList: List<Uri>) {
+            instance?.launchBeforeAndAfterActivity(uriList)
         }
     }
 
@@ -203,10 +199,16 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         thumbnailPreview.setOnClickListener {
             // if normal image showPhotoActivity
             if (ParameterConfig.isDehazeEnabled() || ParameterConfig.isSuperResolutionEnabled()) {
-                launchBeforeAndAfterActivity()
+                val safeUriList = FileImageReader.getInstance()
+                    ?.let { reader ->
+                        listOfNotNull(reader.getBeforeUriDefaultResultsFolder(), reader.getAfterUriDefaultResultsFolder())
+                    } ?: emptyList()
+
+                launchBeforeAndAfterActivity(safeUriList)
             } else {
                 // normal image
-                showPhotoActivity()
+                val safeUriList = listOfNotNull(thumbnailUri)
+                launchBeforeAndAfterActivity(safeUriList)
             }
         }
 
@@ -398,8 +400,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         idleAnimator?.start()
     }
 
-    private fun launchBeforeAndAfterActivity() {
+    private fun launchBeforeAndAfterActivity(uriList: List<Uri>) {
         val intent = Intent(this, BeforeAndAfterPreviewActivity::class.java)
+
+        // convert list to arraylist
+        val uriArrayList = ArrayList<Uri>()
+        uriArrayList .addAll(uriList)
+        intent.putParcelableArrayListExtra("uriListKey", uriArrayList)
         startActivity(intent)
     }
 }
