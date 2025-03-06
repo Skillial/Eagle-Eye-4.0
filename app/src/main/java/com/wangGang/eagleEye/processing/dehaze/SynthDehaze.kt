@@ -268,6 +268,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         Log.d(TAG, "Saving Image")
         viewModel.updateLoadingText("Saving Image")
         FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImg, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImg, ImageFileAttribute.FileType.JPEG)
         clearImg.release()
 
         ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[10])

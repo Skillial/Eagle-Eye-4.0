@@ -171,6 +171,18 @@
             return Uri.fromFile(imageFile)
         }
 
+        fun saveMatrixToResultsDir(mat: Mat, fileType: ImageFileAttribute.FileType) {
+            // Save the image to /EagleEye0/Results/ directory
+            // Format: EagleEyeResult_YYYYMMDDTHHMMSS.jpg
+            val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
+            val imageFileName = "EagleEyeResult_$timeStamp"
+            val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            Imgcodecs.imwrite(imageFile.absolutePath, mat)
+
+            Log.d(TAG, "saveMatToResultsDir")
+            Log.d(TAG, "Saved: ${imageFile.absolutePath}")
+        }
+
         @Synchronized
         fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType, resultType: ResultType): Uri? {
             val imageFileName = resultType.toString()
@@ -190,6 +202,26 @@
             refreshImageGallery(imageFile)
 
             return Uri.fromFile(imageFile)
+        }
+
+        @Synchronized
+        fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType): Unit {
+            // Save the image to /EagleEye0/Results/ directory
+            // Format: EagleEyeResult_YYYYMMDDTHHMMSS.jpg
+            val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
+            val imageFileName = "EagleEyeResult_$timeStamp"
+            val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+
+            val rotatedBitmap = ImageUtils.rotateBitmap(bitmap, 90f)
+
+            try {
+                FileOutputStream(imageFile).use { out ->
+                    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                }
+                Log.d(TAG, "Saved: ${imageFile.absolutePath}")
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
         }
 
         @Synchronized
