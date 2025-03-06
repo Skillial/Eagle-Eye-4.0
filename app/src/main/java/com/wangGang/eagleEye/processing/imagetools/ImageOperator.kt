@@ -30,7 +30,8 @@ object ImageOperator {
         interpolationValue: Int,
         quadrantWidth: Int,
         quadrantHeight: Int,
-        outputFilePath: String  // Added the output file path for saving the image
+        outputFilePath: String,  // Added the output file path for saving the image
+        outputFilePath2: String
     )
     /*
      * Adds random noise. Returns the same mat with the noise operator applied.
@@ -327,7 +328,7 @@ object ImageOperator {
         return hrMat
     }
 
-    fun performJNIInterpolationWithMerge(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int, savePath: String) {
+    fun performJNIInterpolationWithMerge(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int, savePath: String, savePath2: String) {
         val divisionFactor = 4
         val width = fromMat.cols()
         val height = fromMat.rows()
@@ -384,7 +385,7 @@ object ImageOperator {
             quadrant.release()
             resizedQuadrant.release()
         }
-        mergeQuadrants(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, savePath)
+        mergeQuadrants(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, savePath, savePath2)
     }
 
     fun performJNIInterpolation(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int): Array<String> {

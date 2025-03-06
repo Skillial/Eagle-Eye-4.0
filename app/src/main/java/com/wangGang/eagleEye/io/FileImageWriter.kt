@@ -129,7 +129,7 @@
         fun getPath(fileNames: Array<String>, fileType: ImageFileAttribute.FileType): Array<String> {
             var list = mutableListOf<String>()
             for (fileName in fileNames){
-                val imageFile = File(proposedPath, "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+                val imageFile = File("$proposedPath/${DirectoryStorage.SR_ALBUM_NAME_PREFIX}", "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
                 list.add(imageFile.absolutePath)
             }
             return list.toTypedArray()
@@ -288,8 +288,19 @@
         }
 
         @Synchronized
-        fun getSharedResultPath(fileType: ImageFileAttribute.FileType): String {
+        fun getSharedAfterPath(fileType: ImageFileAttribute.FileType): String {
             val imageFileName = ResultType.AFTER.toString()
+            val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
+            return imageFile.absolutePath
+        }
+
+        // getSharedResultPath
+        @Synchronized
+        fun getSharedResultPath(fileType: ImageFileAttribute.FileType): String {
+            // Save the image to /EagleEye0/Results/ directory
+            // Format: EagleEyeResult_YYYYMMDDTHHMMSS.jpg
+            val timeStamp = SimpleDateFormat("yyyyMMdd'T'HHmmss").format(Date())
+            val imageFileName = "EagleEyeResult_$timeStamp"
             val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
             return imageFile.absolutePath
         }

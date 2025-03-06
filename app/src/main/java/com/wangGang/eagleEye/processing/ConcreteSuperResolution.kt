@@ -9,7 +9,6 @@ import com.wangGang.eagleEye.io.DirectoryStorage
 import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
-import com.wangGang.eagleEye.io.ResultType
 import com.wangGang.eagleEye.model.AttributeHolder
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure.SharpnessResult
@@ -310,10 +309,12 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
 
 
-            val savePath = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
+            val savePath = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.JPEG)
+                ?: throw IllegalStateException("Failed to get output file path")
+            val savePath2 = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
                 ?: throw IllegalStateException("Failed to get output file path")
             ImageOperator.performJNIInterpolationWithMerge(
-                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath
+                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath, savePath2
             )
 
             Log.d(TAG, "savePath: $savePath")

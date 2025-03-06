@@ -29,11 +29,13 @@ Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrants(JN
                                                                               jint interpolationValue,
                                                                               jint quadrantWidth,
                                                                               jint quadrantHeight,
-                                                                              jstring outputFilePath) {
+                                                                              jstring outputFilePath,
+                                                                              jstring outputFilePath2) {
 
     // TODO: implement mergeQuadrants()
     // Convert the Java string to a C++ string
     const char* outputPath = env->GetStringUTFChars(outputFilePath, nullptr);
+    const char* outputPath2 = env->GetStringUTFChars(outputFilePath2, nullptr);
     // Start time to measure the time taken for the operation (optional)
     long long startTime = cv::getTickCount();
 
@@ -80,6 +82,7 @@ Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrants(JN
 
     // Save the final image to the specified file path
     cv::imwrite(outputPath, mergedImage);
+    cv::imwrite(outputPath2, mergedImage);
 
     // Calculate and log elapsed time
     long long elapsedTime = (cv::getTickCount() - startTime) / cv::getTickFrequency();
@@ -87,7 +90,7 @@ Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrants(JN
 
     // Release the file path string
     env->ReleaseStringUTFChars(outputFilePath, outputPath);
-
+    env->ReleaseStringUTFChars(outputFilePath2, outputPath2);
 }
 
 cv::Mat produceMask(const cv::Mat& inputMat) {
@@ -114,6 +117,7 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
                                                                                   jobject thiz,
                                                                                   jobjectArray filenames,
                                                                                   jstring outputFilePath,
+                                                                                  jstring outputFilePath2,
                                                                                   jobjectArray quadrantsNames,
                                                                                   jint divisionFactor,
                                                                                   jint interpolationValue,
@@ -122,12 +126,14 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
     // TODO: implement meanFuse()
     // Convert the Java string to a C++ string
     const char* outputPath = env->GetStringUTFChars(outputFilePath, nullptr);
+    const char* outputPath2 = env->GetStringUTFChars(outputFilePath2, nullptr);
 
     // Get the number of inner arrays
     jsize outerLength = env->GetArrayLength(filenames);
     if (outerLength == 0) {
         __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "No filename arrays provided");
         env->ReleaseStringUTFChars(outputFilePath, outputPath);
+        env->ReleaseStringUTFChars(outputFilePath2, outputPath);
         return;
     }
 
@@ -221,7 +227,9 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
 
     // Save the final image to the specified file path
     cv::imwrite(outputPath, mergedImage);
+    cv::imwrite(outputPath2, mergedImage);
     env->ReleaseStringUTFChars(outputFilePath, outputPath);
+    env->ReleaseStringUTFChars(outputFilePath2, outputPath2);
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Mean fusion completed successfully.");
 
 }

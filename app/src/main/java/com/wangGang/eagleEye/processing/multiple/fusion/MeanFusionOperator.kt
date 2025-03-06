@@ -1,17 +1,14 @@
 package com.wangGang.eagleEye.processing.multiple.fusion
 
 import android.util.Log
-import androidx.compose.foundation.Image
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import com.wangGang.eagleEye.processing.imagetools.ImageOperator
 import com.wangGang.eagleEye.processing.imagetools.MatMemory
-import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
-import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
 
 /**
@@ -31,6 +28,7 @@ class MeanFusionOperator(
     external fun meanFuse(
         filenames: Array<Array<String>>,
         outputFilePath: String,
+        outputFilePath2: String,
         quadrantNames: Array<String>,
         divisionFactor: Int,
         scale: Int,
@@ -80,9 +78,11 @@ class MeanFusionOperator(
 //            maskMat.release()
             MatMemory.cleanMemory()
         }
-        val outputFilePath = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
-            ?: throw IllegalStateException("Failed to get output file path")
-        Log.d(TAG, "Output file path: $outputFilePath")
+        val outputFilePath1 = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.JPEG)
+            ?: throw IllegalStateException("Failed to get output file path 1")
+        val outputFilePath2 = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
+            ?: throw IllegalStateException("Failed to get output file path 2")
+        Log.d(TAG, "Output file path: $outputFilePath1")
         val fileList2D: Array<Array<String>> = fileList.map{it}.toTypedArray()
         val rowCount = fileList2D.size         // Number of rows in the original array
         val colCount = fileList2D[0].size      // Number of columns in the original array
@@ -104,8 +104,8 @@ class MeanFusionOperator(
             Log.d(TAG, "Quadrant name: $each")
         }
 
-        Log.d("MeanFusionOperator", "OutputFilePath: $outputFilePath")
-        meanFuse(fileList2dTransposed, outputFilePath, quadrantsNames, divisionFactor, scale.toInt(), quadrantWidth, quadrantHeight)
+        Log.d("MeanFusionOperator", "OutputFilePath: $outputFilePath1")
+        meanFuse(fileList2dTransposed, outputFilePath1, outputFilePath2, quadrantsNames, divisionFactor, scale.toInt(), quadrantWidth, quadrantHeight)
 
 //        Core.divide(sumMat, Scalar.all(imageMatPathList.size + 1.0), sumMat)
 //        sumMat.convertTo(outputMat, CvType.CV_8UC(sumMat.channels()))
