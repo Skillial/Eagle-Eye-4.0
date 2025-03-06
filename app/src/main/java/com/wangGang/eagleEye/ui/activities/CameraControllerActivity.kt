@@ -194,7 +194,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
 
         thumbnailPreview.setOnClickListener {
-            launchBeforeAndAfterActivity()
+            // if normal image showPhotoActivity
+            if (ParameterConfig.isDehazeEnabled() || ParameterConfig.isSuperResolutionEnabled()) {
+                launchBeforeAndAfterActivity()
+            } else {
+                // normal image
+                showPhotoActivity()
+            }
         }
 
         settingsButton.setOnClickListener {
@@ -301,7 +307,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         } else if (ParameterConfig.isDehazeEnabled()) {
             progressManager.resetProgress(ImageEnhancementType.DEHAZE)
         } else {
-            progressManager.resetProgress()
+            // normal image
+            progressManager.resetProgress(1)
         }
     }
 

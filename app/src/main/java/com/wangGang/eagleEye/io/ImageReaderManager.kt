@@ -76,11 +76,8 @@ class ImageReaderManager(
         Log.d("ImageReaderManager", "Image processed")
     }
     private fun handleNormalImage(bitmap: Bitmap) {
-        val matrix = Matrix()
-        matrix.postRotate(90f)
-        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
         CoroutineScope(Dispatchers.IO).launch {
-            FileImageWriter.getInstance()!!.saveBitmapToUserDir(rotatedBitmap,ImageFileAttribute.FileType.JPEG)
+            FileImageWriter.getInstance()!!.saveBitmapToResultsDir(bitmap,ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
             viewModel.setLoadingBoxVisible(false)
         }
     }

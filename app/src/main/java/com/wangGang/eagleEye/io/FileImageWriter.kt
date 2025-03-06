@@ -30,8 +30,6 @@
             const val ROOT_ALBUM_NAME_PREFIX = "/EagleEye"
             const val RESULTS_ALBUM_NAME_PREFIX = "/Results"
 
-
-
             fun getInstance(): FileImageWriter? {
                 return sharedInstance
             }
