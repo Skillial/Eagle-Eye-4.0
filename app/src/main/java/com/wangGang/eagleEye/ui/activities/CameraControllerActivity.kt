@@ -194,7 +194,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
 
         thumbnailPreview.setOnClickListener {
-            showPhotoActivity()
+            launchBeforeAndAfterActivity()
         }
 
         settingsButton.setOnClickListener {
