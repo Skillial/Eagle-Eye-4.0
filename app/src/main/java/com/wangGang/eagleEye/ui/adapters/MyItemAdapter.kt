@@ -29,15 +29,18 @@ class MyItemAdapter(
         holder.textView.text = item.second
         holder.itemView.tag = item
 
-        // If this item is "Upscale", disable dragging and hide the grab handle.
         if (item.second.equals("Upscale", ignoreCase = true)) {
             holder.itemView.setOnLongClickListener { false }
             holder.grabHandle.visibility = View.INVISIBLE
+            // Dim the whole item to indicate it's fixed.
+            holder.itemView.alpha = 0.5f
         } else {
             holder.itemView.setOnLongClickListener { true }
             holder.grabHandle.visibility = View.VISIBLE
+            holder.itemView.alpha = 1.0f
         }
     }
+
 
     override fun getUniqueItemId(position: Int): Long {
         return mItemList[position].first
