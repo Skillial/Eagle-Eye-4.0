@@ -1,18 +1,18 @@
 package com.wangGang.eagleEye.ui.activities
 
-import DragManageAdapter
 import android.os.Bundle
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
-import com.wangGang.eagleEye.ui.adapters.DraggableListAdapter
+import com.wangGang.eagleEye.ui.adapters.MyItemAdapter
+import com.woxthebox.draglistview.DragListView
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -28,7 +28,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var scalingLabel: TextView
     /* Draggable List */
     private lateinit var algoRecyclerView: RecyclerView
-    private lateinit var adapter: DraggableListAdapter
+    // private lateinit var adapter: DraggableListAdapter
+    private lateinit var adapter: MyItemAdapter
+    private lateinit var dragListView: DragListView
 
     // Constants
     private val scaleFactors = listOf(1, 2, 4, 8, 16)
@@ -42,18 +44,19 @@ class SettingsActivity : AppCompatActivity() {
         setupSwitchButtons()
         setupScaleSeekBar()
         setupBackButton()
-        setupDraggableList()
+        // setupDraggableList()
+        setupDragListView()
     }
 
     override fun onStop() {
         super.onStop()
-        saveNewAlgoOrder()
+        // saveNewAlgoOrder()
     }
 
-    private fun saveNewAlgoOrder() {
+    /*private fun saveNewAlgoOrder() {
         val newOrder = adapter.getCurrentList()
         ParameterConfig.setProcessingOrder(newOrder)
-    }
+    }*/
 
     private fun setupBackButton() {
         backButton.setOnClickListener {
@@ -109,7 +112,7 @@ class SettingsActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupDraggableList() {
+   /* private fun setupDraggableList() {
         val currentOrder = ParameterConfig.getProcessingOrder().toMutableList()
         adapter = DraggableListAdapter(currentOrder)
 
@@ -120,7 +123,7 @@ class SettingsActivity : AppCompatActivity() {
         val callback = DragManageAdapter(adapter)
         val touchHelper = ItemTouchHelper(callback)
         touchHelper.attachToRecyclerView(algoRecyclerView)
-    }
+    }*/
 
     private fun assignViews() {
         backButton = binding.btnBack
@@ -135,6 +138,54 @@ class SettingsActivity : AppCompatActivity() {
         scalingLabel = binding.scalingLabel
 
         // Draggable List
-        algoRecyclerView = binding.draggableAlgoList
+        // algoRecyclerView = binding.draggableAlgoList
+
+        dragListView = binding.dragListView
+    }
+
+    private fun setupDragListView() {
+        // Create a list with three items. "Upscale" is marked with a unique ID and will be non-draggable.
+        val items = arrayListOf(
+            Pair(0L, "SR"),
+            Pair(1L, "Dehaze"),
+            Pair(2L, "Upscale")
+        )
+
+        // Initialize the adapter.
+        val myAdapter = MyItemAdapter(
+            itemList = items,
+            layoutId = R.layout.list_item,  // your list item layout
+            grabHandleId = R.id.image,       // the ID of the drag handle in your layout
+            dragOnLongPress = true
+        )
+
+        // Save adapter reference if needed globally:
+        adapter = myAdapter
+
+        // Set up DragListView using its setter methods (instead of property syntax).
+        dragListView.setLayoutManager(LinearLayoutManager(this))
+        dragListView.setAdapter(myAdapter, true)
+        dragListView.setCanDragHorizontally(false)
+
+        dragListView.setDragListListener(object : DragListView.DragListListenerAdapter() {
+            override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
+                // When dragging ends, enforce that "Upscale" is always at the bottom.
+                val currentList = myAdapter.itemList  // from the adapter
+                val upscaleItem = currentList.find { it.second.equals("Upscale", ignoreCase = true) }
+                if (upscaleItem != null) {
+                    currentList.removeAll { it.second.equals("Upscale", ignoreCase = true) }
+                    currentList.add(upscaleItem)
+                    myAdapter.notifyDataSetChanged()
+                }
+                // Update processing order (e.g., via ParameterConfig)
+                updateProcessingOrder(currentList)
+            }
+        })
+    }
+
+    private fun updateProcessingOrder(newOrder: List<Pair<Long, String>>) {
+        // Extract just the titles and update ParameterConfig.
+        val orderTitles = newOrder.map { it.second }
+        ParameterConfig.setProcessingOrder(orderTitles)
     }
 }

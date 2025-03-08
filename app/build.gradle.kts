@@ -90,4 +90,6 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("me.relex:circleindicator:2.1.6")
+
+    implementation("com.github.woxthebox:draglistview:1.7.3")
 }
