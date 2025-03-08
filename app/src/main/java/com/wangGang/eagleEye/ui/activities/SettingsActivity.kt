@@ -1,13 +1,13 @@
 package com.wangGang.eagleEye.ui.activities
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
@@ -27,8 +27,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var scaleSeekBar: SeekBar
     private lateinit var scalingLabel: TextView
     /* Draggable List */
-    private lateinit var algoRecyclerView: RecyclerView
-    // private lateinit var adapter: DraggableListAdapter
     private lateinit var adapter: MyItemAdapter
     private lateinit var dragListView: DragListView
 
@@ -44,19 +42,8 @@ class SettingsActivity : AppCompatActivity() {
         setupSwitchButtons()
         setupScaleSeekBar()
         setupBackButton()
-        // setupDraggableList()
         setupDragListView()
     }
-
-    override fun onStop() {
-        super.onStop()
-        // saveNewAlgoOrder()
-    }
-
-    /*private fun saveNewAlgoOrder() {
-        val newOrder = adapter.getCurrentList()
-        ParameterConfig.setProcessingOrder(newOrder)
-    }*/
 
     private fun setupBackButton() {
         backButton.setOnClickListener {
@@ -112,19 +99,6 @@ class SettingsActivity : AppCompatActivity() {
         })
     }
 
-   /* private fun setupDraggableList() {
-        val currentOrder = ParameterConfig.getProcessingOrder().toMutableList()
-        adapter = DraggableListAdapter(currentOrder)
-
-        algoRecyclerView.layoutManager = LinearLayoutManager(this)
-        algoRecyclerView.adapter = adapter
-
-        // Attach ItemTouchHelper for drag
-        val callback = DragManageAdapter(adapter)
-        val touchHelper = ItemTouchHelper(callback)
-        touchHelper.attachToRecyclerView(algoRecyclerView)
-    }*/
-
     private fun assignViews() {
         backButton = binding.btnBack
 
@@ -138,31 +112,42 @@ class SettingsActivity : AppCompatActivity() {
         scalingLabel = binding.scalingLabel
 
         // Draggable List
-        // algoRecyclerView = binding.draggableAlgoList
-
         dragListView = binding.dragListView
     }
 
     private fun setupDragListView() {
-        // Create a list with three items. "Upscale" is marked with a unique ID and will be non-draggable.
-        val items = arrayListOf(
-            Pair(0L, "SR"),
-            Pair(1L, "Dehaze"),
-            Pair(2L, "Upscale")
-        )
+        // Get the current processing order from ParameterConfig.
+        // If none is stored, default to a known order.
+        val storedOrder = ParameterConfig.getProcessingOrder().toMutableList()
+        if (storedOrder.isEmpty()) {
+            storedOrder.addAll(listOf("SR", "Dehaze", "Upscale"))
+        } else {
+            // Ensure "Upscale" is present and always at the end.
+            if (!storedOrder.contains("Upscale")) {
+                storedOrder.add("Upscale")
+            } else {
+                storedOrder.remove("Upscale")
+                storedOrder.add("Upscale")
+            }
+        }
 
-        // Initialize the adapter.
+        Log.d("SettingsActivity", "Stored order: $storedOrder")
+
+        // Build an ArrayList of Pair<Long, String> items based on the stored order.
+        val items = storedOrder.mapIndexed { index, title ->
+            Pair(index.toLong(), title)
+        }.toCollection(arrayListOf())
+
+        // Initialize the adapter with the items from the stored order.
         val myAdapter = MyItemAdapter(
             itemList = items,
-            layoutId = R.layout.list_item,  // your list item layout
-            grabHandleId = R.id.image,       // the ID of the drag handle in your layout
+            layoutId = R.layout.list_item,  // Your list item layout
+            grabHandleId = R.id.image,       // The ID of the drag handle in your layout
             dragOnLongPress = true
         )
-
-        // Save adapter reference if needed globally:
         adapter = myAdapter
 
-        // Set up DragListView using its setter methods (instead of property syntax).
+        // Set up DragListView.
         dragListView.setLayoutManager(LinearLayoutManager(this))
         dragListView.setAdapter(myAdapter, true)
         dragListView.setCanDragHorizontally(false)
@@ -170,22 +155,23 @@ class SettingsActivity : AppCompatActivity() {
         dragListView.setDragListListener(object : DragListView.DragListListenerAdapter() {
             override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
                 // When dragging ends, enforce that "Upscale" is always at the bottom.
-                val currentList = myAdapter.itemList  // from the adapter
+                val currentList = myAdapter.itemList
                 val upscaleItem = currentList.find { it.second.equals("Upscale", ignoreCase = true) }
                 if (upscaleItem != null) {
                     currentList.removeAll { it.second.equals("Upscale", ignoreCase = true) }
                     currentList.add(upscaleItem)
                     myAdapter.notifyDataSetChanged()
                 }
-                // Update processing order (e.g., via ParameterConfig)
+                // Update processing order using ParameterConfig.
                 updateProcessingOrder(currentList)
             }
         })
     }
 
     private fun updateProcessingOrder(newOrder: List<Pair<Long, String>>) {
-        // Extract just the titles and update ParameterConfig.
+        // Extract only the algorithm names and update ParameterConfig.
         val orderTitles = newOrder.map { it.second }
         ParameterConfig.setProcessingOrder(orderTitles)
     }
+
 }
