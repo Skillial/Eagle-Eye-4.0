@@ -105,16 +105,22 @@ class ParameterConfig private constructor(appContext: Context) {
         }
 
         @JvmStatic
-        fun getAlgoOrder(): List<String> {
+        /*
+        * Gets the processing order and returns it as a list of strings
+        * */
+        fun getProcessingOrder(): List<String> {
             val defaultOrder = "Super Resolution,Dehaze"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
 
         @JvmStatic
-        fun setAlgoOrder(algoOrderList: List<String>) {
-            val algoOrder = algoOrderList.joinToString(",")
-            setPrefs("algo_order", algoOrder)
+        /*
+        * Sets the processing order by joining the list of strings into a single string
+        * */
+        fun setProcessingOrder(processingOrderList: List<String>) {
+            val processingOrder = processingOrderList.joinToString(",")
+            setPrefs("algo_order", processingOrder)
         }
 
         @JvmStatic

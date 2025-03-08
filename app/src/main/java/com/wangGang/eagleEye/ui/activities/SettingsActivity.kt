@@ -4,7 +4,6 @@ import DragManageAdapter
 import android.os.Bundle
 import android.widget.ImageButton
 import android.widget.SeekBar
-import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
@@ -53,7 +52,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveNewAlgoOrder() {
         val newOrder = adapter.getCurrentList()
-        ParameterConfig.setAlgoOrder(newOrder)
+        ParameterConfig.setProcessingOrder(newOrder)
     }
 
     private fun setupBackButton() {
@@ -111,7 +110,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupDraggableList() {
-        val currentOrder = ParameterConfig.getAlgoOrder().toMutableList()
+        val currentOrder = ParameterConfig.getProcessingOrder().toMutableList()
         adapter = DraggableListAdapter(currentOrder)
 
         algoRecyclerView.layoutManager = LinearLayoutManager(this)
