@@ -142,7 +142,7 @@ class SettingsActivity : AppCompatActivity() {
         val myAdapter = MyItemAdapter(
             itemList = items,
             layoutId = R.layout.list_item,  // Your list item layout
-            grabHandleId = R.id.image,       // The ID of the drag handle in your layout
+            grabHandleId = R.id.item_layout,       // The ID of the drag handle in your layout
             dragOnLongPress = true
         )
         adapter = myAdapter

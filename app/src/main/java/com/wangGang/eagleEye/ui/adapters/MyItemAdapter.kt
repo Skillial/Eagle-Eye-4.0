@@ -31,12 +31,10 @@ class MyItemAdapter(
 
         if (item.second.equals("Upscale", ignoreCase = true)) {
             holder.itemView.setOnLongClickListener { false }
-            holder.grabHandle.visibility = View.INVISIBLE
             // Dim the whole item to indicate it's fixed.
             holder.itemView.alpha = 0.5f
         } else {
             holder.itemView.setOnLongClickListener { true }
-            holder.grabHandle.visibility = View.VISIBLE
             holder.itemView.alpha = 1.0f
         }
     }
@@ -49,6 +47,5 @@ class MyItemAdapter(
     inner class ViewHolder(itemView: View) :
         DragItemAdapter.ViewHolder(itemView, grabHandleId, dragOnLongPress) {
         val textView: TextView = itemView.findViewById(R.id.text)
-        val grabHandle: View = itemView.findViewById(grabHandleId)
     }
 }
