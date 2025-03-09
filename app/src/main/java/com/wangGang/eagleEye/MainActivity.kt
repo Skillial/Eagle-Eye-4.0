@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private fun initializeApp() {
         val intent = Intent(this, CameraControllerActivity::class.java)
         startActivity(intent)
+        finish()    // Disable going back to main activity
     }
 
     private fun loadComponents() {

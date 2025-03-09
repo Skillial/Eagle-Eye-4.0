@@ -8,8 +8,10 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
@@ -183,10 +185,17 @@ class SettingsActivity : AppCompatActivity() {
         // Set up DragListView.
         dragListView.setLayoutManager(LinearLayoutManager(this))
         dragListView.setAdapter(myAdapter, true)
+        dragListView.recyclerView.isVerticalScrollBarEnabled = true
         dragListView.setCanDragHorizontally(false)
+        dragListView.setCanDragVertically(true)
 
         dragListView.setDragListListener(object : DragListView.DragListListenerAdapter() {
+            override fun onItemDragStarted(position: Int) {
+                mRefreshLayout.setEnabled(false)
+            }
+
             override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
+                mRefreshLayout.setEnabled(true)
                 // When dragging ends, enforce that "Upscale" is always at the bottom.
                 val currentList = myAdapter.itemList
                 val upscaleItem = currentList.find { it.second.equals("Upscale", ignoreCase = true) }
@@ -197,6 +206,31 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 // Update processing order using ParameterConfig.
                 updateProcessingOrder(currentList)
+            }
+        })
+
+        mRefreshLayout.setScrollingView(dragListView.recyclerView)
+        mRefreshLayout.setColorSchemeColors(ContextCompat.getColor(baseContext, R.color.teal_200))
+        mRefreshLayout.setOnRefreshListener {
+            mRefreshLayout.postDelayed({
+                mRefreshLayout.isRefreshing = false
+            }, 2000)
+        }
+
+        dragListView.setSwipeListener (object : OnSwipeListenerAdapter() {
+            override fun onItemSwipeStarted(item: ListSwipeItem) {
+                mRefreshLayout.setEnabled(false)
+            }
+
+            override fun onItemSwipeEnded(item: ListSwipeItem, swipedDirection: SwipeDirection) {
+                mRefreshLayout.setEnabled(true)
+
+                // Swipe to delete on left
+                if (swipedDirection == SwipeDirection.LEFT) {
+                    val adapterItem = item.tag as Pair<*, *>
+                    val pos: Int = dragListView.getAdapter().getPositionForItem(adapterItem)
+                    dragListView.getAdapter().removeItem(pos)
+                }
             }
         })
 
@@ -223,12 +257,9 @@ class SettingsActivity : AppCompatActivity() {
                     // Retrieve the dragged item from the source list.
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null) {
-                        // Avoid adding duplicates.
-                        // if (!myAdapter.itemList.any { it.second.equals(droppedItem.second, ignoreCase = true) }) {
-                            myAdapter.itemList.add(droppedItem)
-                            myAdapter.notifyDataSetChanged()
-                            updateProcessingOrder(myAdapter.itemList)
-                        //}
+                        myAdapter.itemList.add(droppedItem)
+                        myAdapter.notifyDataSetChanged()
+                        updateProcessingOrder(myAdapter.itemList)
                     }
                     true
                 }
@@ -243,23 +274,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         }
-
-         dragListView.setSwipeListener (object : OnSwipeListenerAdapter() {
-            override fun onItemSwipeStarted(item: ListSwipeItem) {
-                mRefreshLayout.setEnabled(false)
-            }
-
-            override fun onItemSwipeEnded(item: ListSwipeItem, swipedDirection: SwipeDirection) {
-                mRefreshLayout.setEnabled(true)
-
-                // Swipe to delete on left
-                if (swipedDirection == SwipeDirection.LEFT) {
-                    val adapterItem = item.tag as Pair<*, *>
-                    val pos: Int = dragListView.getAdapter().getPositionForItem(adapterItem)
-                    dragListView.getAdapter().removeItem(pos)
-                }
-            }
-        })
     }
 
     private fun updateProcessingOrder(newOrder: List<Pair<Long, String>>) {
