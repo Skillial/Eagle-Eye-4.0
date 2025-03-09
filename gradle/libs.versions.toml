@@ -15,6 +15,7 @@ appcompat = "1.7.0"
 material = "1.12.0"
 onnxruntimeAndroidVersion = "1.20.0"
 onnxruntimeMobile = "1.15.0"
+swiperefreshlayout = "1.1.0"
 
 [libraries]
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
@@ -38,6 +39,7 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntimeAndroidVersion" }
 onnxruntime-mobile = { module = "com.microsoft.onnxruntime:onnxruntime-mobile", version.ref = "onnxruntimeMobile" }
+androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

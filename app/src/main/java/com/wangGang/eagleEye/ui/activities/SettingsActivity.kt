@@ -2,17 +2,25 @@ package com.wangGang.eagleEye.ui.activities
 
 import android.os.Bundle
 import android.util.Log
+import android.view.DragEvent
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
 import com.wangGang.eagleEye.ui.adapters.MyItemAdapter
+import com.wangGang.eagleEye.ui.adapters.SourceListAdapter
+import com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout
 import com.woxthebox.draglistview.DragListView
+import com.woxthebox.draglistview.swipe.ListSwipeHelper.OnSwipeListenerAdapter
+import com.woxthebox.draglistview.swipe.ListSwipeItem
+import com.woxthebox.draglistview.swipe.ListSwipeItem.SwipeDirection
+
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -26,9 +34,15 @@ class SettingsActivity : AppCompatActivity() {
     /* Scaling Factor */
     private lateinit var scaleSeekBar: SeekBar
     private lateinit var scalingLabel: TextView
+    /* Commands List */
+    private lateinit var sourceAdapter: SourceListAdapter
+    private lateinit var sourceRecyclerView: RecyclerView
     /* Draggable List */
     private lateinit var adapter: MyItemAdapter
     private lateinit var dragListView: DragListView
+
+    private lateinit var mRefreshLayout: MySwipeRefreshLayout
+
 
     // Constants
     private val scaleFactors = listOf(1, 2, 4, 8, 16)
@@ -42,6 +56,7 @@ class SettingsActivity : AppCompatActivity() {
         setupSwitchButtons()
         setupScaleSeekBar()
         setupBackButton()
+        setupSourceList()
         setupDragListView()
     }
 
@@ -111,8 +126,26 @@ class SettingsActivity : AppCompatActivity() {
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
 
+        // Commands List (Source)
+        sourceRecyclerView = binding.sourceListView
+
         // Draggable List
-        dragListView = binding.dragListView
+        dragListView = binding.targetListView
+
+        mRefreshLayout = binding.swipeRefreshLayout
+    }
+
+    private fun setupSourceList() {
+        // Create your command list. These commands will be moved to the target list upon drop.
+        val commandItems = arrayListOf(
+            Pair(0L, "SR"),
+            Pair(1L, "Dehaze"),
+            Pair(2L, "Upscale")
+        )
+
+        sourceAdapter = SourceListAdapter(commandItems)
+        sourceRecyclerView.layoutManager = LinearLayoutManager(this)
+        sourceRecyclerView.adapter = sourceAdapter
     }
 
     private fun setupDragListView() {
@@ -142,7 +175,7 @@ class SettingsActivity : AppCompatActivity() {
         val myAdapter = MyItemAdapter(
             itemList = items,
             layoutId = R.layout.list_item,  // Your list item layout
-            grabHandleId = R.id.item_layout,       // The ID of the drag handle in your layout
+            grabHandleId = R.id.item_layout, // Use the root layout so dragging can start anywhere
             dragOnLongPress = true
         )
         adapter = myAdapter
@@ -164,6 +197,67 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 // Update processing order using ParameterConfig.
                 updateProcessingOrder(currentList)
+            }
+        })
+
+        // Add an onDragListener to the underlying RecyclerView to handle drops from the source list.
+        dragListView.recyclerView.setOnDragListener { view, event ->
+            when (event.action) {
+                DragEvent.ACTION_DRAG_STARTED -> {
+                    Log.d("DragListener", "ACTION_DRAG_STARTED")
+                    true
+                }
+                DragEvent.ACTION_DRAG_ENTERED -> {
+                    Log.d("DragListener", "ACTION_DRAG_ENTERED")
+                    view.alpha = 0.8f
+                    true
+                }
+                DragEvent.ACTION_DRAG_EXITED -> {
+                    Log.d("DragListener", "ACTION_DRAG_EXITED")
+                    view.alpha = 1.0f
+                    true
+                }
+                DragEvent.ACTION_DROP -> {
+                    Log.d("DragListener", "ACTION_DROP")
+                    view.alpha = 1.0f
+                    // Retrieve the dragged item from the source list.
+                    val droppedItem = event.localState as? Pair<Long, String>
+                    if (droppedItem != null) {
+                        // Avoid adding duplicates.
+                        // if (!myAdapter.itemList.any { it.second.equals(droppedItem.second, ignoreCase = true) }) {
+                            myAdapter.itemList.add(droppedItem)
+                            myAdapter.notifyDataSetChanged()
+                            updateProcessingOrder(myAdapter.itemList)
+                        //}
+                    }
+                    true
+                }
+                DragEvent.ACTION_DRAG_ENDED -> {
+                    Log.d("DragListener", "ACTION_DRAG_ENDED")
+                    view.alpha = 1.0f
+                    true
+                }
+                else -> {
+                    Log.d("DragListener", "Unknown action: ${event.action}")
+                    true
+                }
+            }
+        }
+
+         dragListView.setSwipeListener (object : OnSwipeListenerAdapter() {
+            override fun onItemSwipeStarted(item: ListSwipeItem) {
+                mRefreshLayout.setEnabled(false)
+            }
+
+            override fun onItemSwipeEnded(item: ListSwipeItem, swipedDirection: SwipeDirection) {
+                mRefreshLayout.setEnabled(true)
+
+                // Swipe to delete on left
+                if (swipedDirection == SwipeDirection.LEFT) {
+                    val adapterItem = item.tag as Pair<*, *>
+                    val pos: Int = dragListView.getAdapter().getPositionForItem(adapterItem)
+                    dragListView.getAdapter().removeItem(pos)
+                }
             }
         })
     }

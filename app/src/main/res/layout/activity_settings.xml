@@ -96,20 +96,50 @@
             android:layout_marginBottom="16dp"
             android:background="@android:color/darker_gray" />-->
 
+        <!-- Source List Label -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Drag and drop to reorder algorithms"
-            android:textColor="@color/black"
-            android:layout_marginBottom="8dp"
-            android:textSize="16sp"/>
+            android:text="Available Commands"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-        <!-- Draggable list for algorithms -->
-        <com.woxthebox.draglistview.DragListView
-            android:id="@+id/drag_list_view"
+        <!-- Source List for Commands -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/source_list_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#CCCCCC"
+            android:layout_marginVertical="8dp" />
 
+        <!-- Target List Label -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Algorithm Order"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout
+            android:id="@+id/swipe_refresh_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <!-- Target Draggable List -->
+                <com.woxthebox.draglistview.DragListView
+                    android:id="@+id/target_list_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </FrameLayout>
+        </com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout>
     </LinearLayout>
 </LinearLayout>
