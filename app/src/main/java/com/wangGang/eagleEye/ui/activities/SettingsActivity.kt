@@ -145,7 +145,7 @@ class SettingsActivity : AppCompatActivity() {
 
         processingOrderListAdapter = ProcessingOrderListAdapter(
             itemList = items,
-            layoutId = R.layout.list_item,
+            layoutId = R.layout.processing_order_list_item,
             grabHandleId = R.id.item_layout,
             dragOnLongPress = true
         )

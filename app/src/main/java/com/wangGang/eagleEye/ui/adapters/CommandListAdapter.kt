@@ -14,7 +14,7 @@ class CommandListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         // Inflate the same list item layout (or create a dedicated one for source items)
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.processing_order_list_item, parent, false)
         return ViewHolder(view)
     }
 

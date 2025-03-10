@@ -53,14 +53,6 @@
             android:layout_marginBottom="4dp"
             android:paddingEnd="16dp" />
 
-        <!-- Divider -->
-        <!--<View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="@android:color/darker_gray" />-->
-
         <!-- Container for the slider -->
         <LinearLayout
             android:id="@+id/scalingContainer"
@@ -88,20 +80,12 @@
                 android:progress="1" />
         </LinearLayout>
 
-        <!-- Divider -->
-        <!--<View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="@android:color/darker_gray" />-->
-
         <!-- Source List Label -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Available Commands"
-            android:textSize="18sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <!-- Source List for Commands -->
@@ -121,8 +105,8 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Algorithm Order"
-            android:textSize="18sp"
+            android:text="Processing Order"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <FrameLayout
