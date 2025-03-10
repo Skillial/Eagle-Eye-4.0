@@ -19,7 +19,6 @@ import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
 import com.wangGang.eagleEye.ui.adapters.MyItemAdapter
 import com.wangGang.eagleEye.ui.adapters.SourceListAdapter
-import com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout
 import com.woxthebox.draglistview.DragListView
 
 class SettingsActivity : AppCompatActivity() {
