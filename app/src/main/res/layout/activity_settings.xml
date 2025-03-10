@@ -125,21 +125,16 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout
-            android:id="@+id/swipe_refresh_layout"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <FrameLayout
+            <!-- Target Draggable List -->
+            <com.woxthebox.draglistview.DragListView
+                android:id="@+id/target_list_view"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="wrap_content" />
+        </FrameLayout>
 
-                <!-- Target Draggable List -->
-                <com.woxthebox.draglistview.DragListView
-                    android:id="@+id/target_list_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </FrameLayout>
-        </com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout>
     </LinearLayout>
 </LinearLayout>
