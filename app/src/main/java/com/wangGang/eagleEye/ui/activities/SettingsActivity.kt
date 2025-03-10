@@ -121,10 +121,18 @@ class SettingsActivity : AppCompatActivity() {
                 val chosenFactor = SCALING_FACTORS[progress]
                 ParameterConfig.setScalingFactor(chosenFactor)
                 scalingLabel.text = "Scale Factor: $chosenFactor"
+
+                // If scaling factor is less than 8, ensure that "Upscale" is at the bottom.
+                if (chosenFactor >= 8) {
+                    enforceUpscaleAtBottom(processingOrderListAdapter)
+                    updateProcessingOrder(processingOrderListAdapter.itemList)
+                }
+                processingOrderListAdapter.notifyDataSetChanged()
             }
             override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
         })
+
     }
 
     private fun setupProcessingOrderListView() {
@@ -145,6 +153,7 @@ class SettingsActivity : AppCompatActivity() {
         setupInternalDragAndDrop()
         setupProcessingOrderListViewConfig()
         setupDragAndDropFromSourceList(processingOrderListAdapter)
+        setupDragCallback()
         setupSwipeToDelete()
     }
 
@@ -168,7 +177,32 @@ class SettingsActivity : AppCompatActivity() {
             override fun onItemDragStarted(position: Int) = Unit
 
             override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
+                // If scaling factor is ≥8, ensure that "Upscale" is fixed at the bottom.
+                if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
+                    enforceUpscaleAtBottom(processingOrderListAdapter)
+                    processingOrderListAdapter.notifyDataSetChanged()
+                }
                 updateProcessingOrder(processingOrderListAdapter.itemList)
+            }
+        })
+    }
+
+    private fun setupDragCallback() {
+        processingOrderDragListView.setDragListCallback(object : DragListView.DragListCallbackAdapter() {
+            override fun canDragItemAtPosition(dragPosition: Int): Boolean {
+                val item = processingOrderListAdapter.itemList[dragPosition]
+                // When scaling factor is >=8, disallow dragging of "Upscale"
+                return if (ParameterConfig.isScalingFactorGreaterThanOrEqual8() &&
+                    item.second.equals("Upscale", ignoreCase = true)) {
+                    false
+                } else {
+                    true
+                }
+            }
+
+            override fun canDropItemAtPosition(dropPosition: Int): Boolean {
+                // Always allow dropping (or you can add additional logic here)
+                return true
             }
         })
     }
@@ -194,7 +228,7 @@ class SettingsActivity : AppCompatActivity() {
                     Log.d("DragListener", "ACTION_DROP")
                     view.alpha = 1.0f
                     val droppedItem = event.localState as? Pair<Long, String>
-                    if (droppedItem != null) {
+                    if (droppedItem != null && !adapter.itemList.contains(droppedItem)) {
                         adapter.itemList.add(droppedItem)
                         adapter.notifyDataSetChanged()
                         updateProcessingOrder(adapter.itemList)
@@ -285,4 +319,14 @@ class SettingsActivity : AppCompatActivity() {
         val orderTitles = newOrder.map { it.second }
         ParameterConfig.setProcessingOrder(orderTitles)
     }
+
+    private fun enforceUpscaleAtBottom(adapter: ProcessingOrderListAdapter) {
+        val currentList = adapter.itemList
+        val upscaleItem = currentList.find { it.second.equals("Upscale", ignoreCase = true) }
+        if (upscaleItem != null) {
+            currentList.removeAll { it.second.equals("Upscale", ignoreCase = true) }
+            currentList.add(upscaleItem)
+        }
+    }
+
 }

@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import com.woxthebox.draglistview.DragItemAdapter
 import com.wangGang.eagleEye.R
+import com.wangGang.eagleEye.constants.ParameterConfig
 
 class ProcessingOrderListAdapter (
     itemList: ArrayList<Pair<Long, String>>,
@@ -29,7 +30,8 @@ class ProcessingOrderListAdapter (
         holder.textView.text = item.second
         holder.itemView.tag = item
 
-        if (item.second.equals("Upscale", ignoreCase = true)) {
+        val currentItemIsUpscale = item.second.equals("Upscale", ignoreCase = true)
+        if (ParameterConfig.isScalingFactorGreaterThanOrEqual8() && currentItemIsUpscale) {
             holder.itemView.setOnLongClickListener { false }
             // Dim the whole item to indicate it's fixed.
             holder.itemView.alpha = 0.5f
@@ -48,4 +50,6 @@ class ProcessingOrderListAdapter (
         DragItemAdapter.ViewHolder(itemView, grabHandleId, dragOnLongPress) {
         val textView: TextView = itemView.findViewById(R.id.text)
     }
+
+
 }

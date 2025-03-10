@@ -152,6 +152,11 @@ class ParameterConfig private constructor(appContext: Context) {
         fun isGridOverlayEnabled(): Boolean {
             return getPrefsBoolean("grid_overlay_enabled", false)
         }
+
+        // Helper methods
+        fun isScalingFactorGreaterThanOrEqual8(): Boolean {
+            return getScalingFactor() >= 8
+        }
     }
 
     enum class SRTechnique {
