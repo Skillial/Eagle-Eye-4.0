@@ -40,11 +40,11 @@ class SettingsActivity : AppCompatActivity() {
     // Views
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var backButton: ImageButton
-    private lateinit var superResolutionSwitch: SwitchCompat
 
     /* === Switches === */
-    private lateinit var dehazeSwitch: SwitchCompat
     private lateinit var gridOverlaySwitch: SwitchCompat
+//    private lateinit var superResolutionSwitch: SwitchCompat
+//    private lateinit var dehazeSwitch: SwitchCompat
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
@@ -73,9 +73,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun assignViews() {
         backButton = binding.btnBack
-        superResolutionSwitch = binding.switchSuperResolution
         gridOverlaySwitch = binding.switchGridOverlay
-        dehazeSwitch = binding.switchDehaze
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
         commandListRecyclerView = binding.sourceListView
@@ -87,7 +85,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupSwitchButtons() {
-        superResolutionSwitch.isChecked = ParameterConfig.isSuperResolutionEnabled()
+        /*superResolutionSwitch.isChecked = ParameterConfig.isSuperResolutionEnabled()
         dehazeSwitch.isChecked = ParameterConfig.isDehazeEnabled()
         gridOverlaySwitch.isChecked = ParameterConfig.isGridOverlayEnabled()
 
@@ -104,7 +102,8 @@ class SettingsActivity : AppCompatActivity() {
                 ParameterConfig.setSuperResolutionEnabled(false)
                 superResolutionSwitch.isChecked = false
             }
-        }
+        }*/
+
         gridOverlaySwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setGridOverlayEnabled(isChecked)
         }
@@ -230,8 +229,14 @@ class SettingsActivity : AppCompatActivity() {
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null && adapter.itemList.none { it.second.equals(droppedItem.second, ignoreCase = true) }) {
                         adapter.itemList.add(droppedItem)
+                        // Check the current scaling factor.
+                        if (ParameterConfig.getScalingFactor() >= 8) {
+                            enforceUpscaleAtBottom(processingOrderListAdapter)
+                            updateProcessingOrder(adapter.itemList)
+                        } else {
+                            updateProcessingOrder(adapter.itemList)
+                        }
                         adapter.notifyDataSetChanged()
-                        updateProcessingOrder(adapter.itemList)
                     }
                     true
                 }
