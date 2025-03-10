@@ -122,7 +122,7 @@ class SettingsActivity : AppCompatActivity() {
                 scalingLabel.text = "Scale Factor: $chosenFactor"
 
                 // If scaling factor is less than 8, ensure that "Upscale" is at the bottom.
-                if (chosenFactor >= 8) {
+                if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
                     enforceUpscaleAtBottom(processingOrderListAdapter)
                     updateProcessingOrder(processingOrderListAdapter.itemList)
                 }
@@ -229,8 +229,7 @@ class SettingsActivity : AppCompatActivity() {
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null && adapter.itemList.none { it.second.equals(droppedItem.second, ignoreCase = true) }) {
                         adapter.itemList.add(droppedItem)
-                        // Check the current scaling factor.
-                        if (ParameterConfig.getScalingFactor() >= 8) {
+                        if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
                             enforceUpscaleAtBottom(processingOrderListAdapter)
                             updateProcessingOrder(adapter.itemList)
                         } else {
