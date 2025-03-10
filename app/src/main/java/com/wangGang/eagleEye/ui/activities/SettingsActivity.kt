@@ -228,13 +228,14 @@ class SettingsActivity : AppCompatActivity() {
                     Log.d("DragListener", "ACTION_DROP")
                     view.alpha = 1.0f
                     val droppedItem = event.localState as? Pair<Long, String>
-                    if (droppedItem != null && !adapter.itemList.contains(droppedItem)) {
+                    if (droppedItem != null && adapter.itemList.none { it.second.equals(droppedItem.second, ignoreCase = true) }) {
                         adapter.itemList.add(droppedItem)
                         adapter.notifyDataSetChanged()
                         updateProcessingOrder(adapter.itemList)
                     }
                     true
                 }
+
                 DragEvent.ACTION_DRAG_ENDED -> {
                     Log.d("DragListener", "ACTION_DRAG_ENDED")
                     view.alpha = 1.0f
