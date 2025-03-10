@@ -9,6 +9,7 @@ import android.view.DragEvent
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -176,15 +177,25 @@ class SettingsActivity : AppCompatActivity() {
             override fun onItemDragStarted(position: Int) = Unit
 
             override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
-                // If scaling factor is ≥8, ensure that "Upscale" is fixed at the bottom.
                 if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
-                    enforceUpscaleAtBottom(processingOrderListAdapter)
-                    processingOrderListAdapter.notifyDataSetChanged()
+                    val currentList = processingOrderListAdapter.itemList
+                    val upscaleIndex = currentList.indexOfFirst { it.second.equals("Upscale", ignoreCase = true) }
+
+                    // If the drop position is below (i.e. a higher index than) the "Upscale" item,
+                    // show a toast and enforce that "Upscale" remains at the bottom.
+                    if (toPosition > upscaleIndex) {
+                        Toast.makeText(this@SettingsActivity,
+                            "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
+                            Toast.LENGTH_SHORT).show()
+                        enforceUpscaleAtBottom(processingOrderListAdapter)
+                        processingOrderListAdapter.notifyDataSetChanged()
+                    }
                 }
                 updateProcessingOrder(processingOrderListAdapter.itemList)
             }
         })
     }
+
 
     private fun setupDragCallback() {
         processingOrderDragListView.setDragListCallback(object : DragListView.DragListCallbackAdapter() {
@@ -227,19 +238,23 @@ class SettingsActivity : AppCompatActivity() {
                     Log.d("DragListener", "ACTION_DROP")
                     view.alpha = 1.0f
                     val droppedItem = event.localState as? Pair<Long, String>
-                    if (droppedItem != null && adapter.itemList.none { it.second.equals(droppedItem.second, ignoreCase = true) }) {
-                        adapter.itemList.add(droppedItem)
-                        if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
-                            enforceUpscaleAtBottom(processingOrderListAdapter)
-                            updateProcessingOrder(adapter.itemList)
+                    if (droppedItem != null) {
+                        if (adapter.itemList.any { it.second.equals(droppedItem.second, ignoreCase = true) }) {
+                            // Show a toast if duplicate.
+                            Toast.makeText(this@SettingsActivity, "Duplicate command: ${droppedItem.second}", Toast.LENGTH_SHORT).show()
                         } else {
-                            updateProcessingOrder(adapter.itemList)
+                            adapter.itemList.add(droppedItem)
+                            if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
+                                enforceUpscaleAtBottom(processingOrderListAdapter)
+                                updateProcessingOrder(adapter.itemList)
+                            } else {
+                                updateProcessingOrder(adapter.itemList)
+                            }
+                            adapter.notifyDataSetChanged()
                         }
-                        adapter.notifyDataSetChanged()
                     }
                     true
                 }
-
                 DragEvent.ACTION_DRAG_ENDED -> {
                     Log.d("DragListener", "ACTION_DRAG_ENDED")
                     view.alpha = 1.0f
