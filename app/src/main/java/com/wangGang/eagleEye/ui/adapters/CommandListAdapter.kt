@@ -8,9 +8,9 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
 
-class SourceListAdapter(
+class CommandListAdapter(
     val items: ArrayList<Pair<Long, String>>
-) : RecyclerView.Adapter<SourceListAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<CommandListAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         // Inflate the same list item layout (or create a dedicated one for source items)

@@ -7,12 +7,12 @@ import android.widget.TextView
 import com.woxthebox.draglistview.DragItemAdapter
 import com.wangGang.eagleEye.R
 
-class MyItemAdapter(
+class ProcessingOrderListAdapter (
     itemList: ArrayList<Pair<Long, String>>,
     private val layoutId: Int,
     private val grabHandleId: Int,
     private val dragOnLongPress: Boolean
-) : DragItemAdapter<Pair<Long, String>, MyItemAdapter.ViewHolder>() {
+) : DragItemAdapter<Pair<Long, String>, ProcessingOrderListAdapter.ViewHolder>() {
 
     init {
         setItemList(itemList)

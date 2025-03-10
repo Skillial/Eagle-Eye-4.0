@@ -17,8 +17,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
-import com.wangGang.eagleEye.ui.adapters.MyItemAdapter
-import com.wangGang.eagleEye.ui.adapters.SourceListAdapter
+import com.wangGang.eagleEye.ui.adapters.CommandListAdapter
+import com.wangGang.eagleEye.ui.adapters.ProcessingOrderListAdapter
 import com.woxthebox.draglistview.DragListView
 
 class SettingsActivity : AppCompatActivity() {
@@ -31,7 +31,10 @@ class SettingsActivity : AppCompatActivity() {
             Pair(1L, "Dehaze"),
             Pair(2L, "Upscale")
         )
-        private val scaleFactors = listOf(1, 2, 4, 8, 16)
+
+        private val DEFAULT_PROCESSING_ORDER = listOf("SR", "Dehaze", "Upscale")
+
+        private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }
 
     // Views
@@ -52,8 +55,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var processingOrderDragListView: DragListView
 
     // Adapters
-    private lateinit var sourceAdapter: SourceListAdapter
-    private lateinit var adapter: MyItemAdapter
+    private lateinit var commandListAdapter: CommandListAdapter
+    private lateinit var processingOrderListAdapter: ProcessingOrderListAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,13 +112,13 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupScaleSeekBar() {
         val current = ParameterConfig.getScalingFactor()
-        val currentIndex = scaleFactors.indexOf(current).coerceAtLeast(0)
+        val currentIndex = SCALING_FACTORS.indexOf(current).coerceAtLeast(0)
         scaleSeekBar.progress = currentIndex
         scalingLabel.text = "Scale Factor: $current"
 
         scaleSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                val chosenFactor = scaleFactors[progress]
+                val chosenFactor = SCALING_FACTORS[progress]
                 ParameterConfig.setScalingFactor(chosenFactor)
                 scalingLabel.text = "Scale Factor: $chosenFactor"
             }
@@ -132,7 +135,7 @@ class SettingsActivity : AppCompatActivity() {
             Pair(index.toLong(), title)
         }.toCollection(arrayListOf())
 
-        adapter = MyItemAdapter(
+        processingOrderListAdapter = ProcessingOrderListAdapter(
             itemList = items,
             layoutId = R.layout.list_item,
             grabHandleId = R.id.item_layout,
@@ -141,19 +144,19 @@ class SettingsActivity : AppCompatActivity() {
 
         setupInternalDragAndDrop()
         setupProcessingOrderListViewConfig()
-        setupDragAndDropFromSourceList(adapter)
+        setupDragAndDropFromSourceList(processingOrderListAdapter)
         setupSwipeToDelete()
     }
 
     private fun setupCommandListRecyclerView() {
-        sourceAdapter = SourceListAdapter(COMMAND_ITEMS)
+        commandListAdapter = CommandListAdapter(COMMAND_ITEMS)
         commandListRecyclerView.layoutManager = LinearLayoutManager(this)
-        commandListRecyclerView.adapter = sourceAdapter
+        commandListRecyclerView.adapter = commandListAdapter
     }
 
     private fun setupProcessingOrderListViewConfig() {
         processingOrderDragListView.setLayoutManager(LinearLayoutManager(this))
-        processingOrderDragListView.setAdapter(adapter, true)
+        processingOrderDragListView.setAdapter(processingOrderListAdapter, true)
         processingOrderDragListView.recyclerView.isVerticalScrollBarEnabled = true
         processingOrderDragListView.setCanDragHorizontally(false)
         processingOrderDragListView.setCanDragVertically(true)
@@ -165,12 +168,12 @@ class SettingsActivity : AppCompatActivity() {
             override fun onItemDragStarted(position: Int) = Unit
 
             override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
-                updateProcessingOrder(adapter.itemList)
+                updateProcessingOrder(processingOrderListAdapter.itemList)
             }
         })
     }
 
-    private fun setupDragAndDropFromSourceList(myAdapter: MyItemAdapter) {
+    private fun setupDragAndDropFromSourceList(adapter: ProcessingOrderListAdapter) {
         processingOrderDragListView.recyclerView.setOnDragListener { view, event ->
             when (event.action) {
                 DragEvent.ACTION_DRAG_STARTED -> {
@@ -192,9 +195,9 @@ class SettingsActivity : AppCompatActivity() {
                     view.alpha = 1.0f
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null) {
-                        myAdapter.itemList.add(droppedItem)
-                        myAdapter.notifyDataSetChanged()
-                        updateProcessingOrder(myAdapter.itemList)
+                        adapter.itemList.add(droppedItem)
+                        adapter.notifyDataSetChanged()
+                        updateProcessingOrder(adapter.itemList)
                     }
                     true
                 }
@@ -225,7 +228,7 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.adapterPosition
-                (processingOrderDragListView.adapter as? MyItemAdapter)?.let { adapter ->
+                (processingOrderDragListView.adapter as? ProcessingOrderListAdapter)?.let { adapter ->
                     adapter.itemList.removeAt(pos)
                     adapter.notifyItemRemoved(pos)
                     updateProcessingOrder(adapter.itemList)
@@ -273,7 +276,7 @@ class SettingsActivity : AppCompatActivity() {
         if (order.first() == "") {
             // Remove empty string
             order.removeAt(0)
-            order.addAll(listOf("SR", "Dehaze", "Upscale"))
+            order.addAll(DEFAULT_PROCESSING_ORDER)
         }
         return order
     }
