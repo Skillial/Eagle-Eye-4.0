@@ -8,6 +8,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Top Section: Back Button, Switches, and Scale SeekBar -->
     <ImageButton
         android:id="@+id/btn_back"
         android:layout_width="50dp"
@@ -17,6 +18,7 @@
         android:background="@android:color/transparent"
         android:tint="@android:color/black" />
 
+    <!-- Other controls like switches and seekbar -->
     <LinearLayout
         android:id="@+id/settingsContainer"
         android:layout_width="match_parent"
@@ -25,7 +27,7 @@
         android:layout_marginTop="16dp"
         android:gravity="center_vertical">
 
-        <!-- Switches here -->
+        <!-- Switches -->
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchSuperResolution"
             android:layout_width="match_parent"
@@ -68,10 +70,8 @@
                 android:layout_height="wrap_content"
                 android:text="Scale Factor:"
                 android:layout_marginEnd="16dp"
-                android:textColor="@color/black"
-                />
+                android:textColor="@color/black" />
 
-            <!-- SeekBar that we’ll treat like a discrete slider for [1, 2, 4, 8, 16] -->
             <SeekBar
                 android:id="@+id/scaleSeekbar"
                 android:layout_width="match_parent"
@@ -79,46 +79,61 @@
                 android:max="4"
                 android:progress="1" />
         </LinearLayout>
+    </LinearLayout>
 
-        <!-- Source List Label -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Available Commands"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+    <!-- Horizontal container for side-by-side lists -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:paddingTop="16dp">
 
-        <!-- Source List for Commands -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/source_list_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+        <!-- Left Side: Source List -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingEnd="8dp">
 
-        <!-- Divider -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#CCCCCC"
-            android:layout_marginVertical="8dp" />
-
-        <!-- Target List Label -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Processing Order"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <!-- Target Draggable List -->
-            <com.woxthebox.draglistview.DragListView
-                android:id="@+id/target_list_view"
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </FrameLayout>
+                android:layout_height="wrap_content"
+                android:text="Available Commands"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/source_list_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </LinearLayout>
+
+        <!-- Right Side: Target List -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Processing Order"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <com.woxthebox.draglistview.DragListView
+                    android:id="@+id/target_list_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>
