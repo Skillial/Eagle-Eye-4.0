@@ -1,5 +1,8 @@
 package com.wangGang.eagleEye.ui.activities
 
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
@@ -8,10 +11,9 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
-import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
@@ -19,35 +21,40 @@ import com.wangGang.eagleEye.ui.adapters.MyItemAdapter
 import com.wangGang.eagleEye.ui.adapters.SourceListAdapter
 import com.wangGang.eagleEye.ui.views.MySwipeRefreshLayout
 import com.woxthebox.draglistview.DragListView
-import com.woxthebox.draglistview.swipe.ListSwipeHelper.OnSwipeListenerAdapter
-import com.woxthebox.draglistview.swipe.ListSwipeItem
-import com.woxthebox.draglistview.swipe.ListSwipeItem.SwipeDirection
-
 
 class SettingsActivity : AppCompatActivity() {
+
+    companion object {
+        private val TAG = "SettingsActivity"
+
+        private val COMMAND_ITEMS = arrayListOf(
+            Pair(0L, "SR"),
+            Pair(1L, "Dehaze"),
+            Pair(2L, "Upscale")
+        )
+        private val scaleFactors = listOf(1, 2, 4, 8, 16)
+    }
 
     // Views
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var backButton: ImageButton
-    /* Switches */
     private lateinit var superResolutionSwitch: SwitchCompat
+
+    /* === Switches === */
     private lateinit var dehazeSwitch: SwitchCompat
     private lateinit var gridOverlaySwitch: SwitchCompat
-    /* Scaling Factor */
+
+    /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
     private lateinit var scalingLabel: TextView
-    /* Commands List */
+
+    /* === RecyclerViews === */
+    private lateinit var commandListRecyclerView: RecyclerView
+    private lateinit var processingOrderDragListView: DragListView
+
+    // Adapters
     private lateinit var sourceAdapter: SourceListAdapter
-    private lateinit var sourceRecyclerView: RecyclerView
-    /* Draggable List */
     private lateinit var adapter: MyItemAdapter
-    private lateinit var dragListView: DragListView
-
-    private lateinit var mRefreshLayout: MySwipeRefreshLayout
-
-
-    // Constants
-    private val scaleFactors = listOf(1, 2, 4, 8, 16)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,14 +65,23 @@ class SettingsActivity : AppCompatActivity() {
         setupSwitchButtons()
         setupScaleSeekBar()
         setupBackButton()
-        setupSourceList()
-        setupDragListView()
+        setupCommandListRecyclerView()
+        setupProcessingOrderListView()
+    }
+
+    private fun assignViews() {
+        backButton = binding.btnBack
+        superResolutionSwitch = binding.switchSuperResolution
+        gridOverlaySwitch = binding.switchGridOverlay
+        dehazeSwitch = binding.switchDehaze
+        scaleSeekBar = binding.scaleSeekbar
+        scalingLabel = binding.scalingLabel
+        commandListRecyclerView = binding.sourceListView
+        processingOrderDragListView = binding.targetListView
     }
 
     private fun setupBackButton() {
-        backButton.setOnClickListener {
-            finish()
-        }
+        backButton.setOnClickListener { finish() }
     }
 
     private fun setupSwitchButtons() {
@@ -80,7 +96,6 @@ class SettingsActivity : AppCompatActivity() {
                 dehazeSwitch.isChecked = false
             }
         }
-
         dehazeSwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setDehazeEnabled(isChecked)
             if (isChecked) {
@@ -88,154 +103,76 @@ class SettingsActivity : AppCompatActivity() {
                 superResolutionSwitch.isChecked = false
             }
         }
-
         gridOverlaySwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setGridOverlayEnabled(isChecked)
         }
     }
 
     private fun setupScaleSeekBar() {
-
-        // Initialize
         val current = ParameterConfig.getScalingFactor()
         val currentIndex = scaleFactors.indexOf(current).coerceAtLeast(0)
         scaleSeekBar.progress = currentIndex
         scalingLabel.text = "Scale Factor: $current"
 
-        // Set listener
         scaleSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 val chosenFactor = scaleFactors[progress]
                 ParameterConfig.setScalingFactor(chosenFactor)
-
                 scalingLabel.text = "Scale Factor: $chosenFactor"
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
         })
     }
 
-    private fun assignViews() {
-        backButton = binding.btnBack
-
-        // Switches
-        superResolutionSwitch = binding.switchSuperResolution
-        gridOverlaySwitch = binding.switchGridOverlay
-        dehazeSwitch = binding.switchDehaze
-
-        // Scale Factor Setting
-        scaleSeekBar = binding.scaleSeekbar
-        scalingLabel = binding.scalingLabel
-
-        // Commands List (Source)
-        sourceRecyclerView = binding.sourceListView
-
-        // Draggable List
-        dragListView = binding.targetListView
-
-        mRefreshLayout = binding.swipeRefreshLayout
-    }
-
-    private fun setupSourceList() {
-        // Create your command list. These commands will be moved to the target list upon drop.
-        val commandItems = arrayListOf(
-            Pair(0L, "SR"),
-            Pair(1L, "Dehaze"),
-            Pair(2L, "Upscale")
-        )
-
-        sourceAdapter = SourceListAdapter(commandItems)
-        sourceRecyclerView.layoutManager = LinearLayoutManager(this)
-        sourceRecyclerView.adapter = sourceAdapter
-    }
-
-    private fun setupDragListView() {
-        // Get the current processing order from ParameterConfig.
-        // If none is stored, default to a known order.
-        val storedOrder = ParameterConfig.getProcessingOrder().toMutableList()
-        if (storedOrder.isEmpty()) {
-            storedOrder.addAll(listOf("SR", "Dehaze", "Upscale"))
-        } else {
-            // Ensure "Upscale" is present and always at the end.
-            if (!storedOrder.contains("Upscale")) {
-                storedOrder.add("Upscale")
-            } else {
-                storedOrder.remove("Upscale")
-                storedOrder.add("Upscale")
-            }
-        }
-
+    private fun setupProcessingOrderListView() {
+        // Retrieve stored processing order, ensuring "Upscale" is at the end.
+        val storedOrder = getStoredOrder()
         Log.d("SettingsActivity", "Stored order: $storedOrder")
-
-        // Build an ArrayList of Pair<Long, String> items based on the stored order.
         val items = storedOrder.mapIndexed { index, title ->
             Pair(index.toLong(), title)
         }.toCollection(arrayListOf())
 
-        // Initialize the adapter with the items from the stored order.
-        val myAdapter = MyItemAdapter(
+        adapter = MyItemAdapter(
             itemList = items,
-            layoutId = R.layout.list_item,  // Your list item layout
-            grabHandleId = R.id.item_layout, // Use the root layout so dragging can start anywhere
+            layoutId = R.layout.list_item,
+            grabHandleId = R.id.item_layout,
             dragOnLongPress = true
         )
-        adapter = myAdapter
 
-        // Set up DragListView.
-        dragListView.setLayoutManager(LinearLayoutManager(this))
-        dragListView.setAdapter(myAdapter, true)
-        dragListView.recyclerView.isVerticalScrollBarEnabled = true
-        dragListView.setCanDragHorizontally(false)
-        dragListView.setCanDragVertically(true)
+        setupInternalDragAndDrop()
+        setupProcessingOrderListViewConfig()
+        setupDragAndDropFromSourceList(adapter)
+        setupSwipeToDelete()
+    }
 
-        dragListView.setDragListListener(object : DragListView.DragListListenerAdapter() {
-            override fun onItemDragStarted(position: Int) {
-                mRefreshLayout.setEnabled(false)
-            }
+    private fun setupCommandListRecyclerView() {
+        sourceAdapter = SourceListAdapter(COMMAND_ITEMS)
+        commandListRecyclerView.layoutManager = LinearLayoutManager(this)
+        commandListRecyclerView.adapter = sourceAdapter
+    }
+
+    private fun setupProcessingOrderListViewConfig() {
+        processingOrderDragListView.setLayoutManager(LinearLayoutManager(this))
+        processingOrderDragListView.setAdapter(adapter, true)
+        processingOrderDragListView.recyclerView.isVerticalScrollBarEnabled = true
+        processingOrderDragListView.setCanDragHorizontally(false)
+        processingOrderDragListView.setCanDragVertically(true)
+        processingOrderDragListView.isDragEnabled = true
+    }
+
+    private fun setupInternalDragAndDrop() {
+        processingOrderDragListView.setDragListListener(object : DragListView.DragListListenerAdapter() {
+            override fun onItemDragStarted(position: Int) = Unit
 
             override fun onItemDragEnded(fromPosition: Int, toPosition: Int) {
-                mRefreshLayout.setEnabled(true)
-                // When dragging ends, enforce that "Upscale" is always at the bottom.
-                val currentList = myAdapter.itemList
-                val upscaleItem = currentList.find { it.second.equals("Upscale", ignoreCase = true) }
-                if (upscaleItem != null) {
-                    currentList.removeAll { it.second.equals("Upscale", ignoreCase = true) }
-                    currentList.add(upscaleItem)
-                    myAdapter.notifyDataSetChanged()
-                }
-                // Update processing order using ParameterConfig.
-                updateProcessingOrder(currentList)
+                updateProcessingOrder(adapter.itemList)
             }
         })
+    }
 
-        mRefreshLayout.setScrollingView(dragListView.recyclerView)
-        mRefreshLayout.setColorSchemeColors(ContextCompat.getColor(baseContext, R.color.teal_200))
-        mRefreshLayout.setOnRefreshListener {
-            mRefreshLayout.postDelayed({
-                mRefreshLayout.isRefreshing = false
-            }, 2000)
-        }
-
-        dragListView.setSwipeListener (object : OnSwipeListenerAdapter() {
-            override fun onItemSwipeStarted(item: ListSwipeItem) {
-                mRefreshLayout.setEnabled(false)
-            }
-
-            override fun onItemSwipeEnded(item: ListSwipeItem, swipedDirection: SwipeDirection) {
-                mRefreshLayout.setEnabled(true)
-
-                // Swipe to delete on left
-                if (swipedDirection == SwipeDirection.LEFT) {
-                    val adapterItem = item.tag as Pair<*, *>
-                    val pos: Int = dragListView.getAdapter().getPositionForItem(adapterItem)
-                    dragListView.getAdapter().removeItem(pos)
-                }
-            }
-        })
-
-        // Add an onDragListener to the underlying RecyclerView to handle drops from the source list.
-        dragListView.recyclerView.setOnDragListener { view, event ->
+    private fun setupDragAndDropFromSourceList(myAdapter: MyItemAdapter) {
+        processingOrderDragListView.recyclerView.setOnDragListener { view, event ->
             when (event.action) {
                 DragEvent.ACTION_DRAG_STARTED -> {
                     Log.d("DragListener", "ACTION_DRAG_STARTED")
@@ -254,7 +191,6 @@ class SettingsActivity : AppCompatActivity() {
                 DragEvent.ACTION_DROP -> {
                     Log.d("DragListener", "ACTION_DROP")
                     view.alpha = 1.0f
-                    // Retrieve the dragged item from the source list.
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null) {
                         myAdapter.itemList.add(droppedItem)
@@ -276,10 +212,75 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupSwipeToDelete() {
+        val callback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            private val paint = Paint().apply {
+                color = Color.RED
+            }
+
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean = false
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val pos = viewHolder.adapterPosition
+                (processingOrderDragListView.adapter as? MyItemAdapter)?.let { adapter ->
+                    adapter.itemList.removeAt(pos)
+                    adapter.notifyItemRemoved(pos)
+                    updateProcessingOrder(adapter.itemList)
+                }
+            }
+
+            override fun onChildDraw(
+                c: Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    val itemView = viewHolder.itemView
+                    if (dX < 0) {
+                        c.drawRect(
+                            itemView.right.toFloat() + dX,
+                            itemView.top.toFloat(),
+                            itemView.right.toFloat(),
+                            itemView.bottom.toFloat(),
+                            paint
+                        )
+                    } else if (dX > 0) {
+                        c.drawRect(
+                            itemView.left.toFloat(),
+                            itemView.top.toFloat(),
+                            itemView.left.toFloat() + dX,
+                            itemView.bottom.toFloat(),
+                            paint
+                        )
+                    }
+                }
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+            }
+        }
+        ItemTouchHelper(callback).attachToRecyclerView(processingOrderDragListView.recyclerView)
+    }
+
+    private fun getStoredOrder(): MutableList<String> {
+        val order = ParameterConfig.getProcessingOrder().toMutableList()
+        Log.d(TAG, "getStoredOrder() - order: $order")
+        if (order.first() == "") {
+            // Remove empty string
+            order.removeAt(0)
+            order.addAll(listOf("SR", "Dehaze", "Upscale"))
+        }
+        return order
+    }
+
     private fun updateProcessingOrder(newOrder: List<Pair<Long, String>>) {
-        // Extract only the algorithm names and update ParameterConfig.
         val orderTitles = newOrder.map { it.second }
         ParameterConfig.setProcessingOrder(orderTitles)
     }
-
 }
