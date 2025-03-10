@@ -13,26 +13,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
         android:background="#F5F5F5"
         android:padding="8dp">
 
-        <ImageView
-            android:id="@+id/drag_handle"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:foregroundGravity="center_vertical"
-            android:src="@drawable/ic_drag_handle"
-            android:layout_marginEnd="4dp"/>
-
+        <!-- TextView for the item title -->
         <TextView
             android:id="@+id/text"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="center_vertical"
             android:textSize="12sp"/>
-
     </LinearLayout>
 </androidx.cardview.widget.CardView>
 

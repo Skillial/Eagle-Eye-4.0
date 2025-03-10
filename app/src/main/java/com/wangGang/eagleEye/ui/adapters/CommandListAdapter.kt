@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
+import com.wangGang.eagleEye.ui.views.EnlargedDragShadowBuilder
 
 class CommandListAdapter(
     val items: ArrayList<Pair<Long, String>>
@@ -14,7 +15,7 @@ class CommandListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         // Inflate the same list item layout (or create a dedicated one for source items)
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.processing_order_list_item, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.command_list_item, parent, false)
         return ViewHolder(view)
     }
 
@@ -30,7 +31,7 @@ class CommandListAdapter(
             // Create a ClipData object with the item's text.
             val clipData = ClipData.newPlainText("command", item.second)
             // Create a DragShadowBuilder using the view.
-            val shadowBuilder = View.DragShadowBuilder(view)
+            val shadowBuilder = EnlargedDragShadowBuilder(view, 1.5f)
             // Start drag-and-drop; pass the item as local state.
             view.startDragAndDrop(clipData, shadowBuilder, item, 0)
             true // consume the long press event

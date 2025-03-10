@@ -35,9 +35,15 @@ class ProcessingOrderListAdapter (
             holder.itemView.setOnLongClickListener { false }
             // Dim the whole item to indicate it's fixed.
             holder.itemView.alpha = 0.5f
+
+            // make the drag icon invisible
+            holder.dragIcon.visibility = View.INVISIBLE
         } else {
             holder.itemView.setOnLongClickListener { true }
             holder.itemView.alpha = 1.0f
+
+            // make the drag icon visible
+            holder.dragIcon.visibility = View.VISIBLE
         }
     }
 
@@ -49,7 +55,6 @@ class ProcessingOrderListAdapter (
     inner class ViewHolder(itemView: View) :
         DragItemAdapter.ViewHolder(itemView, grabHandleId, dragOnLongPress) {
         val textView: TextView = itemView.findViewById(R.id.text)
+        val dragIcon: View = itemView.findViewById(R.id.drag_handle)
     }
-
-
 }

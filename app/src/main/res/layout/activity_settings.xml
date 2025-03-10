@@ -28,23 +28,6 @@
         android:gravity="center_vertical">
 
         <!-- Switches -->
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switchSuperResolution"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Enable Super Resolution"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
-            android:paddingEnd="16dp" />
-
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switchDehaze"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Enable Dehaze"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
-            android:paddingEnd="16dp" />
 
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchGridOverlay"
