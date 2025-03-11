@@ -86,24 +86,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupSwitchButtons() {
-        /*superResolutionSwitch.isChecked = ParameterConfig.isSuperResolutionEnabled()
-        dehazeSwitch.isChecked = ParameterConfig.isDehazeEnabled()
         gridOverlaySwitch.isChecked = ParameterConfig.isGridOverlayEnabled()
-
-        superResolutionSwitch.setOnCheckedChangeListener { _, isChecked ->
-            ParameterConfig.setSuperResolutionEnabled(isChecked)
-            if (isChecked) {
-                ParameterConfig.setDehazeEnabled(false)
-                dehazeSwitch.isChecked = false
-            }
-        }
-        dehazeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            ParameterConfig.setDehazeEnabled(isChecked)
-            if (isChecked) {
-                ParameterConfig.setSuperResolutionEnabled(false)
-                superResolutionSwitch.isChecked = false
-            }
-        }*/
 
         gridOverlaySwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setGridOverlayEnabled(isChecked)
