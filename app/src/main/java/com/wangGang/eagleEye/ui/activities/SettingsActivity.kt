@@ -125,6 +125,9 @@ class SettingsActivity : AppCompatActivity() {
         val items = storedOrder.mapIndexed { index, title ->
             Pair(index.toLong(), title)
         }.toCollection(arrayListOf())
+        if (items[0].second == "") {
+            items.removeAt(0)
+        }
 
         processingOrderListAdapter = ProcessingOrderListAdapter(
             itemList = items,
@@ -310,11 +313,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun getStoredOrder(): MutableList<String> {
         val order = ParameterConfig.getProcessingOrder().toMutableList()
         Log.d(TAG, "getStoredOrder() - order: $order")
-        if (order.first() == "") {
-            // Remove empty string
-            order.removeAt(0)
-            order.addAll(DEFAULT_PROCESSING_ORDER)
-        }
+//        if (order.first() == "") {
+//            // Remove empty string
+//            order.removeAt(0)
+//            order.addAll(DEFAULT_PROCESSING_ORDER)
+//        }
         return order
     }
 
