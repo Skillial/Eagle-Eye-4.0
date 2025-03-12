@@ -33,7 +33,6 @@ class SettingsActivity : AppCompatActivity() {
             Pair(2L, "Upscale")
         )
 
-        private val DEFAULT_PROCESSING_ORDER = listOf("SR", "Dehaze", "Upscale")
 
         private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }
@@ -169,12 +168,16 @@ class SettingsActivity : AppCompatActivity() {
 
                     // If the drop position is below (i.e. a higher index than) the "Upscale" item,
                     // show a toast and enforce that "Upscale" remains at the bottom.
-                    if (toPosition > upscaleIndex) {
-                        Toast.makeText(this@SettingsActivity,
-                            "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
-                            Toast.LENGTH_SHORT).show()
-                        enforceUpscaleAtBottom(processingOrderListAdapter)
-                        processingOrderListAdapter.notifyDataSetChanged()
+                    if (upscaleIndex != -1) {
+                        if (toPosition > upscaleIndex) {
+                            Toast.makeText(
+                                this@SettingsActivity,
+                                "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            enforceUpscaleAtBottom(processingOrderListAdapter)
+                            processingOrderListAdapter.notifyDataSetChanged()
+                        }
                     }
                 }
                 updateProcessingOrder(processingOrderListAdapter.itemList)
@@ -203,7 +206,7 @@ class SettingsActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupDragAndDropFromSourceList(adapter: ProcessingOrderListAdapter) {
+        private fun setupDragAndDropFromSourceList(adapter: ProcessingOrderListAdapter) {
         processingOrderDragListView.recyclerView.setOnDragListener { view, event ->
             when (event.action) {
                 DragEvent.ACTION_DRAG_STARTED -> {
@@ -230,20 +233,22 @@ class SettingsActivity : AppCompatActivity() {
                             Toast.makeText(this@SettingsActivity, "Duplicate command: ${droppedItem.second}", Toast.LENGTH_SHORT).show()
                         } else {
                             adapter.itemList.add(droppedItem)
+                            // If scaling factor is 8 or greater, enforce that "Upscale" stays at the bottom.
                             if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
                                 enforceUpscaleAtBottom(processingOrderListAdapter)
-                                updateProcessingOrder(adapter.itemList)
-                            } else {
-                                updateProcessingOrder(adapter.itemList)
                             }
+                            Log.d("DragListener", "New order: ${adapter.itemList}")
+                            updateProcessingOrder(adapter.itemList)
                             adapter.notifyDataSetChanged()
+
                         }
                     }
+
                     true
+
                 }
                 DragEvent.ACTION_DRAG_ENDED -> {
                     Log.d("DragListener", "ACTION_DRAG_ENDED")
-                    view.alpha = 1.0f
                     true
                 }
                 else -> {
