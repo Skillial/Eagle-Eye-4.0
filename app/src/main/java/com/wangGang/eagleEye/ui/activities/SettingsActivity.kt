@@ -217,12 +217,10 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 DragEvent.ACTION_DRAG_EXITED -> {
                     Log.d("DragListener", "ACTION_DRAG_EXITED")
-                    view.alpha = 1.0f
                     true
                 }
                 DragEvent.ACTION_DROP -> {
                     Log.d("DragListener", "ACTION_DROP")
-                    view.alpha = 1.0f
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null) {
                         if (adapter.itemList.any { it.second.equals(droppedItem.second, ignoreCase = true) }) {
@@ -231,11 +229,9 @@ class SettingsActivity : AppCompatActivity() {
                         } else {
                             adapter.itemList.add(droppedItem)
                             if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
-                                enforceUpscaleAtBottom(processingOrderListAdapter)
-                                updateProcessingOrder(adapter.itemList)
-                            } else {
-                                updateProcessingOrder(adapter.itemList)
+                                enforceUpscaleAtBottom(adapter)
                             }
+                            updateProcessingOrder(adapter.itemList)
                             adapter.notifyDataSetChanged()
                         }
                     }
@@ -243,7 +239,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 DragEvent.ACTION_DRAG_ENDED -> {
                     Log.d("DragListener", "ACTION_DRAG_ENDED")
-                    view.alpha = 1.0f
                     true
                 }
                 else -> {
