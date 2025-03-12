@@ -33,7 +33,6 @@ class SettingsActivity : AppCompatActivity() {
             Pair(2L, "Upscale")
         )
 
-        private val DEFAULT_PROCESSING_ORDER = listOf("SR", "Dehaze", "Upscale")
 
         private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }
@@ -169,12 +168,16 @@ class SettingsActivity : AppCompatActivity() {
 
                     // If the drop position is below (i.e. a higher index than) the "Upscale" item,
                     // show a toast and enforce that "Upscale" remains at the bottom.
-                    if (toPosition > upscaleIndex) {
-                        Toast.makeText(this@SettingsActivity,
-                            "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
-                            Toast.LENGTH_SHORT).show()
-                        enforceUpscaleAtBottom(processingOrderListAdapter)
-                        processingOrderListAdapter.notifyDataSetChanged()
+                    if (upscaleIndex != -1) {
+                        if (toPosition > upscaleIndex) {
+                            Toast.makeText(
+                                this@SettingsActivity,
+                                "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            enforceUpscaleAtBottom(processingOrderListAdapter)
+                            processingOrderListAdapter.notifyDataSetChanged()
+                        }
                     }
                 }
                 updateProcessingOrder(processingOrderListAdapter.itemList)
@@ -217,10 +220,12 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 DragEvent.ACTION_DRAG_EXITED -> {
                     Log.d("DragListener", "ACTION_DRAG_EXITED")
+                    view.alpha = 1.0f
                     true
                 }
                 DragEvent.ACTION_DROP -> {
                     Log.d("DragListener", "ACTION_DROP")
+                    view.alpha = 1.0f
                     val droppedItem = event.localState as? Pair<Long, String>
                     if (droppedItem != null) {
                         if (adapter.itemList.any { it.second.equals(droppedItem.second, ignoreCase = true) }) {
@@ -239,6 +244,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 DragEvent.ACTION_DRAG_ENDED -> {
                     Log.d("DragListener", "ACTION_DRAG_ENDED")
+                    view.alpha = 1.0f
                     true
                 }
                 else -> {
