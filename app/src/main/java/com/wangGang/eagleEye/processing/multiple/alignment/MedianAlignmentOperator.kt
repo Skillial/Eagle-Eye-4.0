@@ -1,5 +1,6 @@
 package com.wangGang.eagleEye.processing.multiple.alignment
 
+import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import com.wangGang.eagleEye.model.AttributeHolder
@@ -13,7 +14,7 @@ import java.util.concurrent.Semaphore
  * It is aligned by BIT operations.
  * Created by NeilDG on 12/17/2016.
  */
-class MedianAlignmentOperator(private val imageSequenceList: Array<Mat>, private val resultNames: Array<String>) {
+class MedianAlignmentOperator(private val imageSequenceList: Array<String>, private val resultNames: Array<String>) {
 
     companion object {
         private const val TAG = "ExposureAlignmentOperator"
@@ -22,7 +23,8 @@ class MedianAlignmentOperator(private val imageSequenceList: Array<Mat>, private
     fun perform() {
         val mtbAligner = Photo.createAlignMTB()
         val processMatList = imageSequenceList.toList()
-
+            .map { FileImageReader.getInstance()!!.imReadFullPath(it) }
+            .toMutableList()
         mtbAligner.process(processMatList, processMatList)
 
         for (i in 1 until processMatList.size) {

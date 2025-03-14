@@ -14,6 +14,7 @@ import com.wangGang.eagleEye.camera.CameraController.Companion.MAX_BURST_IMAGES
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
+import com.wangGang.eagleEye.processing.upscale.Interpolation
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,7 @@ class ImageReaderManager(
 ) {
     private lateinit var imageReader: ImageReader
     private var imageList = mutableListOf<Bitmap>()
+    private var saveAfter = true
     fun initializeImageReader() {
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
@@ -91,6 +93,8 @@ class ImageReaderManager(
                     handleDehazeImage()
                 } else if (each == "SR") {
                     handleSuperResolutionImage()
+                } else if (each == "Upscale"){
+                    handleUpscaleImage()
                 }
             }
         }
@@ -99,19 +103,44 @@ class ImageReaderManager(
         cameraController.openCamera()
         viewModel.setLoadingBoxVisible(false)
     }
+
+    private suspend fun handleUpscaleImage() {
+        Log.d("ImageReaderManager", "Upscaling image")
+        val newImageList = mutableListOf<Bitmap>()
+        val scale =  ParameterConfig.getScalingFactor().toFloat()
+        for (each in imageList.toList()){
+            if (scale >= 8){
+                withContext(Dispatchers.IO) {
+                    Interpolation(viewModel).upscaleImageWithImageSave(each, scale)
+                }
+            } else {
+                val newBitmap = withContext(Dispatchers.IO) {
+                    Interpolation(viewModel).upscaleImage(each, scale)
+                }
+                newImageList.add(newBitmap)
+            }
+        }
+        if (scale < 8){
+            imageList.clear()
+            imageList.addAll(newImageList)
+        } else {
+            saveAfter = false
+        }
+    }
+
     private fun saveImages(oldBitmap: Bitmap) {
         FileImageWriter.getInstance()!!
             .saveBitmapToResultsDir(oldBitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
-        FileImageWriter.getInstance()!!
-            .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
-        imageList.clear()
+        if (saveAfter) {
+            FileImageWriter.getInstance()!!
+                .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+            imageList.clear()
+        }
     }
 
     private suspend fun handleDehazeImage() {
         val newImageList = mutableListOf<Bitmap>()
-        Log.d("size", ""+imageList.toList().size)
         for (each in imageList.toList()){
-            Log.d("size", ""+each+""+imageList.toList().size)
             val newBitmap = withContext(Dispatchers.IO) {
                 SynthDehaze(context, viewModel).dehazeImage(each)
             }
@@ -126,23 +155,22 @@ class ImageReaderManager(
     private suspend fun handleSuperResolutionImage() = withContext(Dispatchers.IO) {
         val newImageList = mutableListOf<Bitmap>()
         // Process each image sequentially
+
         for (each in imageList.toList()) {
             viewModel.updateLoadingText("Saving Images")
             // Save image synchronously
             FileImageWriter.getInstance()?.saveImageToStorage(each)?.let {
                 viewModel.addImageInput(it)
             }
-            // Check if the imageInputMap has reached the required size
-            if (viewModel.imageInputMap.value?.size == 10) {
-                // Run super resolution and update image list immediately
-                newImageList.add(concreteSuperResolution.superResolutionImage(viewModel.imageInputMap.value!!))
-                viewModel.clearImageInputMap()
-            }
         }
-        // Update the imageList after processing
         imageList.clear()
+        if (viewModel.imageInputMap.value?.size == 10) {
+            // Run super resolution and update image list immediately
+            newImageList.add(concreteSuperResolution.superResolutionImage(viewModel.imageInputMap.value!!))
+            viewModel.clearImageInputMap()
+        }
+
         imageList.addAll(newImageList)
-        Log.d("size", "New imageList size: ${imageList.size}")
     }
 
 

@@ -1,6 +1,7 @@
 package com.wangGang.eagleEye.processing.multiple.alignment
 
 import android.util.Log
+import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import com.wangGang.eagleEye.model.AttributeHolder
@@ -18,7 +19,7 @@ import java.util.concurrent.Semaphore
 
 class LRWarpingOperator(
     private val refKeypoint: MatOfKeyPoint,
-    private val imagesToWarpList: Array<Mat>,
+    private val imagesToWarpList: Array<String>,
     private val resultNames: Array<String>,
     private val goodMatchList: Array<MatOfDMatch?>, // Nullable Array of MatOfDMatch
     private val keyPointList: Array<MatOfKeyPoint?> // Nullable Array of MatOfKeyPoint
@@ -28,12 +29,13 @@ class LRWarpingOperator(
     fun perform() {
         // Multi-threaded Warping
         val warpingWorkers = Array(imagesToWarpList.size) { i ->
+            val imageToWarp = FileImageReader.getInstance()!!.imReadFullPath(imagesToWarpList[i])
             WarpingWorker(
                 Semaphore(1),  // Semaphore set to 1 to allow single thread execution at a time
                 refKeypoint,
                 goodMatchList[i],
                 keyPointList[i],
-                imagesToWarpList[i]
+                imageToWarp
             )
         }
 

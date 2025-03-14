@@ -12,6 +12,7 @@ import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
+import org.opencv.core.Scalar
 import org.opencv.imgproc.Imgproc
 
 /**
@@ -48,7 +49,7 @@ class MeanFusionOperator(
     }
 
     // Similar to the native counterpart, but has more overhead due to repetitive JNI calls.
-    private fun performAlternateFusion(): Bitmap {
+    private fun performAlternateFusionWithInterpolation(): Bitmap {
         val scale = ParameterConfig.getScalingFactor().toFloat()
         outputMat = Mat()
         initialMat.convertTo(initialMat, CvType.CV_16UC(initialMat.channels())) // Convert to CV_16UC
@@ -57,7 +58,7 @@ class MeanFusionOperator(
         var quadrantHeight = initialMat.height() / 4
 //        val sumMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_CUBIC) // Linear interpolation
         var fileList = mutableListOf<Array<String>>()
-        fileList.add(ImageOperator.performJNIInterpolation(initialMat, scale, Imgproc.INTER_CUBIC, 1))
+        fileList.add(ImageOperator.performJNIInterpolation(initialMat, 1))
         initialMat.release()
         outputMat?.release()
 
@@ -68,7 +69,7 @@ class MeanFusionOperator(
             // Delete file as it is no longer needed
             FileImageWriter.getInstance()?.deleteImage(imagePath, ImageFileAttribute.FileType.JPEG)
             Log.d(TAG, "Initial image for fusion. Name: $imagePath Size: ${initialMat.size()} Scale: $scale")
-            fileList.add(ImageOperator.performJNIInterpolation(initialMat, scale, Imgproc.INTER_CUBIC, fileList.size +1))
+            fileList.add(ImageOperator.performJNIInterpolation(initialMat,fileList.size +1))
 
             // Perform interpolation
 //            initialMat = ImageOperator.performInterpolation(initialMat, scale, Imgproc.INTER_CUBIC) // Cubic interpolation
@@ -119,8 +120,36 @@ class MeanFusionOperator(
 //        sumMat.release()
     }
 
+    private fun performAlternateFusion(): Bitmap {
+        val scale = ParameterConfig.getScalingFactor().toFloat()
+        outputMat = Mat()
+        initialMat.convertTo(initialMat, CvType.CV_16UC(initialMat.channels())) // Convert to CV_16UC
+        Log.d(TAG, "Initial image for fusion Size: ${initialMat.size()} Scale: $scale")
 
-    fun getResult(): Mat? {
-        return outputMat
+        val sumMat = initialMat.clone()
+        initialMat.release()
+        outputMat?.release()
+
+        for (imagePath in imageMatPathList) {
+            // Load the next Mat
+            initialMat = FileImageReader.getInstance()?.imReadOpenCV(imagePath, ImageFileAttribute.FileType.JPEG)
+                ?: throw IllegalStateException("Failed to read image: $imagePath")
+
+            // Delete file as it is no longer needed
+            FileImageWriter.getInstance()?.deleteImage(imagePath, ImageFileAttribute.FileType.JPEG)
+
+            val maskMat = ImageOperator.produceMask(initialMat)
+
+            Core.add(sumMat, initialMat, sumMat, maskMat, CvType.CV_16UC(initialMat.channels()))
+
+            initialMat.release()
+            maskMat.release()
+            MatMemory.cleanMemory()
+        }
+
+        Core.divide(sumMat, Scalar.all(imageMatPathList.size + 1.0), sumMat)
+        sumMat.convertTo(sumMat, CvType.CV_8UC(sumMat.channels()))
+        return ImageOperator.matToBitmap(sumMat)
     }
+
 }

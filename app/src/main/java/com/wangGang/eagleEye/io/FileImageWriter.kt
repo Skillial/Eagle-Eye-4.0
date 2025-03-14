@@ -278,6 +278,15 @@
         }
 
         @Synchronized
+        fun debugSaveMatrixToImageReturnFilePath(mat: Mat, directory: String, fileName: String, fileType: ImageFileAttribute.FileType): String {
+            val imageFile = File("$proposedPath/$directory", "$fileName${ImageFileAttribute.getFileExtension(fileType)}")
+            Imgcodecs.imwrite(imageFile.absolutePath, mat)
+            Log.d(TAG, "debugSaveMatrixToImage")
+            Log.d(TAG, "Saved ${imageFile.absolutePath}")
+            return imageFile.absolutePath
+        }
+
+        @Synchronized
         fun saveMatrixToImage(mat: Mat, directory: String, fileName: String, fileType: ImageFileAttribute.FileType) {
             val dirFile = File("$proposedPath/$directory")
             if (!dirFile.mkdirs()) {

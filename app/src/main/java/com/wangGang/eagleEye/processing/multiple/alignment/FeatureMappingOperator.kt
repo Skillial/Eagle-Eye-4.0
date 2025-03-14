@@ -2,6 +2,7 @@ package com.wangGang.eagleEye.processing.multiple.alignment
 
 import android.util.Log
 import com.wangGang.eagleEye.constants.ParameterConfig
+import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.thread.FlaggingThread
 import org.opencv.core.CvType
 import org.opencv.core.DMatch
@@ -19,7 +20,7 @@ import java.util.concurrent.Semaphore
  */
 class FeatureMatchingOperator(
     private val referenceMat: Mat,
-    private val comparingMatList: Array<Mat>
+    private val comparingMatList: Array<String>
 ) {
     lateinit var refKeypoint: MatOfKeyPoint
         private set
@@ -43,32 +44,25 @@ class FeatureMatchingOperator(
 
     fun perform() {
         this.detectFeaturesInReference()
-        val featureMatchers = arrayOfNulls<FeatureMatcher>(comparingMatList.size)
-        val featureSem = Semaphore(comparingMatList.size)
 
-        // Perform multithreaded feature matching
-        for (i in featureMatchers.indices) {
-            featureMatchers[i] = FeatureMatcher(
-                featureSem,
+        for (i in comparingMatList.indices) {
+            val comparingMat = FileImageReader.getInstance()?.imReadFullPath(comparingMatList[i])!!
+
+            // Perform feature matching sequentially
+            val featureMatcher = FeatureMatcher(
+                Semaphore(1), // Dummy semaphore, not really needed for single-threaded execution
                 this.referenceDescriptor,
-                comparingMatList[i]
+                comparingMat
             )
-            featureMatchers[i]!!.startWork()
-        }
 
-        try {
-            featureSem.acquire(comparingMatList.size)
-
-            for (i in featureMatchers.indices) {
-                dMatchesList[i] = featureMatchers[i]!!.matches
-                lrKeypointsList[i] = featureMatchers[i]!!.lRKeypoint
-            }
-
-            featureSem.release(comparingMatList.size)
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
+            featureMatcher.startWork() // Execute the work synchronously
+            comparingMat.release()
+            // Store the results
+            dMatchesList[i] = featureMatcher.matches
+            lrKeypointsList[i] = featureMatcher.lRKeypoint
         }
     }
+
 
     private fun detectFeaturesInReference() {
         // Find features in reference LR image
@@ -101,6 +95,8 @@ class FeatureMatchingOperator(
             this.matches = this.matchFeaturesToReference()
             Log.d(TAG, "Number of matches found: ${matches?.size()}")
             this.finishWork()
+            this.descriptor.release()
+
         }
 
         private fun matchFeaturesToReference(): MatOfDMatch {

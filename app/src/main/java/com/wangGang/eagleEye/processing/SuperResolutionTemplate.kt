@@ -21,6 +21,7 @@ abstract class SuperResolutionTemplate {
         SharpnessMeasure.initialize()
         val energyInputMatList = readEnergy(imageInputMap)
         val filteredMatList = applyFilter(energyInputMatList)
+        energyInputMatList.forEach { it.release() }
         return filteredMatList
     }
 
