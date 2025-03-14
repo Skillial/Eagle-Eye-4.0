@@ -31,8 +31,6 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
     private fun loadAndResize(bitmap: Bitmap, size: Size): Triple<Mat, Size, Mat> {
 
         // Save before image
-        Log.d(TAG, "loadAndResize - Saving before image")
-        FileImageWriter.getInstance()!!.saveBitmapToResultsDir(bitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
 
         val rotatedBitmap = ImageUtils.rotateBitmap(bitmap, 90f)
 
@@ -113,7 +111,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(chwData), inputShape)
     }
 
-    fun dehazeImage(bitmap: Bitmap) {
+    fun dehazeImage(bitmap: Bitmap): Bitmap {
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions().apply {
             setMemoryPatternOptimization(true)
@@ -262,21 +260,25 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         Log.d(TAG, "Converting Image")
         viewModel.updateLoadingText("Converting Image")
         clearImg.convertTo(clearImg, CvType.CV_8U)
-        Imgproc.cvtColor(clearImg, clearImg, Imgproc.COLOR_RGB2BGR)
-
+        Core.rotate(clearImg, clearImg, Core.ROTATE_90_COUNTERCLOCKWISE)
         ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[9])
 
-        Log.d(TAG, "Saving Image")
-        viewModel.updateLoadingText("Saving Image")
-        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImg, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
-        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImg, ImageFileAttribute.FileType.JPEG)
+//        Log.d(TAG, "Saving Image")
+//        viewModel.updateLoadingText("Saving Image")
+//        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImg, ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+//        FileImageWriter.getInstance()!!.saveMatrixToResultsDir(clearImg, ImageFileAttribute.FileType.JPEG)
+        // convert clearImg to bitmap
+        val clearBitmap = Bitmap.createBitmap(clearImg.cols(), clearImg.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(clearImg, clearBitmap)
         clearImg.release()
-
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[10])
-
-        val uriList = FileImageReader.getInstance()
-            ?.let { listOfNotNull(it.getBeforeUriDefaultResultsFolder(), it.getAfterUriDefaultResultsFolder()) }
-        Log.d("ConcreteSuperResolution", "uriList: $uriList")
-        CameraControllerActivity.launchBeforeAndAfterActivity(uriList!!)
+        return clearBitmap
+//        clearImg.release()
+//
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[10])
+//
+//        val uriList = FileImageReader.getInstance()
+//            ?.let { listOfNotNull(it.getBeforeUriDefaultResultsFolder(), it.getAfterUriDefaultResultsFolder()) }
+//        Log.d("ConcreteSuperResolution", "uriList: $uriList")
+//        CameraControllerActivity.launchBeforeAndAfterActivity(uriList!!)
     }
 }

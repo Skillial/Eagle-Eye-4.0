@@ -1,6 +1,7 @@
 // ConcreteSuperResolution.kt
 package com.wangGang.eagleEye.processing
 
+import android.graphics.Bitmap
 import android.util.Log
 import com.wangGang.eagleEye.processing.multiple.alignment.LRWarpingOperator
 import com.wangGang.eagleEye.assessment.InputImageEnergyReader
@@ -87,7 +88,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         return SharpnessMeasure.getSharedInstance().measureSharpness(filteredMatList)
     }
 
-    override fun performSuperResolution(filteredMatList: Array<Mat>, imageInputMap: List<String>) {
+    override fun performSuperResolution(filteredMatList: Array<Mat>, imageInputMap: List<String>): Bitmap {
         viewModel.updateLoadingText("Measuring Sharpness")
         val sharpnessResult = SharpnessMeasure.getSharedInstance().measureSharpness(filteredMatList)
         val inputIndices: Array<Int> = SharpnessMeasure.getSharedInstance().trimMatList(imageInputMap.size, sharpnessResult, 0.0)
@@ -119,7 +120,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         ProgressManager.getInstance().incrementProgress("Interpolating Images")
 
         // Perform actual super-resolution
-        performActualSuperres(rgbInputMatList, inputIndices, imageInputMap, bestIndex, false)
+        return performActualSuperres(rgbInputMatList, inputIndices, imageInputMap, bestIndex, false)
 
         // Mark process as completed
 //        SRProcessManager.getInstance().srProcessCompleted()
@@ -131,7 +132,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         imageInputMap: List<String>,
         bestIndex: Int,
         debugMode: Boolean
-    ) {
+    ): Bitmap {
         // Perform denoising on original input list
         // Note: Commented this out since Eagle Eye 2.0 does not
         // use denoising by default
@@ -140,7 +141,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         // val updatedMatList = denoisingOperator.getResult()
 
         // Pass updatedMatList to the next method
-        this.performFullSRMode(rgbInputMatList, inputIndices, imageInputMap, bestIndex, debugMode)
+        return this.performFullSRMode(rgbInputMatList, inputIndices, imageInputMap, bestIndex, debugMode)
     }
 
     private fun performMedianAlignment(imagesToAlignList: Array<Mat>, resultNames: Array<String>) {
@@ -166,7 +167,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         imageInputMap: List<String>,
         bestIndex: Int,
         debug: Boolean
-    ) {
+    ): Bitmap {
         viewModel.updateLoadingText("Preprocessing Images")
         // Perform feature matching of LR images against the first image as reference mat.
         val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 3)
@@ -214,7 +215,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         ProgressManager.getInstance().incrementProgress("Assessing Image Warp Results")
 
-        this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
+        return this.performMeanFusion(inputIndices[0], bestIndex, alignedImageNames, imageInputMap, debug)
 
 //        try {
 //            Thread.sleep(3000)
@@ -222,13 +223,13 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 //            e.printStackTrace()
 //        }
         // Refresh the gallery
-        FileImageWriter.getInstance()?.refreshThumbnailFolder()
-
-        Log.d("ConcreteSuperResolution", "launchBeforeAndAfterActivity")
-        val uriList = FileImageReader.getInstance()
-            ?.let { listOfNotNull(it.getBeforeUriDefaultResultsFolder(), it.getAfterUriDefaultResultsFolder()) }
-        Log.d("ConcreteSuperResolution", "uriList: $uriList")
-        CameraControllerActivity.launchBeforeAndAfterActivity(uriList!!)
+//        FileImageWriter.getInstance()?.refreshThumbnailFolder()
+//
+//        Log.d("ConcreteSuperResolution", "launchBeforeAndAfterActivity")
+//        val uriList = FileImageReader.getInstance()
+//            ?.let { listOfNotNull(it.getBeforeUriDefaultResultsFolder(), it.getAfterUriDefaultResultsFolder()) }
+//        Log.d("ConcreteSuperResolution", "uriList: $uriList")
+//        CameraControllerActivity.launchBeforeAndAfterActivity(uriList!!)
     }
 
     private fun performPerspectiveWarping(
@@ -294,7 +295,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         alignedImageNames: Array<String>,
         imageInputMap: List<String>,
         debugMode: Boolean
-    ) {
+    ): Bitmap {
         if (alignedImageNames.size == 1) {
             viewModel.updateLoadingText("Skipping Mean Fusion, Interpolate Selected Best Image")
             val resultMat: Mat = if (debugMode) {
@@ -316,17 +317,18 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                 ?: throw IllegalStateException("Failed to get output file path")
             val savePath2 = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
                 ?: throw IllegalStateException("Failed to get output file path")
-            ImageOperator.performJNIInterpolationWithMerge(
+            val newBitmap = ImageOperator.performJNIInterpolationWithMerge(
                 resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath, savePath2
             )
 
             Log.d(TAG, "savePath: $savePath")
 
             ProgressManager.getInstance().incrementProgress("Saving Results")
-
-            Log.d("ConcreteSuperResolution", "saveHRResultToUserDir 1")
-
             resultMat.release()
+            return newBitmap
+//            Log.d("ConcreteSuperResolution", "saveHRResultToUserDir 1")
+
+
         } else {
             viewModel.updateLoadingText("Performing Mean Fusion")
 
@@ -352,15 +354,15 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                 val dirFile = File(imageInputMap[i])
                 FileImageWriter.getInstance()?.deleteRecursive(dirFile)
             }
-            fusionOperator.perform()
-            ProgressManager.getInstance().incrementProgress("Performing Mean Fusion")
+            return fusionOperator.perform()
 
-
-            if (fusionOperator.getResult() == null) {
-                throw IllegalStateException("MeanFusionOperator result is null")
-            }
-
-            fusionOperator.getResult()!!.release()
+//
+//
+//            if (fusionOperator.getResult() == null) {
+//                throw IllegalStateException("MeanFusionOperator result is null")
+//            }
+//
+//            fusionOperator.getResult()!!.release()
         }
     }
 }

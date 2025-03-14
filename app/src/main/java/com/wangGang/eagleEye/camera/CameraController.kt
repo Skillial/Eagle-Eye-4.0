@@ -65,7 +65,8 @@ class CameraController(private val context: Context, private val viewModel: Came
 
     // Methods
     fun captureImage() {
-        val isSuperResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
+        val order = ParameterConfig.getProcessingOrder()
+        val isSuperResolutionEnabled = order.contains("SR")
         val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
         val captureList = mutableListOf<CaptureRequest>()
 

@@ -1,10 +1,12 @@
 package com.wangGang.eagleEye.processing.imagetools
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import com.wangGang.eagleEye.model.single_gaussian.LoadedImagePatch
+import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
@@ -32,7 +34,7 @@ object ImageOperator {
         quadrantHeight: Int,
         outputFilePath: String,  // Added the output file path for saving the image
         outputFilePath2: String
-    )
+    ): Mat
     /*
      * Adds random noise. Returns the same mat with the noise operator applied.
      */
@@ -328,7 +330,7 @@ object ImageOperator {
         return hrMat
     }
 
-    fun performJNIInterpolationWithMerge(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int, savePath: String, savePath2: String) {
+    fun performJNIInterpolationWithMerge(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int, savePath: String, savePath2: String): Bitmap {
         val divisionFactor = 4
         val width = fromMat.cols()
         val height = fromMat.rows()
@@ -385,7 +387,14 @@ object ImageOperator {
             quadrant.release()
             resizedQuadrant.release()
         }
-        mergeQuadrants(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, savePath, savePath2)
+        val newMat = mergeQuadrants(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, savePath, savePath2)
+        // rotate newMat by -90f
+        Core.rotate(newMat, newMat, Core.ROTATE_90_COUNTERCLOCKWISE)
+
+        Imgproc.cvtColor(newMat, newMat, Imgproc.COLOR_BGR2RGB)
+        val bitmap = Bitmap.createBitmap(newMat.cols(), newMat.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(newMat, bitmap)
+        return bitmap
     }
 
     fun performJNIInterpolation(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int): Array<String> {

@@ -10,6 +10,7 @@ import android.media.ImageReader
 import android.util.Log
 import android.util.Size
 import com.wangGang.eagleEye.camera.CameraController
+import com.wangGang.eagleEye.camera.CameraController.Companion.MAX_BURST_IMAGES
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
@@ -27,7 +28,7 @@ class ImageReaderManager(
     private val viewModel: CameraViewModel
 ) {
     private lateinit var imageReader: ImageReader
-
+    private var imageList = mutableListOf<Bitmap>()
     fun initializeImageReader() {
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
@@ -47,82 +48,102 @@ class ImageReaderManager(
     fun setImageReaderListener() {
         imageReader = cameraController.getImageReader()
         val handler = cameraController.getHandler()
-        if (handler != null && handler.looper.thread.isAlive) {
+
+        if (handler.looper.thread.isAlive) {
             Log.d("ImageReaderManager", "Handler is alive")
+
             imageReader.setOnImageAvailableListener({ reader ->
                 val image = reader?.acquireNextImage()
-                image?.let { processImage(it) }
+                image?.let {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        waitForImageBurst(it) // Now we call the suspend function properly
+                    }
+                }
             }, handler)
         }
     }
 
-    private fun processImage(image: Image) {
+    private suspend fun waitForImageBurst(image: Image) {
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
         image.close()
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        val isSuperResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
-        val isDehazeEnabled = ParameterConfig.isDehazeEnabled()
-
-        if (isSuperResolutionEnabled) {
-            handleSuperResolutionImage(bitmap)
-        } else if (isDehazeEnabled) {
-            handleDehazeImage(bitmap)
-        } else {
-            handleNormalImage(bitmap)
-        }
-
-        Log.d("ImageReaderManager", "Image processed")
-    }
-    private fun handleNormalImage(bitmap: Bitmap) {
-        CoroutineScope(Dispatchers.IO).launch {
-            FileImageWriter.getInstance()!!.saveBitmapToResultsDir(bitmap,ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
-            FileImageWriter.getInstance()!!.deleteImage("${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}/${ResultType.BEFORE}", ImageFileAttribute.FileType.JPEG)
-            // delete "Before" Image
-            viewModel.setLoadingBoxVisible(false)
+        imageList.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+        val order = ParameterConfig.getProcessingOrder()
+        val isSuperResolutionEnabled = order.contains("SR")
+        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
+        Log.d("ImageReaderManager", "Total captures: $totalCaptures")
+        if (imageList.size == totalCaptures) {
+            processImage()
         }
     }
-    private fun handleDehazeImage(bitmap: Bitmap) {
-        CoroutineScope(Dispatchers.Main).launch {
-            cameraController.closeCamera()
-            withContext(Dispatchers.IO) {
-                SynthDehaze(context, viewModel).dehazeImage(bitmap)
+
+
+    private suspend fun processImage() {
+        val oldBitmap = imageList[0]
+        val order = ParameterConfig.getProcessingOrder()
+        cameraController.closeCamera()
+        if (order.isNotEmpty()){
+            Log.d("order", ""+order)
+            for (each in order) {
+                Log.d("ImageReaderManager", "Processing image with: $each")
+                if (each == "Dehaze") {
+                    handleDehazeImage()
+                } else if (each == "SR") {
+                    handleSuperResolutionImage()
+                }
             }
-            cameraController.openCamera()
-            setImageReaderListener()
-            viewModel.setLoadingBoxVisible(false)
         }
+        saveImages(oldBitmap)
+        setImageReaderListener()
+        cameraController.openCamera()
+        viewModel.setLoadingBoxVisible(false)
+    }
+    private fun saveImages(oldBitmap: Bitmap) {
+        FileImageWriter.getInstance()!!
+            .saveBitmapToResultsDir(oldBitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+        FileImageWriter.getInstance()!!
+            .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+        imageList.clear()
+    }
+
+    private suspend fun handleDehazeImage() {
+        val newImageList = mutableListOf<Bitmap>()
+        Log.d("size", ""+imageList.toList().size)
+        for (each in imageList.toList()){
+            Log.d("size", ""+each+""+imageList.toList().size)
+            val newBitmap = withContext(Dispatchers.IO) {
+                SynthDehaze(context, viewModel).dehazeImage(each)
+            }
+            newImageList.add(newBitmap)
+        }
+        imageList.clear()
+        imageList.addAll(newImageList)
     }
 
 
-    private fun handleSuperResolutionImage(bitmap: Bitmap) {
-        CoroutineScope(Dispatchers.IO).launch {
+
+    private suspend fun handleSuperResolutionImage() = withContext(Dispatchers.IO) {
+        val newImageList = mutableListOf<Bitmap>()
+        // Process each image sequentially
+        for (each in imageList.toList()) {
             viewModel.updateLoadingText("Saving Images")
-            val saveJob = launch {
-                FileImageWriter.getInstance()?.saveImageToStorage(bitmap)?.let {
-                    viewModel.addImageInput(it)
-                }
-
-                if (viewModel.imageInputMap.value?.size == 1) {
-                    FileImageWriter.getInstance()?.saveBitmapToResultsDir(bitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
-                        ?.let { FileImageReader.getInstance()?.setBeforeUri(it) }
-                }
+            // Save image synchronously
+            FileImageWriter.getInstance()?.saveImageToStorage(each)?.let {
+                viewModel.addImageInput(it)
             }
-            saveJob.join() // Ensures the file is saved before checking the count
-
+            // Check if the imageInputMap has reached the required size
             if (viewModel.imageInputMap.value?.size == 10) {
-                // Run super resolution asynchronously
-                launch {
-                    cameraController.closeCamera()
-                    concreteSuperResolution.superResolutionImage(viewModel.imageInputMap.value!!)
-                    viewModel.setLoadingBoxVisible(false)
-                    viewModel.clearImageInputMap()
-                    cameraController.openCamera()
-                    setImageReaderListener()
-                }
+                // Run super resolution and update image list immediately
+                newImageList.add(concreteSuperResolution.superResolutionImage(viewModel.imageInputMap.value!!))
+                viewModel.clearImageInputMap()
             }
         }
+        // Update the imageList after processing
+        imageList.clear()
+        imageList.addAll(newImageList)
+        Log.d("size", "New imageList size: ${imageList.size}")
     }
+
 
 }

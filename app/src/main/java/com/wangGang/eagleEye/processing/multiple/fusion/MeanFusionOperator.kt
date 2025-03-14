@@ -1,5 +1,6 @@
 package com.wangGang.eagleEye.processing.multiple.fusion
 
+import android.graphics.Bitmap
 import android.util.Log
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.io.FileImageReader
@@ -7,6 +8,8 @@ import com.wangGang.eagleEye.io.FileImageWriter
 import com.wangGang.eagleEye.io.ImageFileAttribute
 import com.wangGang.eagleEye.processing.imagetools.ImageOperator
 import com.wangGang.eagleEye.processing.imagetools.MatMemory
+import org.opencv.android.Utils
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
@@ -34,18 +37,18 @@ class MeanFusionOperator(
         scale: Int,
         quadrantWidth: Int,
         quadrantHeight: Int
-    )
+    ): Mat
 
     private var outputMat: Mat? = null
 
-    fun perform() {
+    fun perform(): Bitmap{
         // Delete acquired images if camera app was used.
         outputMat = Mat()
-        performAlternateFusion()
+        return performAlternateFusion()
     }
 
     // Similar to the native counterpart, but has more overhead due to repetitive JNI calls.
-    private fun performAlternateFusion() {
+    private fun performAlternateFusion(): Bitmap {
         val scale = ParameterConfig.getScalingFactor().toFloat()
         outputMat = Mat()
         initialMat.convertTo(initialMat, CvType.CV_16UC(initialMat.channels())) // Convert to CV_16UC
@@ -105,8 +108,12 @@ class MeanFusionOperator(
         }
 
         Log.d("MeanFusionOperator", "OutputFilePath: $outputFilePath1")
-        meanFuse(fileList2dTransposed, outputFilePath1, outputFilePath2, quadrantsNames, divisionFactor, scale.toInt(), quadrantWidth, quadrantHeight)
-
+        val newMat = meanFuse(fileList2dTransposed, outputFilePath1, outputFilePath2, quadrantsNames, divisionFactor, scale.toInt(), quadrantWidth, quadrantHeight)
+        Core.rotate(newMat, newMat, Core.ROTATE_90_COUNTERCLOCKWISE)
+        Imgproc.cvtColor(newMat, newMat, Imgproc.COLOR_BGR2RGB)
+        val bitmap = Bitmap.createBitmap(newMat.cols(), newMat.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(newMat, bitmap)
+        return bitmap
 //        Core.divide(sumMat, Scalar.all(imageMatPathList.size + 1.0), sumMat)
 //        sumMat.convertTo(outputMat, CvType.CV_8UC(sumMat.channels()))
 //        sumMat.release()

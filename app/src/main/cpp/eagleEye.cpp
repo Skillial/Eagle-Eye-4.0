@@ -2,6 +2,8 @@
 #include <opencv2/opencv.hpp>
 #include <fstream>
 #include <android/log.h>
+#include <android/bitmap.h>
+#include <cstdio>
 #define LOG_TAG "EagleEyeJNI"
 // Write C++ code here.
 //
@@ -21,7 +23,7 @@
 //      }
 //    }
 extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT jobject JNICALL
 Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrants(JNIEnv *env,
                                                                               jobject thiz,
                                                                               jobjectArray filenames,
@@ -31,66 +33,66 @@ Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrants(JN
                                                                               jint quadrantHeight,
                                                                               jstring outputFilePath,
                                                                               jstring outputFilePath2) {
-
-    // TODO: implement mergeQuadrants()
-    // Convert the Java string to a C++ string
+    // Convert the Java strings to C strings
     const char* outputPath = env->GetStringUTFChars(outputFilePath, nullptr);
     const char* outputPath2 = env->GetStringUTFChars(outputFilePath2, nullptr);
-    // Start time to measure the time taken for the operation (optional)
+
     long long startTime = cv::getTickCount();
 
-    // Initialize the merged image (size depends on your divisionFactor)
+    // Calculate total dimensions and initialize the merged image (BGR)
     int totalHeight = divisionFactor * quadrantHeight * interpolationValue;
     int totalWidth = divisionFactor * quadrantWidth * interpolationValue;
-    cv::Mat mergedImage(totalHeight, totalWidth, CV_8UC3, cv::Scalar(0, 0, 0)); // Black image as a base
-    // Loop through the filenames and process each image
-    for (int i = 0; i < env->GetArrayLength(filenames); i++) {
+    cv::Mat* mergedImage = new cv::Mat(totalHeight, totalWidth, CV_8UC3, cv::Scalar(0, 0, 0));
+
+    // Loop through the filenames and merge quadrants
+    int numFiles = env->GetArrayLength(filenames);
+    for (int i = 0; i < numFiles; i++) {
         jstring filename = (jstring) env->GetObjectArrayElement(filenames, i);
         const char* filenameStr = env->GetStringUTFChars(filename, nullptr);
 
-        // Read the current quadrant image
         cv::Mat quadrant = cv::imread(filenameStr);
         if (quadrant.empty()) {
-            continue; // Skip if the image couldn't be loaded
+            env->ReleaseStringUTFChars(filename, filenameStr);
+            continue;
         }
 
         int row = i / divisionFactor;
         int col = i % divisionFactor;
-
-        // Compute the position of the quadrant in the merged image
         int rowOffset = row * quadrantHeight * interpolationValue;
         int colOffset = col * quadrantWidth * interpolationValue;
 
-        // Copy the quadrant to the correct position in the merged image
-        quadrant.copyTo(
-                mergedImage(cv::Rect(colOffset, rowOffset, quadrant.cols, quadrant.rows))
-        );
+        quadrant.copyTo((*mergedImage)(cv::Rect(colOffset, rowOffset, quadrant.cols, quadrant.rows)));
 
-
-        // Release memory for the current quadrant
-        cv::Mat().release();
-
-        // Delete the file after processing
+        // Delete the file after processing and release the filename string
         std::remove(filenameStr);
-
-        // Release the filename string
         env->ReleaseStringUTFChars(filename, filenameStr);
     }
 
-    // Optionally, print memory usage here
-    // Log.d("Memory test - per merge", ...);
+//    // Optionally save the merged image to disk
+//    cv::imwrite(outputPath, mergedImage);
+//    cv::imwrite(outputPath2, mergedImage);
 
-    // Save the final image to the specified file path
-    cv::imwrite(outputPath, mergedImage);
-    cv::imwrite(outputPath2, mergedImage);
+//    long long elapsedTime = (cv::getTickCount() - startTime) / cv::getTickFrequency();
+//    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Time taken to merge and save the image: %lld seconds", elapsedTime);
+//
+//    // Release the output file path strings
+//    env->ReleaseStringUTFChars(outputFilePath, outputPath);
+//    env->ReleaseStringUTFChars(outputFilePath2, outputPath2);
 
-    // Calculate and log elapsed time
-    long long elapsedTime = (cv::getTickCount() - startTime) / cv::getTickFrequency();
-    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Time taken to merge and save the image: %lld seconds", elapsedTime);
+    jclass matClass = env->FindClass("org/opencv/core/Mat");
+    if (matClass == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "Cannot find org/opencv/core/Mat class");
+        return nullptr;
+    }
+    // The constructor signature is (J)V meaning it accepts a native pointer.
+    jmethodID matConstructor = env->GetMethodID(matClass, "<init>", "(J)V");
+    if (matConstructor == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "Cannot find Mat(long addr) constructor");
+        return nullptr;
+    }
+    jobject jMat = env->NewObject(matClass, matConstructor, reinterpret_cast<jlong>(mergedImage));
 
-    // Release the file path string
-    env->ReleaseStringUTFChars(outputFilePath, outputPath);
-    env->ReleaseStringUTFChars(outputFilePath2, outputPath2);
+    return jMat;
 }
 
 cv::Mat produceMask(const cv::Mat& inputMat) {
@@ -112,7 +114,7 @@ cv::Mat produceMask(const cv::Mat& inputMat) {
 }
 
 extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT jobject  JNICALL
 Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFuse(JNIEnv *env,
                                                                                   jobject thiz,
                                                                                   jobjectArray filenames,
@@ -134,7 +136,7 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
         __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "No filename arrays provided");
         env->ReleaseStringUTFChars(outputFilePath, outputPath);
         env->ReleaseStringUTFChars(outputFilePath2, outputPath);
-        return;
+        return 0;
     }
 
     for (jsize i=0;i<outerLength;i++){
@@ -169,8 +171,7 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
         }
         if (sumMat.empty()) {
             __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "No valid images processed.");
-
-            return;
+            return 0;
         }
         sumMat /= innerLength;
         // save image
@@ -184,7 +185,7 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
     }
     int totalHeight = divisionFactor * quadrantHeight * interpolationValue;
     int totalWidth = divisionFactor * quadrantWidth * interpolationValue;
-    cv::Mat mergedImage(totalHeight, totalWidth, CV_8UC3, cv::Scalar(0, 0, 0)); // Black image as a base
+    cv::Mat* mergedImage = new cv::Mat(totalHeight, totalWidth, CV_8UC3, cv::Scalar(0, 0, 0));
 
     for (int i = 0; i < env->GetArrayLength(quadrantsNames); i++) {
         jstring filename = (jstring) env->GetObjectArrayElement(quadrantsNames, i);
@@ -206,9 +207,8 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
         int colOffset = col * quadrantWidth * interpolationValue;
 
         // Copy the quadrant to the correct position in the merged image
-        quadrant.copyTo(
-                mergedImage(cv::Rect(colOffset, rowOffset, quadrant.cols, quadrant.rows))
-        );
+        quadrant.copyTo((*mergedImage)(cv::Rect(colOffset, rowOffset, quadrant.cols, quadrant.rows)));
+
 
 
         // Release memory for the current quadrant
@@ -224,14 +224,27 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
 
     // Optionally, print memory usage here
     // Log.d("Memory test - per merge", ...);
-
-    // Save the final image to the specified file path
-    cv::imwrite(outputPath, mergedImage);
-    cv::imwrite(outputPath2, mergedImage);
-    env->ReleaseStringUTFChars(outputFilePath, outputPath);
-    env->ReleaseStringUTFChars(outputFilePath2, outputPath2);
+//    // Save the final image to the specified file path
+//    cv::imwrite(outputPath, mergedImage);
+//    cv::imwrite(outputPath2, mergedImage);
+//    env->ReleaseStringUTFChars(outputFilePath, outputPath);
+//    env->ReleaseStringUTFChars(outputFilePath2, outputPath2);
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Mean fusion completed successfully.");
+    // --- Create a Java Mat object from the native cv::Mat pointer ---
+    jclass matClass = env->FindClass("org/opencv/core/Mat");
+    if (matClass == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "Cannot find org/opencv/core/Mat class");
+        return nullptr;
+    }
+    // The constructor signature is (J)V meaning it accepts a native pointer.
+    jmethodID matConstructor = env->GetMethodID(matClass, "<init>", "(J)V");
+    if (matConstructor == nullptr) {
+        __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "Cannot find Mat(long addr) constructor");
+        return nullptr;
+    }
+    jobject jMat = env->NewObject(matClass, matConstructor, reinterpret_cast<jlong>(mergedImage));
 
+    return jMat;
 }
 
 
