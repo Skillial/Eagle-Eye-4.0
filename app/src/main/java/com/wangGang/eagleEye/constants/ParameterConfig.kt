@@ -46,16 +46,6 @@ class ParameterConfig private constructor(appContext: Context) {
         }
 
         @JvmStatic
-        fun setTechnique(technique: SRTechnique) {
-            sharedInstance?.currentTechnique = technique
-        }
-
-        @JvmStatic
-        fun getCurrentTechnique(): SRTechnique {
-            return sharedInstance?.currentTechnique ?: SRTechnique.MULTIPLE
-        }
-
-        @JvmStatic
         fun setPrefs(key: String, value: Boolean) {
             sharedInstance?.editorPrefs?.putBoolean(key, value)?.apply()
         }
@@ -124,14 +114,16 @@ class ParameterConfig private constructor(appContext: Context) {
             setPrefs("algo_order", processingOrder)
         }
 
+        // TODO: Modify this code when the app supports multiple Super Resolution Blocks
         @JvmStatic
         fun isSuperResolutionEnabled(): Boolean {
-            return getPrefsBoolean("super_resolution_enabled", false)
+            return getProcessingOrder().contains("Super Resolution")
         }
 
+        // TODO: Modify this code when the app supports multiple Dehaze Blocks
         @JvmStatic
         fun isDehazeEnabled(): Boolean {
-            return getPrefsBoolean("dehaze_enabled", false)
+            return getProcessingOrder().contains("Dehaze")
         }
 
         @JvmStatic
@@ -172,12 +164,13 @@ class ParameterConfig private constructor(appContext: Context) {
         }
     }
 
-    enum class SRTechnique {
-        SINGLE,
-        MULTIPLE
+ // This enum represents the available processing algorithms.
+    enum class ProcessingAlgorithm(val displayName: String) {
+        SUPER_RESOLUTION("Super Resolution"),
+        DEHAZE("Dehaze"),
+        UPSCALE("Upscale")
     }
 
-    private var currentTechnique: SRTechnique = SRTechnique.MULTIPLE
     private val sharedPrefs: SharedPreferences = appContext.getSharedPreferences(PARAMETER_PREFS, Context.MODE_PRIVATE)
     private val editorPrefs: SharedPreferences.Editor = sharedPrefs.edit()
 }
