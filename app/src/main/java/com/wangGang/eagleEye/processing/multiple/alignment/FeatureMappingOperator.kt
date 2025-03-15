@@ -96,7 +96,6 @@ class FeatureMatchingOperator(
             Log.d(TAG, "Number of matches found: ${matches?.size()}")
             this.finishWork()
             this.descriptor.release()
-
         }
 
         private fun matchFeaturesToReference(): MatOfDMatch {
@@ -105,27 +104,46 @@ class FeatureMatchingOperator(
             Log.d(TAG, "Comparing descriptor type: ${CvType.typeToString(descriptor.type())}")
             Log.d(TAG, "Reference descriptor size: ${refDescriptor.size()}")
             Log.d(TAG, "Comparing descriptor size: ${descriptor.size()}")
+
+            // Check if either descriptor is empty to avoid crashes.
+            if (refDescriptor.empty() || descriptor.empty()) {
+                Log.e(
+                    TAG,
+                    "One or both descriptors are empty. " +
+                            "Reference descriptor size: ${refDescriptor.size()}, " +
+                            "Comparing descriptor size: ${descriptor.size()}"
+                )
+                // Return an empty MatOfDMatch if there is nothing to match.
+                return MatOfDMatch()
+            }
+
+            // Perform feature matching.
             this.matcher.match(this.refDescriptor, this.descriptor, initialMatch)
 
-            val minDistance: Float =
-                ParameterConfig.getPrefsFloat(ParameterConfig.FEATURE_MINIMUM_DISTANCE_KEY, 999.0f)
-            // Only select good matches
+            // Retrieve the minimum match distance threshold from preferences.
+            val minDistance: Float = ParameterConfig.getPrefsFloat(
+                ParameterConfig.FEATURE_MINIMUM_DISTANCE_KEY,
+                999.0f
+            )
+
+            // Only select good matches based on the distance threshold.
             val dMatchList = initialMatch.toArray()
             val goodMatchesList: MutableList<DMatch> = ArrayList()
-            for (i in dMatchList.indices) {
-                if (dMatchList[i].distance < minDistance) {
-                    goodMatchesList.add(dMatchList[i])
+            for (match in dMatchList) {
+                if (match.distance < minDistance) {
+                    goodMatchesList.add(match)
                 }
             }
 
             initialMatch.release()
 
-            // Filter matches to only show good ones
+            // Convert the filtered list to a MatOfDMatch.
             val goodMatches = MatOfDMatch()
             goodMatches.fromArray(*goodMatchesList.toTypedArray())
 
             return goodMatches
         }
+
     }
 
     companion object {

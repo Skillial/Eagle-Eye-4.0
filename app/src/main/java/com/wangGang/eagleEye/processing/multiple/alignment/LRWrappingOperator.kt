@@ -27,41 +27,41 @@ class LRWarpingOperator(
     private val warpedMatList: Array<Mat?> = arrayOfNulls(imagesToWarpList.size)
 
     fun perform() {
-        // Multi-threaded Warping
-        val warpingWorkers = Array(imagesToWarpList.size) { i ->
+        // Process each image sequentially
+        for (i in imagesToWarpList.indices) {
+            // Read the image to be warped
             val imageToWarp = FileImageReader.getInstance()!!.imReadFullPath(imagesToWarpList[i])
-            WarpingWorker(
-                Semaphore(1),  // Semaphore set to 1 to allow single thread execution at a time
+
+            // Create the warping worker without a semaphore since we're not multithreading
+            val worker = WarpingWorker(
                 refKeypoint,
                 goodMatchList[i],
                 keyPointList[i],
                 imageToWarp
             )
-        }
 
-        // Start warping
-        warpingWorkers.forEach { it.startWork() }
+            // Perform warping synchronously
+            worker.performWarping()  // Ensure this method runs on the current thread
 
-        try {
-            // Wait for all threads to finish
-            warpingWorkers.forEach {
-                it.retrieveSemaphore().acquire()  // Acquire the semaphore
-                val warpedMat = it.warpedMat
+            // Retrieve the warped image matrix
+            val warpedMat = worker.warpedMat
 
-                // Check if warpedMat is not null before calling saveMatrixToImage
-                warpedMat?.let { mat ->
-                    FileImageWriter.getInstance()!!.saveMatrixToImage(mat, resultNames[warpingWorkers.indexOf(it)], ImageFileAttribute.FileType.JPEG)
-                    mat.release()  // Release the matrix after saving
-                } ?: run {
-                    Log.e(TAG, "Warped matrix is null for worker: ${warpingWorkers.indexOf(it)}")
-                }
+            // Check if the warped matrix is not null and not empty before saving
+            if (warpedMat != null && !warpedMat.empty()) {
+                FileImageWriter.getInstance()!!.saveMatrixToImage(
+                    warpedMat,
+                    resultNames[i],
+                    ImageFileAttribute.FileType.JPEG
+                )
+                warpedMat.release()  // Release the matrix after saving
+            } else {
+                Log.e(TAG, "Warped matrix is null or empty for index: $i")
             }
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
         }
 
         finalizeResult()
     }
+
 
     private fun finalizeResult() {
         AttributeHolder.getSharedInstance()!!.putValue("WARPED_IMAGES_LENGTH_KEY", imagesToWarpList.size)
@@ -133,20 +133,17 @@ class LRWarpingOperator(
     }
 
     private inner class WarpingWorker(
-        semaphore: Semaphore,
         private val refKeypoint: MatOfKeyPoint,
         private val goodMatch: MatOfDMatch?,
         private val candidateKeypoint: MatOfKeyPoint?,
         private val candidateMat: Mat
-    ) : FlaggingThread(semaphore) {
-        var warpedMat: Mat? = null  // Make warpedMat nullable
+    ) {
+        var warpedMat: Mat? = null
 
-        override fun run() {
+        // Synchronous method to perform warping
+        fun performWarping() {
             warpedMat = warpImage(goodMatch, candidateKeypoint, candidateMat)
-            finishWork()
         }
-
-        fun retrieveSemaphore(): Semaphore = semaphore
     }
 
     companion object {
