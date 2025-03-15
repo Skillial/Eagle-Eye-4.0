@@ -16,11 +16,8 @@ class ParameterConfig private constructor(appContext: Context) {
         private const val PARAMETER_PREFS = "parameter_config"
         private const val SCALE_KEY = "scale"
 
-        const val DEBUGGING_FLAG_KEY = "DEBUGGING_FLAG_KEY"
-        const val DENOISE_FLAG_KEY = "DENOISE_FLAG_KEY"
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
-        const val SR_CHOICE_KEY = "SR_CHOICE_KEY"
 
         @JvmStatic
         fun hasInitialized(): Boolean {
@@ -100,7 +97,7 @@ class ParameterConfig private constructor(appContext: Context) {
         * Gets the processing order and returns it as a list of strings
         * */
         fun getProcessingOrder(): List<String> {
-            val defaultOrder = "Super Resolution,Dehaze"
+            val defaultOrder = "${ProcessingAlgorithm.SUPER_RESOLUTION.displayName},${ProcessingAlgorithm.DEHAZE.displayName}"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
@@ -117,13 +114,13 @@ class ParameterConfig private constructor(appContext: Context) {
         // TODO: Modify this code when the app supports multiple Super Resolution Blocks
         @JvmStatic
         fun isSuperResolutionEnabled(): Boolean {
-            return getProcessingOrder().contains("Super Resolution")
+            return getProcessingOrder().contains(ProcessingAlgorithm.SUPER_RESOLUTION.displayName)
         }
 
         // TODO: Modify this code when the app supports multiple Dehaze Blocks
         @JvmStatic
         fun isDehazeEnabled(): Boolean {
-            return getProcessingOrder().contains("Dehaze")
+            return getProcessingOrder().contains(ProcessingAlgorithm.DEHAZE.displayName)
         }
 
         @JvmStatic
@@ -147,10 +144,10 @@ class ParameterConfig private constructor(appContext: Context) {
             val colors = mutableListOf<Int>()
             for (algo in processingOrder) {
                 when (algo) {
-                    "Super Resolution"-> {
+                    ProcessingAlgorithm.SUPER_RESOLUTION.displayName -> {
                         colors.add(Color.GREEN)
                     }
-                    "Dehaze" -> {
+                    ProcessingAlgorithm.DEHAZE.displayName  -> {
                         colors.add(Color.YELLOW)
                     }
                 }
@@ -164,7 +161,6 @@ class ParameterConfig private constructor(appContext: Context) {
         }
     }
 
- // This enum represents the available processing algorithms.
     enum class ProcessingAlgorithm(val displayName: String) {
         SUPER_RESOLUTION("Super Resolution"),
         DEHAZE("Dehaze"),
