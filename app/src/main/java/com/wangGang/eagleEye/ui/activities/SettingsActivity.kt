@@ -27,13 +27,11 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private val TAG = "SettingsActivity"
 
-        private val COMMAND_ITEMS = arrayListOf(
-            Pair(0L, "SR"),
-            Pair(1L, "Dehaze"),
-            Pair(2L, "Upscale")
-        )
+        private val COMMAND_ITEMS: ArrayList<Pair<Long, String>> = ParameterConfig.ProcessingAlgorithm.entries
+            .mapIndexed { index, algorithm -> index.toLong() to algorithm.displayName }
+            .toCollection(ArrayList())
 
-        private val DEFAULT_PROCESSING_ORDER = listOf("SR", "Dehaze", "Upscale")
+        private val DEFAULT_PROCESSING_ORDER = ParameterConfig.ProcessingAlgorithm.entries.map { it.displayName }
 
         private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }
@@ -44,8 +42,6 @@ class SettingsActivity : AppCompatActivity() {
 
     /* === Switches === */
     private lateinit var gridOverlaySwitch: SwitchCompat
-//    private lateinit var superResolutionSwitch: SwitchCompat
-//    private lateinit var dehazeSwitch: SwitchCompat
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar

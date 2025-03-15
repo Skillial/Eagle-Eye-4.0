@@ -97,7 +97,7 @@ class ParameterConfig private constructor(appContext: Context) {
         * Gets the processing order and returns it as a list of strings
         * */
         fun getProcessingOrder(): List<String> {
-            val defaultOrder = "${ProcessingAlgorithm.SUPER_RESOLUTION.displayName},${ProcessingAlgorithm.DEHAZE.displayName}"
+            val defaultOrder = "${ProcessingAlgorithm.SUPER_RESOLUTION.displayName},${ProcessingAlgorithm.DEHAZE.displayName},${ProcessingAlgorithm.UPSCALE.displayName}"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
