@@ -129,18 +129,8 @@ class ParameterConfig private constructor(appContext: Context) {
         }
 
         @JvmStatic
-        fun setSuperResolutionEnabled(enabled: Boolean) {
-            setPrefs("super_resolution_enabled", enabled)
-        }
-
-        @JvmStatic
         fun isDehazeEnabled(): Boolean {
             return getPrefsBoolean("dehaze_enabled", false)
-        }
-
-        @JvmStatic
-        fun setDehazeEnabled(enabled: Boolean) {
-            setPrefs("dehaze_enabled", enabled)
         }
 
         @JvmStatic
