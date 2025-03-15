@@ -2,6 +2,7 @@ package com.wangGang.eagleEye.constants
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.util.Log
 
 /**
@@ -146,6 +147,28 @@ class ParameterConfig private constructor(appContext: Context) {
         // Helper methods
         fun isScalingFactorGreaterThanOrEqual8(): Boolean {
             return getScalingFactor() >= 8
+        }
+
+        // Mix all colors
+        fun getColorBasedOnAlgo() {
+            val processingOrder = getProcessingOrder()
+            val colors = mutableListOf<Int>()
+            for (algo in processingOrder) {
+                when (algo) {
+                    "Super Resolution"-> {
+                        colors.add(Color.GREEN)
+                    }
+                    "Dehaze" -> {
+                        colors.add(Color.YELLOW)
+                    }
+                }
+            }
+
+            // mix all colors
+            var mixedColor = 0
+            for (color in colors) {
+                mixedColor = mixedColor or color
+            }
         }
     }
 
