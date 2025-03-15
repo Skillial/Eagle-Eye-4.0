@@ -166,7 +166,7 @@ class SettingsActivity : AppCompatActivity() {
 
                     // If the drop position is below (i.e. a higher index than) the "Upscale" item,
                     // show a toast and enforce that "Upscale" remains at the bottom.
-                    if (toPosition > upscaleIndex) {
+                    if (upscaleIndex != -1 && toPosition > upscaleIndex) {
                         Toast.makeText(this@SettingsActivity,
                             "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
                             Toast.LENGTH_SHORT).show()
