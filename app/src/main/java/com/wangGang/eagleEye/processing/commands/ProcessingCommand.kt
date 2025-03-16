@@ -28,9 +28,14 @@ sealed class ProcessingCommand(val displayName: String, val tasks: List<String>,
 data object SuperResolution : ProcessingCommand(
     displayName = "Super Resolution",
     tasks = listOf(
-        "Load High Resolution Model",
-        "Process Image",
-        "Post Process Image"
+        "Reading Energy",
+        "Applying Filter",
+        "Performing Sharpness Measure",
+        "Performing Unsharp Masking",
+        "Preprocessing Images",
+        "Performing alignment/warping",
+        "Assessing Image Warp Results",
+        "Performing Mean Fusion"
     ),
     color = Color.Green
 )
@@ -56,9 +61,7 @@ data object Dehaze : ProcessingCommand(
 data object Upscale : ProcessingCommand(
     displayName = "Upscale",
     tasks = listOf(
-        "Load Upscaling Model",
-        "Process Image",
-        "Enhance Details"
+        "Upscaling Image"
     ),
     color = Color.Blue
 )

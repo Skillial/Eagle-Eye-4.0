@@ -6,6 +6,7 @@ import com.wangGang.eagleEye.io.ImageUtils
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure.SharpnessResult
 import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 import org.opencv.core.Mat
 
 abstract class SuperResolutionTemplate {
@@ -18,10 +19,17 @@ abstract class SuperResolutionTemplate {
     }
 
     open fun initialize(imageInputMap: List<String>): Array<Mat> {
+
         SharpnessMeasure.initialize()
+
         val energyInputMatList = readEnergy(imageInputMap)
+        ProgressManager.getInstance().nextTask()
+
         val filteredMatList = applyFilter(energyInputMatList)
+        ProgressManager.getInstance().nextTask()
+
         energyInputMatList.forEach { it.release() }
+
         return filteredMatList
     }
 
