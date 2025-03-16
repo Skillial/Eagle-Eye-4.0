@@ -120,7 +120,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         }
 
 //        Loading and Resizing Image
-        val (origImg, imSize, hazyImg) = loadAndResize(bitmap, Size(512.0, 512.0))
+        val (origImg, imSize, hazyImg) = loadAndResize(bitmap, Size(256.0, 256.0))
 //        val (origImg, imSize, hazyImg) = loadAndResizeFromAssets(Size(512.0, 512.0))
         ProgressManager.getInstance().nextTask()
 
@@ -151,7 +151,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
         ProgressManager.getInstance().nextTask()
 
-        val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 512, 512))
+        val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 256, 256))
 
 //        Running Transmission Model
         val transmissionOutput = transmissionInput.use { input ->
@@ -165,7 +165,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         // Close the session
         ortSessionTransmission.close()
-        val size = 512
+        val size = 256
         val reshapedTransmission = Array(size) { FloatArray(size) }
         for (h in 0 until size) {
             for (w in 0 until size) {
@@ -187,7 +187,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
 //        Resizing Image
         val hazyResized = Mat()
-        Imgproc.resize(hazyImg, hazyResized, Size(256.0, 256.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        Imgproc.resize(hazyImg, hazyResized, Size(128.0, 128.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
         ProgressManager.getInstance().nextTask()
 
 //        Preprocessing Image
