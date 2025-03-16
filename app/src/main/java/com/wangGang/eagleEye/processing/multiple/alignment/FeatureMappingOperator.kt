@@ -44,10 +44,8 @@ class FeatureMatchingOperator(
 
     fun perform() {
         this.detectFeaturesInReference()
-
         for (i in comparingMatList.indices) {
             val comparingMat = FileImageReader.getInstance()?.imReadFullPath(comparingMatList[i])!!
-
             // Perform feature matching sequentially
             val featureMatcher = FeatureMatcher(
                 Semaphore(1), // Dummy semaphore, not really needed for single-threaded execution
@@ -56,7 +54,7 @@ class FeatureMatchingOperator(
             )
 
             featureMatcher.startWork() // Execute the work synchronously
-            comparingMat.release()
+            featureMatcher.join()
             // Store the results
             dMatchesList[i] = featureMatcher.matches
             lrKeypointsList[i] = featureMatcher.lRKeypoint
@@ -90,6 +88,7 @@ class FeatureMatchingOperator(
         override fun run() {
             // Detect features in comparing mat
             this.lRKeypoint = MatOfKeyPoint()
+            Log.d(TAG, "ComparingMat size for index: ${comparingMat.size()}")
             orb.detectAndCompute(this.comparingMat, Mat(), this.lRKeypoint, this.descriptor)
             Log.d(TAG, "Number of keypoints detected in comparing image: ${lRKeypoint?.size()}")
             this.matches = this.matchFeaturesToReference()
