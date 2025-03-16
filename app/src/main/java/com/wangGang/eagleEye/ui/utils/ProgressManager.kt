@@ -52,14 +52,18 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         resetValues()
         calculateTotalTasks()
         addTasks()
-        showLoadingText()
         debugPrint()
+    }
+
+    fun showFirstTask() {
+        if (taskList.isNotEmpty()) {
+            viewModel.updateLoadingText(taskList[0])
+        }
     }
 
     fun nextTask() {
         debugPrint()
         incrementProgress()
-        showLoadingText()
     }
 
     private fun debugPrint() {
@@ -110,6 +114,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
     }
 
     private fun updateProgress() {
+        Log.d(TAG, "updateProgress()")
         val progressValue = (completedTasks.toFloat() / totalTasks.toFloat() * 100).toInt()
         _progress.postValue(progressValue)
     }

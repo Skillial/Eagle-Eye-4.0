@@ -82,6 +82,7 @@ class ImageReaderManager(
         Log.d(TAG, "Total captures: $totalCaptures")
         Log.d(TAG, "Image list size: ${imageList.size}")
         if (imageList.size == totalCaptures) {
+            ProgressManager.getInstance().showFirstTask()
             processImage()
         }
     }
