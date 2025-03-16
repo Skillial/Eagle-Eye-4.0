@@ -63,6 +63,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
 
     fun nextTask() {
         debugPrint()
+        showLoadingText()
         incrementProgress()
     }
 
@@ -98,6 +99,13 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         }
 
         Log.d(TAG, "addTasks - taskList: $taskList")
+    }
+
+    private fun onAllTasksCompleted() {
+        if (completedTasks == totalTasks) {
+            viewModel.setLoadingBoxVisible(false)
+            resetValues()
+        }
     }
 
     private fun calculateTotalTasks() {

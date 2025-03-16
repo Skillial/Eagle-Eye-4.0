@@ -33,6 +33,7 @@ import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import com.wangGang.eagleEye.ui.views.GridOverlayView
+import androidx.core.view.isVisible
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -334,7 +335,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         })
 
         viewModel.loadingBoxVisible.observe(this, Observer { visible ->
-            loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
+            if (visible) {
+                loadingBox.visibility = View.VISIBLE
+                progressBar.visibility = View.VISIBLE
+            } else {
+                loadingBox.visibility = View.GONE
+                progressBar.visibility = View.GONE
+            }
 
             if (visible) {
                 Log.d("CameraControllerActivity", "Disabling UI interactivity")
@@ -346,7 +353,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         })
 
         progressManager.progress.observe(this, Observer { progress ->
-            if (progress > 0) {
+            if (loadingBox.isVisible) {
                 progressBar.visibility = View.VISIBLE
                 progressBar.progress = progress
                 idleAnimator?.cancel() // Cancel any idle animation if active
