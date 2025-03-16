@@ -13,6 +13,9 @@ import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.camera.CameraController.Companion.MAX_BURST_IMAGES
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
+import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.SuperResolution
+import com.wangGang.eagleEye.processing.commands.Upscale
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
 import com.wangGang.eagleEye.processing.upscale.Interpolation
 import com.wangGang.eagleEye.ui.utils.ProgressManager
@@ -89,16 +92,12 @@ class ImageReaderManager(
             Log.d("order", ""+order)
             for (each in order) {
                 Log.d("ImageReaderManager", "Processing image with: $each")
-                if (each == "Dehaze") {
-                    handleDehazeImage()
-                } else if (each == "SR") {
-                    handleSuperResolutionImage()
-                } else if (each == "Upscale"){
-                    handleUpscaleImage()
+                when (each) {
+                    Dehaze.displayName -> handleDehazeImage()
+                    SuperResolution.displayName -> handleSuperResolutionImage()
+                    Upscale.displayName -> handleUpscaleImage()
                 }
             }
-        } else {
-            // TODO: set the total tasks to one
         }
 
         saveImages(oldBitmap)
@@ -111,6 +110,8 @@ class ImageReaderManager(
         Log.d("ImageReaderManager", "Upscaling image")
         val newImageList = mutableListOf<Bitmap>()
         val scale =  ParameterConfig.getScalingFactor().toFloat()
+
+//        Upscaling Images
         for (each in imageList.toList()){
             if (scale >= 8){
                 withContext(Dispatchers.IO) {
@@ -123,6 +124,7 @@ class ImageReaderManager(
                 newImageList.add(newBitmap)
             }
         }
+        ProgressManager.getInstance().nextTask()
         if (scale < 8){
             imageList.clear()
             imageList.addAll(newImageList)
@@ -134,7 +136,7 @@ class ImageReaderManager(
     private fun saveImages(oldBitmap: Bitmap) {
         FileImageWriter.getInstance()!!
             .saveBitmapToResultsDir(oldBitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
-        if (saveAfter) {
+        if (saveAfter && imageList.isNotEmpty()) {
             FileImageWriter.getInstance()!!
                 .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
             imageList.clear()

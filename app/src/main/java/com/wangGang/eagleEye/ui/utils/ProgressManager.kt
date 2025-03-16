@@ -66,8 +66,8 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         Log.d(TAG, "debugPrint()")
         Log.d(TAG, "Progress: $completedTasks/$totalTasks")
         Log.d(TAG, "Current Task Index: $completedTasks")
-        Log.d(TAG, "Current Task: ${taskList[completedTasks]}")
-        if (completedTasks < totalTasks) {
+        if (completedTasks < totalTasks && taskList.isNotEmpty()) {
+            Log.d(TAG, "Current Task: ${taskList[completedTasks]}")
             Log.d(TAG, "Next Task: ${taskList[completedTasks + 1]}")
         }
     }
@@ -93,7 +93,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         Log.d(TAG, "addTasks - taskList: $taskList")
     }
 
-    private fun calculateTotalTasks(): Int {
+    private fun calculateTotalTasks() {
         val order = ParameterConfig.getProcessingOrder()
         var total = 0
         for (item in order) {
@@ -103,7 +103,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         }
 
         Log.d(TAG, "calculateTotalTasks - total: $total")
-        return total
+        totalTasks = total
     }
 
     private fun updateProgress() {
@@ -116,12 +116,6 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
             completedTasks++
             updateProgress()
         }
-    }
-
-    private fun incrementProgress(debugMessage: String) {
-        incrementProgress()
-        Log.d("ProgressBar", "Finished: $debugMessage")
-        Log.d("ProgressBar", "Progress: $completedTasks/$totalTasks")
     }
 
     private fun resetValues() {

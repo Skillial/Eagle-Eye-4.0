@@ -94,7 +94,6 @@ class CameraController(private val context: Context, private val viewModel: Came
         playShutterSound()
 
         viewModel.setLoadingBoxVisible(true)
-        ProgressManager.getInstance().incrementProgress("Capturing Images")
 
         cameraCaptureSession.captureBurst(
             captureList,

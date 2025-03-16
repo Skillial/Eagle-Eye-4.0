@@ -133,11 +133,10 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         val warpChoice = ParameterConfig.getPrefsInt(ParameterConfig.WARP_CHOICE_KEY, 3)
 
         // Perform perspective warping and alignment
+//        Preprocessing Images
         val succeedingMatList = rgbInputMatList.sliceArray(1 until rgbInputMatList.size)
-
         val medianResultNames = Array(succeedingMatList.size) { i -> "median_align_$i" }
         val warpResultNames = Array(succeedingMatList.size) { i -> "warp_$i" }
-
         ProgressManager.getInstance().nextTask()
 
         // 1 = Best Alignment Technique

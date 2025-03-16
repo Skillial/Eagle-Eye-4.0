@@ -43,17 +43,20 @@ data object SuperResolution : ProcessingCommand(
 data object Dehaze : ProcessingCommand(
     displayName = "Dehaze",
     tasks = listOf(
-        "Capturing Images",
         "Loading and Resizing Image",
         "Loading Albedo Model",
         "Preprocessing Image",
         "Running Albedo Model",
         "Loading Transmission Model",
         "Running Transmission Model",
+        "Resizing Image",
+        "Preprocessing Image",
         "Loading Airlight Model",
         "Running Airlight Model",
+        "Normalizing Image",
+        "Clearing Image",
         "Processing Image",
-        "Saving Image"
+        "Converting Image"
     ),
     color = Color.Yellow
 )
@@ -61,7 +64,7 @@ data object Dehaze : ProcessingCommand(
 data object Upscale : ProcessingCommand(
     displayName = "Upscale",
     tasks = listOf(
-        "Upscaling Image"
+        "Upscaling Images"
     ),
     color = Color.Blue
 )
