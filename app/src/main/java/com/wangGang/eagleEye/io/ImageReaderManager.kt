@@ -86,8 +86,6 @@ class ImageReaderManager(
         val order = ParameterConfig.getProcessingOrder()
         cameraController.closeCamera()
         if (order.isNotEmpty()){
-            // TODO: set the total tasks for the progress manager
-
             Log.d("order", ""+order)
             for (each in order) {
                 Log.d("ImageReaderManager", "Processing image with: $each")

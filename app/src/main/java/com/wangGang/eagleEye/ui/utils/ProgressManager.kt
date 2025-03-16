@@ -65,6 +65,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         calculateTotalTasks()
         addTasks()
         showLoadingText()
+        debugPrint()
     }
 
     fun nextTask() {

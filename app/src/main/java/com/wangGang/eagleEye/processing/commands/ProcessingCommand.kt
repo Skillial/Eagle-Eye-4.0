@@ -8,7 +8,9 @@ sealed class ProcessingCommand(val displayName: String, val tasks: List<String>,
 
     companion object {
         // List of all available commands.
-        val entries: List<ProcessingCommand> = listOf(SuperResolution, Dehaze, Upscale)
+        val entries: List<ProcessingCommand> by lazy {
+            listOf(SuperResolution, Dehaze, Upscale)
+        }
 
         // Factory function to retrieve a ProcessingCommand based on its displayName.
         fun fromDisplayName(name: String): ProcessingCommand? {

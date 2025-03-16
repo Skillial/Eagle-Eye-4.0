@@ -28,9 +28,7 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private val TAG = "SettingsActivity"
 
-        private val COMMAND_ITEMS: ArrayList<Pair<Long, String>> = ProcessingCommand.entries
-            .mapIndexed { index, algorithm -> index.toLong() to algorithm.displayName }
-            .toCollection(ArrayList())
+        private lateinit var commandItems: ArrayList<Pair<Long, String>>
 
         private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }
@@ -58,6 +56,12 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        commandItems = ArrayList(
+            ProcessingCommand.entries.mapIndexed { index, algorithm ->
+                index.toLong() to algorithm.displayName
+            }
+        )
 
         assignViews()
         setupSwitchButtons()
@@ -139,7 +143,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupCommandListRecyclerView() {
-        commandListAdapter = CommandListAdapter(COMMAND_ITEMS)
+        commandListAdapter = CommandListAdapter(commandItems)
         commandListRecyclerView.layoutManager = LinearLayoutManager(this)
         commandListRecyclerView.adapter = commandListAdapter
     }
