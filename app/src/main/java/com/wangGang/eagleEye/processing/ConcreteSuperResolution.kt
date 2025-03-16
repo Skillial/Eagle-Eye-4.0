@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import java.io.File
@@ -38,43 +39,35 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
         viewModel.updateLoadingText("Reading energy")
-
         val inputMatList: Array<Mat> = Array(imageInputMap.size) { Mat() }
-        val energyReaders: MutableList<InputImageEnergyReader> = mutableListOf()
-        val energySem = Semaphore(0)
 
         try {
-            for (i in inputMatList.indices) {
-                val reader = InputImageEnergyReader(energySem, imageInputMap[i])
-                energyReaders.add(reader)
-                // Assuming each reader is run on a separate thread or coroutines
+            for (i in imageInputMap.indices) {
+                // Create a dummy semaphore because InputImageEnergyReader requires one.
+                // Its release from finishWork() is not used in sequential processing.
+                val dummySem = Semaphore(0)
+                val reader = InputImageEnergyReader(dummySem, imageInputMap[i])
+
+                // Start the reader and wait for it to finish before proceeding
+                reader.start()
+                reader.join()  // Wait until this thread completes
+
+                // Copy the result from the reader to the array
+                inputMatList[i] = reader.outputMat!!
+
+                ProgressManager.getInstance().incrementProgress("Reading energy for image $i")
             }
-
-            // Wait for all threads to finish
-            for (reader in energyReaders) {
-                reader.start()  // Ensure reader threads are started (this depends on how InputImageEnergyReader works)
-            }
-
-            // Wait for all semaphores to release
-            energySem.acquire(inputMatList.size)
-
-            ProgressManager.getInstance().incrementProgress("Reading energy")
 
             viewModel.updateLoadingText("Copying Results")
             Log.d("ProgressBar", "Copying Results")
-            // Once all tasks are done, copy results
-            for (i in energyReaders.indices) {
-                inputMatList[i] = energyReaders[i].outputMat!!
-            }
-
             ProgressManager.getInstance().incrementProgress("Copying Results")
-
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
 
         return inputMatList
     }
+
 
     override fun applyFilter(energyInputMatList: Array<Mat>): Array<Mat> {
         viewModel.updateLoadingText("Applying filter")
@@ -95,22 +88,24 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
         ProgressManager.getInstance().incrementProgress("Measuring Sharpness")
 
-        val rgbInputMatList = Array(inputIndices.size) { Mat() }
+        val rgbInputMatList = Array(inputIndices.size) { "" }
+
         val bestIndex = inputIndices.indexOf(sharpnessResult.bestIndex)
 
         viewModel.updateLoadingText("Performing Unsharp Masking")
 
-        // Run image processing in parallel
         runBlocking {
-            inputIndices.mapIndexed { index, i ->
-                async(Dispatchers.IO) {
+            for ((index, i) in inputIndices.withIndex()) {
+                withContext(Dispatchers.IO) {
                     val inputMat = FileImageReader.getInstance()!!.imReadFullPath(imageInputMap[i])
                     val unsharpMaskOperator = UnsharpMaskOperator(inputMat, i)
                     unsharpMaskOperator.perform()
-                    rgbInputMatList[index] = unsharpMaskOperator.getResult()
+                    rgbInputMatList[index] = unsharpMaskOperator.getFilePath()!!
+                    inputMat.release()
                 }
-            }.awaitAll()
+            }
         }
+
 
         viewModel.updateLoadingText("Interpolating Images")
         // Super-resolution interpolation
@@ -127,7 +122,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     }
 
     private fun performActualSuperres(
-        rgbInputMatList: Array<Mat>,
+        rgbInputMatList: Array<String>,
         inputIndices: Array<Int>,
         imageInputMap: List<String>,
         bestIndex: Int,
@@ -144,7 +139,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
         return this.performFullSRMode(rgbInputMatList, inputIndices, imageInputMap, bestIndex, debugMode)
     }
 
-    private fun performMedianAlignment(imagesToAlignList: Array<Mat>, resultNames: Array<String>) {
+    private fun performMedianAlignment(imagesToAlignList: Array<String>, resultNames: Array<String>) {
 
         val medianAlignmentOperator = MedianAlignmentOperator(imagesToAlignList, resultNames)
         medianAlignmentOperator.perform()
@@ -162,7 +157,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     }
 
     private fun performFullSRMode(
-        rgbInputMatList: Array<Mat>,
+        rgbInputMatList: Array<String>,
         inputIndices: Array<Int>,
         imageInputMap: List<String>,
         bestIndex: Int,
@@ -233,15 +228,14 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
     }
 
     private fun performPerspectiveWarping(
-        referenceMat: Mat,
-        candidateMatList: Array<Mat>,
-        imagesToWarpList: Array<Mat>,
+        referenceMat: String,
+        candidateMatList: Array<String>,
+        imagesToWarpList: Array<String>,
         resultNames: Array<String>
     ) {
-
-        val matchingOperator = FeatureMatchingOperator(referenceMat, candidateMatList)
+        val refMat = FileImageReader.getInstance()?.imReadFullPath(referenceMat)!!
+        val matchingOperator = FeatureMatchingOperator(refMat, candidateMatList)
         matchingOperator.perform()
-
         val perspectiveWarpOperator = LRWarpingOperator(
             matchingOperator.refKeypoint,
             imagesToWarpList,
@@ -312,22 +306,8 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
             // No need to perform image fusion, just use the best image.
             ProgressManager.getInstance().incrementProgress("Skipping Mean Fusion, Interpolate Selected Best Image")
 
-
-            val savePath = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.JPEG)
-                ?: throw IllegalStateException("Failed to get output file path")
-            val savePath2 = FileImageWriter.getInstance()?.getSharedResultPath(ImageFileAttribute.FileType.JPEG)
-                ?: throw IllegalStateException("Failed to get output file path")
-            val newBitmap = ImageOperator.performJNIInterpolationWithMerge(
-                resultMat, ParameterConfig.getScalingFactor().toFloat(), Imgproc.INTER_CUBIC, 1, savePath, savePath2
-            )
-
-            Log.d(TAG, "savePath: $savePath")
-
             ProgressManager.getInstance().incrementProgress("Saving Results")
-            resultMat.release()
-            return newBitmap
-//            Log.d("ConcreteSuperResolution", "saveHRResultToUserDir 1")
-
+            return ImageOperator.matToBitmap(resultMat)
 
         } else {
             viewModel.updateLoadingText("Performing Mean Fusion")
@@ -355,14 +335,6 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                 FileImageWriter.getInstance()?.deleteRecursive(dirFile)
             }
             return fusionOperator.perform()
-
-//
-//
-//            if (fusionOperator.getResult() == null) {
-//                throw IllegalStateException("MeanFusionOperator result is null")
-//            }
-//
-//            fusionOperator.getResult()!!.release()
         }
     }
 }

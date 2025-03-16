@@ -31,10 +31,17 @@ object ImageOperator {
         divisionFactor: Int,
         interpolationValue: Int,
         quadrantWidth: Int,
-        quadrantHeight: Int,
-        outputFilePath: String,  // Added the output file path for saving the image
-        outputFilePath2: String
+        quadrantHeight: Int
     ): Mat
+
+    external fun mergeQuadrantsWithFileSave(
+        filenames: Array<String>,  // or List<String> if you prefer using a list
+        divisionFactor: Int,
+        interpolationValue: Int,
+        quadrantWidth: Int,
+        quadrantHeight: Int,
+        outputFile: String
+    )
     /*
      * Adds random noise. Returns the same mat with the noise operator applied.
      */
@@ -330,7 +337,27 @@ object ImageOperator {
         return hrMat
     }
 
-    fun performJNIInterpolationWithMerge(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int, savePath: String, savePath2: String): Bitmap {
+    fun bitmapToMat(bitmap: Bitmap): Mat {
+        val mat = Mat()
+        val bmp32 = bitmap.copy(Bitmap.Config.ARGB_8888, true) // Ensure it's in ARGB_8888 format
+        Utils.bitmapToMat(bmp32, mat)
+        Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
+        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2BGR)
+        return mat
+    }
+
+    fun matToBitmap(mat: Mat): Bitmap {
+        val newMat = Mat()
+        mat.copyTo(newMat)
+        Core.rotate(newMat, newMat, Core.ROTATE_90_COUNTERCLOCKWISE)
+        Imgproc.cvtColor(newMat, newMat, Imgproc.COLOR_BGR2RGB)
+        val bitmap = Bitmap.createBitmap(newMat.cols(), newMat.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(newMat, bitmap)
+        return bitmap
+    }
+
+
+    fun performJNIInterpolationWithMerge(fromMat: Mat, scaling: Float): Bitmap {
         val divisionFactor = 4
         val width = fromMat.cols()
         val height = fromMat.rows()
@@ -365,7 +392,6 @@ object ImageOperator {
             }
         }
         fromMat.release()
-        Log.d(TAG, scaling.toString())
         for (i in fileList.indices) {
             val quadrant = Imgcodecs.imread(fileList[i])
             val resizedQuadrant = Mat()
@@ -387,17 +413,71 @@ object ImageOperator {
             quadrant.release()
             resizedQuadrant.release()
         }
-        val newMat = mergeQuadrants(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, savePath, savePath2)
-        // rotate newMat by -90f
-        Core.rotate(newMat, newMat, Core.ROTATE_90_COUNTERCLOCKWISE)
-
-        Imgproc.cvtColor(newMat, newMat, Imgproc.COLOR_BGR2RGB)
-        val bitmap = Bitmap.createBitmap(newMat.cols(), newMat.rows(), Bitmap.Config.ARGB_8888)
-        Utils.matToBitmap(newMat, bitmap)
-        return bitmap
+        val newMat = mergeQuadrants(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight)
+        return matToBitmap(newMat)
     }
 
-    fun performJNIInterpolation(fromMat: Mat, scaling: Float, interpolationType: Int, count: Int): Array<String> {
+    fun performInterpolationWithImageSave(fromMat: Mat, scaling: Float) {
+        val divisionFactor = 4
+        val width = fromMat.cols()
+        val height = fromMat.rows()
+        val quadrantWidth = width / divisionFactor
+        val remainderWidth = width % divisionFactor
+        val quadrantHeight = height / divisionFactor
+        val remainderHeight = height % divisionFactor
+
+        // initialize filenames
+        val filenames = Array(divisionFactor * divisionFactor) { index ->
+            "/quadrant${index + 1}"
+        }
+
+        val fileList = mutableListOf<String>()
+
+        var quadrantCount = 0;
+        for (i in 0 until divisionFactor) {
+            for (j in 0 until divisionFactor) {
+                val topLeftX = j * quadrantWidth
+                val bottomRightX =
+                    (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
+                val topLeftY = i * quadrantHeight
+                val bottomRightY =
+                    (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
+                FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
+                    fromMat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX),
+                    filenames[quadrantCount],
+                    ImageFileAttribute.FileType.JPEG
+                )?.let { fileList.add(it) }
+
+                quadrantCount += 1;
+            }
+        }
+        fromMat.release()
+        for (i in fileList.indices) {
+            val quadrant = Imgcodecs.imread(fileList[i])
+            val resizedQuadrant = Mat()
+
+            // perform bicubic interpolation
+            Imgproc.resize(
+                quadrant, resizedQuadrant,
+                Size(
+                    quadrant.cols().toDouble() * scaling,
+                    quadrant.rows().toDouble() * scaling
+                ),
+                0.0, 0.0, Imgproc.INTER_CUBIC
+            )
+            fileList[i] = FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
+                resizedQuadrant,
+                filenames[i],
+                ImageFileAttribute.FileType.JPEG
+            ).toString()
+            quadrant.release()
+            resizedQuadrant.release()
+        }
+        val outputFile = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.JPEG)
+            ?: throw IllegalStateException("Failed to get output file path 1")
+        mergeQuadrantsWithFileSave(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, outputFile)
+    }
+    fun performJNIInterpolation(fromMat: Mat, count: Int): Array<String> {
         val divisionFactor = 4
         val width = fromMat.cols()
         val height = fromMat.rows()
@@ -432,30 +512,46 @@ object ImageOperator {
             }
         }
         fromMat.release()
-        Log.d(TAG, scaling.toString())
-        for (i in fileList.indices) {
-            val quadrant = Imgcodecs.imread(fileList[i])
-            val resizedQuadrant = Mat()
-            // perform bicubic interpolation
-            Imgproc.resize(
-                quadrant, resizedQuadrant,
-                Size(
-                    quadrant.cols().toDouble() * scaling,
-                    quadrant.rows().toDouble() * scaling
-                ),
-                0.0, 0.0, Imgproc.INTER_CUBIC
-            )
-            fileList[i] = FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
-                resizedQuadrant,
-                filenames[i],
-                ImageFileAttribute.FileType.JPEG
-            ).toString()
-            quadrant.release()
-            resizedQuadrant.release()
-        }
         return fileList.toTypedArray()
     }
 
+    fun divideImages(fromMat: Mat, count: Int): Array<String> {
+        val divisionFactor = 4
+        val width = fromMat.cols()
+        val height = fromMat.rows()
+        val quadrantWidth = width / divisionFactor
+        val remainderWidth = width % divisionFactor
+        val quadrantHeight = height / divisionFactor
+        val remainderHeight = height % divisionFactor
+
+        // initialize filenames
+        val filenames = Array(divisionFactor * divisionFactor) { index ->
+            "/quadrant${count}_${index + 1}"
+        }
+
+        val fileList = mutableListOf<String>()
+
+        var quadrantCount = 0;
+        for (i in 0 until divisionFactor) {
+            for (j in 0 until divisionFactor) {
+                val topLeftX = j * quadrantWidth
+                val bottomRightX =
+                    (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
+                val topLeftY = i * quadrantHeight
+                val bottomRightY =
+                    (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
+                FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
+                    fromMat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX),
+                    filenames[quadrantCount],
+                    ImageFileAttribute.FileType.JPEG
+                )?.let { fileList.add(it) }
+
+                quadrantCount += 1;
+            }
+        }
+        fromMat.release()
+        return fileList.toTypedArray()
+    }
 
     fun performInterpolationInPlace(
         fromMat: Mat?,
