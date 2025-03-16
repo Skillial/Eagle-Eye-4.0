@@ -48,18 +48,6 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         taskList = emptyList()
     }
 
-    fun incrementProgress(debugMessage: String) {
-        incrementProgress()
-        Log.d("ProgressBar", "Finished: $debugMessage")
-        Log.d("ProgressBar", "Progress: $completedTasks/$totalTasks")
-    }
-
-    private fun resetValues() {
-        completedTasks = 0
-        taskList = emptyList()
-        _progress.postValue(0)
-    }
-
     fun resetProgress() {
         resetValues()
         calculateTotalTasks()
@@ -128,5 +116,17 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
             completedTasks++
             updateProgress()
         }
+    }
+
+    private fun incrementProgress(debugMessage: String) {
+        incrementProgress()
+        Log.d("ProgressBar", "Finished: $debugMessage")
+        Log.d("ProgressBar", "Progress: $completedTasks/$totalTasks")
+    }
+
+    private fun resetValues() {
+        completedTasks = 0
+        taskList = emptyList()
+        _progress.postValue(0)
     }
 }
