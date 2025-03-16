@@ -65,6 +65,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         debugPrint()
         showLoadingText()
         incrementProgress()
+        onAllTasksCompleted()
     }
 
     private fun debugPrint() {
