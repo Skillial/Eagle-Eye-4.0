@@ -122,16 +122,16 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         viewModel.updateLoadingText("Loading and Resizing Image")
         val (origImg, imSize, hazyImg) = loadAndResize(bitmap, Size(512.0, 512.0))
 //        val (origImg, imSize, hazyImg) = loadAndResizeFromAssets(Size(512.0, 512.0))
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[1])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[1])
 
 
         viewModel.updateLoadingText("Loading Albedo Model")
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[2])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[2])
 
         viewModel.updateLoadingText("Preprocessing Image")
         val hazyInput = preprocess(hazyImg, env)
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[3])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[3])
 
         viewModel.updateLoadingText("Running Albedo Model")
         val albedoOutput = hazyInput.use { input ->
@@ -141,7 +141,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 }
             }
         }
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[4])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[4])
 
         // Close the session
         ortSessionAlbedo.close()
@@ -150,7 +150,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         viewModel.updateLoadingText("Loading Transmission Model")
         val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[5])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[5])
 
         val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 512, 512))
 
@@ -162,7 +162,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 }
             }
         }
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[6])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[6])
 
         // Close the session
         ortSessionTransmission.close()
@@ -202,7 +202,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         viewModel.updateLoadingText("Loading Airlight Model")
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
         sessionOptions.close()
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[7])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[7])
 
         Log.d(TAG, "Running Airlight Model")
         viewModel.updateLoadingText("Running Airlight Model")
@@ -211,7 +211,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 (results.get(0) as OnnxTensor).floatBuffer.array()
             }
         }
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[8])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[8])
 
         // Close the session
         ortSessionAirlight.close()
@@ -261,7 +261,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         viewModel.updateLoadingText("Converting Image")
         clearImg.convertTo(clearImg, CvType.CV_8U)
         Core.rotate(clearImg, clearImg, Core.ROTATE_90_COUNTERCLOCKWISE)
-        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[9])
+//        ProgressManager.getInstance().incrementProgress(ProgressManager.dehazeSteps[9])
 
 //        Log.d(TAG, "Saving Image")
 //        viewModel.updateLoadingText("Saving Image")
