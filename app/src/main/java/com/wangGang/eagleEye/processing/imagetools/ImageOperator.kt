@@ -512,19 +512,46 @@ object ImageOperator {
             }
         }
         fromMat.release()
-        for (i in fileList.indices) {
-            val quadrant = Imgcodecs.imread(fileList[i])
-            fileList[i] = FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
-                quadrant,
-                filenames[i],
-                ImageFileAttribute.FileType.JPEG
-            ).toString()
-            quadrant.release()
-            quadrant.release()
-        }
         return fileList.toTypedArray()
     }
 
+    fun divideImages(fromMat: Mat, count: Int): Array<String> {
+        val divisionFactor = 4
+        val width = fromMat.cols()
+        val height = fromMat.rows()
+        val quadrantWidth = width / divisionFactor
+        val remainderWidth = width % divisionFactor
+        val quadrantHeight = height / divisionFactor
+        val remainderHeight = height % divisionFactor
+
+        // initialize filenames
+        val filenames = Array(divisionFactor * divisionFactor) { index ->
+            "/quadrant${count}_${index + 1}"
+        }
+
+        val fileList = mutableListOf<String>()
+
+        var quadrantCount = 0;
+        for (i in 0 until divisionFactor) {
+            for (j in 0 until divisionFactor) {
+                val topLeftX = j * quadrantWidth
+                val bottomRightX =
+                    (j + 1) * quadrantWidth + if (j == divisionFactor - 1) remainderWidth else 0
+                val topLeftY = i * quadrantHeight
+                val bottomRightY =
+                    (i + 1) * quadrantHeight + if (i == divisionFactor - 1) remainderHeight else 0
+                FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
+                    fromMat.submat(topLeftY, bottomRightY, topLeftX, bottomRightX),
+                    filenames[quadrantCount],
+                    ImageFileAttribute.FileType.JPEG
+                )?.let { fileList.add(it) }
+
+                quadrantCount += 1;
+            }
+        }
+        fromMat.release()
+        return fileList.toTypedArray()
+    }
 
     fun performInterpolationInPlace(
         fromMat: Mat?,

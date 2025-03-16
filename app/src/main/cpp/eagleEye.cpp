@@ -100,24 +100,17 @@ JNIEXPORT jobject  JNICALL
 Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFuse(JNIEnv *env,
                                                                                   jobject thiz,
                                                                                   jobjectArray filenames,
-                                                                                  jstring outputFilePath,
-                                                                                  jstring outputFilePath2,
                                                                                   jobjectArray quadrantsNames,
                                                                                   jint divisionFactor,
-                                                                                  jint interpolationValue,
                                                                                   jint quadrantWidth,
                                                                                   jint quadrantHeight) {
     // TODO: implement meanFuse()
-    // Convert the Java string to a C++ string
-    const char* outputPath = env->GetStringUTFChars(outputFilePath, nullptr);
-    const char* outputPath2 = env->GetStringUTFChars(outputFilePath2, nullptr);
+
 
     // Get the number of inner arrays
     jsize outerLength = env->GetArrayLength(filenames);
     if (outerLength == 0) {
         __android_log_print(ANDROID_LOG_ERROR, "EagleEyeJNI", "No filename arrays provided");
-        env->ReleaseStringUTFChars(outputFilePath, outputPath);
-        env->ReleaseStringUTFChars(outputFilePath2, outputPath);
         return 0;
     }
 
@@ -165,8 +158,8 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
 
 
     }
-    int totalHeight = divisionFactor * quadrantHeight * interpolationValue;
-    int totalWidth = divisionFactor * quadrantWidth * interpolationValue;
+    int totalHeight = divisionFactor * quadrantHeight;
+    int totalWidth = divisionFactor * quadrantWidth;
     cv::Mat* mergedImage = new cv::Mat(totalHeight, totalWidth, CV_8UC3, cv::Scalar(0, 0, 0));
 
     for (int i = 0; i < env->GetArrayLength(quadrantsNames); i++) {
@@ -185,8 +178,8 @@ Java_com_wangGang_eagleEye_processing_multiple_fusion_MeanFusionOperator_meanFus
         int col = i % divisionFactor;
 
         // Compute the position of the quadrant in the merged image
-        int rowOffset = row * quadrantHeight * interpolationValue;
-        int colOffset = col * quadrantWidth * interpolationValue;
+        int rowOffset = row * quadrantHeight;
+        int colOffset = col * quadrantWidth;
 
         // Copy the quadrant to the correct position in the merged image
         quadrant.copyTo((*mergedImage)(cv::Rect(colOffset, rowOffset, quadrant.cols, quadrant.rows)));
