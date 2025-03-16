@@ -38,7 +38,7 @@ const val TAG = "ConcreteSuperResolution"
 class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperResolutionTemplate() {
 
     override fun readEnergy(imageInputMap: List<String>): Array<Mat> {
-        viewModel.updateLoadingText("Reading energy")
+//        viewModel.updateLoadingText("Reading energy")
         val inputMatList: Array<Mat> = Array(imageInputMap.size) { Mat() }
 
         try {
@@ -58,7 +58,7 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
                 ProgressManager.getInstance().incrementProgress("Reading energy for image $i")
             }
 
-            viewModel.updateLoadingText("Copying Results")
+//            viewModel.updateLoadingText("Copying Results")
             Log.d("ProgressBar", "Copying Results")
             ProgressManager.getInstance().incrementProgress("Copying Results")
         } catch (e: InterruptedException) {

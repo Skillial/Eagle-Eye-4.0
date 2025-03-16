@@ -79,8 +79,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         activityCameraControllerBinding = ActivityCameraControllerBinding.inflate(layoutInflater)
         setContentView(activityCameraControllerBinding.root)
 
-        progressManager = ProgressManager.getInstance()
-
         assignViews()
         initializeCamera()
         addEventListeners()
@@ -148,6 +146,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         CameraController.initialize(this, viewModel)
         concreteSuperResolution = ConcreteSuperResolution(viewModel)
 
+        // Initialize Progress Manager
+        // May introduce tight coupling, but it's necessary for now
+        initializeProgressManager()
+
         imageReaderManager = ImageReaderManager(
             this,
             CameraController.getInstance(),
@@ -155,6 +157,11 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             viewModel
         )
         imageReaderManager.initializeImageReader()
+    }
+
+    private fun initializeProgressManager() {
+        ProgressManager.initialize(viewModel)
+        progressManager = ProgressManager.getInstance()
     }
 
     /* ===== UI Methods ===== */
@@ -298,16 +305,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             .fitCenter()
             .into(thumbnailPreview)
     }
-
-    /*private fun showPhotoActivity() {
-        if (thumbnailUri != null) {
-            val intent = Intent(this, PhotoActivity::class.java)
-            intent.putExtra("imageUri", thumbnailUri.toString())
-            startActivity(intent)
-        } else {
-            Log.e("CameraControllerActivity", "thumbnailUri is null, cannot open PhotoActivity")
-        }
-    }*/
 
     private fun setupObservers() {
         viewModel.loadingText.observe(this, Observer { text ->
