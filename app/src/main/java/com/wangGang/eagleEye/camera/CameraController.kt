@@ -62,24 +62,34 @@ class CameraController(private val context: Context, private val viewModel: Came
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private lateinit var preview: TextureView
     private var cameraId: String = ""
+    fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
+        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        // Adjust this check if needed; here we assume PRIVATE_REPROCESSING indicates ZSL support
+        return capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING) == true
+    }
 
-    // Methods
     fun captureImage() {
         val order = ParameterConfig.getProcessingOrder()
         val isSuperResolutionEnabled = order.contains("SR")
         val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
-        val captureList = mutableListOf<CaptureRequest>()
 
-        viewModel.updateLoadingText("Capturing Images")
-
-        for (i in 0 until totalCaptures) {
-            val captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureRequest.addTarget(imageReader.surface)
-            captureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-            captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequest.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
-            captureList.add(captureRequest.build())
+        // Choose capture template based on ZSL support
+        val captureTemplate = if (deviceSupportsZSL(cameraManager, cameraId)) {
+            CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG
+        } else {
+            CameraDevice.TEMPLATE_STILL_CAPTURE
         }
+
+        // Create and configure the capture request builder once
+        val captureBuilder = cameraDevice.createCaptureRequest(captureTemplate)
+        captureBuilder.addTarget(imageReader.surface)
+        captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+
+        // Build the burst capture list using the same builder if settings don't change
+        val captureList = MutableList(totalCaptures) { captureBuilder.build() }
 
         playShutterSound()
 
@@ -89,7 +99,11 @@ class CameraController(private val context: Context, private val viewModel: Came
         cameraCaptureSession.captureBurst(
             captureList,
             object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+                override fun onCaptureCompleted(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    result: TotalCaptureResult
+                ) {
                     super.onCaptureCompleted(session, request, result)
                     Log.d("BurstCapture", "Capture completed")
                 }
@@ -97,6 +111,8 @@ class CameraController(private val context: Context, private val viewModel: Came
             null
         )
     }
+
+
 
     fun setPreview(textureView: TextureView) {
         preview = textureView
