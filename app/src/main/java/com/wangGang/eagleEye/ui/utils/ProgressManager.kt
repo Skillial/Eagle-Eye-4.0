@@ -68,7 +68,10 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         Log.d(TAG, "Current Task Index: $completedTasks")
         if (completedTasks < totalTasks && taskList.isNotEmpty()) {
             Log.d(TAG, "Current Task: ${taskList[completedTasks]}")
-            Log.d(TAG, "Next Task: ${taskList[completedTasks + 1]}")
+
+            if (completedTasks + 1 < totalTasks) {
+                Log.d(TAG, "Next Task: ${taskList[completedTasks + 1]}")
+            }
         }
     }
 

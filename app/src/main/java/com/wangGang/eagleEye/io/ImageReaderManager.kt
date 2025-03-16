@@ -31,9 +31,13 @@ class ImageReaderManager(
     private val concreteSuperResolution: ConcreteSuperResolution,
     private val viewModel: CameraViewModel
 ) {
+    private val TAG = "ImageReaderManager"
+
     private lateinit var imageReader: ImageReader
     private var imageList = mutableListOf<Bitmap>()
     private var saveAfter = true
+
+
     fun initializeImageReader() {
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
@@ -74,15 +78,13 @@ class ImageReaderManager(
         buffer.get(bytes)
         image.close()
         imageList.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
-        val order = ParameterConfig.getProcessingOrder()
-        val isSuperResolutionEnabled = order.contains("SR")
-        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
-        Log.d("ImageReaderManager", "Total captures: $totalCaptures")
+        val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
+        Log.d(TAG, "Total captures: $totalCaptures")
+        Log.d(TAG, "Image list size: ${imageList.size}")
         if (imageList.size == totalCaptures) {
             processImage()
         }
     }
-
 
     private suspend fun processImage() {
         val oldBitmap = imageList[0]
@@ -93,9 +95,18 @@ class ImageReaderManager(
             for (each in order) {
                 Log.d("ImageReaderManager", "Processing image with: $each")
                 when (each) {
-                    Dehaze.displayName -> handleDehazeImage()
-                    SuperResolution.displayName -> handleSuperResolutionImage()
-                    Upscale.displayName -> handleUpscaleImage()
+                    Dehaze.displayName -> {
+                        handleDehazeImage()
+                        break
+                    }
+                    SuperResolution.displayName -> {
+                        handleSuperResolutionImage()
+                        break
+                    }
+                    Upscale.displayName -> {
+                        handleUpscaleImage()
+                        break
+                    }
                 }
             }
         }
@@ -155,14 +166,11 @@ class ImageReaderManager(
         imageList.addAll(newImageList)
     }
 
-
-
     private suspend fun handleSuperResolutionImage() = withContext(Dispatchers.IO) {
+        Log.d("ImageReaderManager", "handleSuperResolutionImage")
         val newImageList = mutableListOf<Bitmap>()
         // Process each image sequentially
-
         for (each in imageList.toList()) {
-            viewModel.updateLoadingText("Saving Images")
             // Save image synchronously
             FileImageWriter.getInstance()?.saveImageToStorage(each)?.let {
                 viewModel.addImageInput(it)
