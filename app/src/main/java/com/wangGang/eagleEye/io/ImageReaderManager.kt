@@ -97,15 +97,12 @@ class ImageReaderManager(
                 when (each) {
                     Dehaze.displayName -> {
                         handleDehazeImage()
-                        break
                     }
                     SuperResolution.displayName -> {
                         handleSuperResolutionImage()
-                        break
                     }
                     Upscale.displayName -> {
                         handleUpscaleImage()
-                        break
                     }
                 }
             }
@@ -113,6 +110,7 @@ class ImageReaderManager(
 
         saveImages(oldBitmap)
         setImageReaderListener()
+        Log.d(TAG, "processImage - Opening Camera")
         cameraController.openCamera()
         viewModel.setLoadingBoxVisible(false)
     }
@@ -170,7 +168,12 @@ class ImageReaderManager(
         Log.d("ImageReaderManager", "handleSuperResolutionImage")
         val newImageList = mutableListOf<Bitmap>()
         // Process each image sequentially
+        var debugInd = 0
         for (each in imageList.toList()) {
+            Log.d(TAG, "Processing image: $debugInd")
+            Log.d(TAG, "Debug Index: $debugInd")
+            debugInd++
+
             // Save image synchronously
             FileImageWriter.getInstance()?.saveImageToStorage(each)?.let {
                 viewModel.addImageInput(it)

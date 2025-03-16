@@ -70,9 +70,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     }
 
     fun captureImage() {
-        val order = ParameterConfig.getProcessingOrder()
-        val isSuperResolutionEnabled = order.contains("SR")
-        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
+        val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
 
         // Choose capture template based on ZSL support
         val captureTemplate = if (deviceSupportsZSL(cameraManager, cameraId)) {
