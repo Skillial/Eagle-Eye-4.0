@@ -121,6 +121,9 @@ class SettingsActivity : AppCompatActivity() {
         val items = storedOrder.mapIndexed { index, title ->
             Pair(index.toLong(), title)
         }.toCollection(arrayListOf())
+        if (items[0].second == "") {
+            items.removeAt(0)
+        }
 
         processingOrderListAdapter = ProcessingOrderListAdapter(
             itemList = items,
@@ -163,9 +166,11 @@ class SettingsActivity : AppCompatActivity() {
                     // If the drop position is below (i.e. a higher index than) the "Upscale" item,
                     // show a toast and enforce that "Upscale" remains at the bottom.
                     if (upscaleIndex != -1 && toPosition > upscaleIndex) {
-                        Toast.makeText(this@SettingsActivity,
+                        Toast.makeText(
+                            this@SettingsActivity,
                             "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
-                            Toast.LENGTH_SHORT).show()
+                            Toast.LENGTH_SHORT
+                        ).show()
                         enforceUpscaleAtBottom(processingOrderListAdapter)
                         processingOrderListAdapter.notifyDataSetChanged()
                     }
@@ -224,11 +229,9 @@ class SettingsActivity : AppCompatActivity() {
                         } else {
                             adapter.itemList.add(droppedItem)
                             if (ParameterConfig.isScalingFactorGreaterThanOrEqual8()) {
-                                enforceUpscaleAtBottom(processingOrderListAdapter)
-                                updateProcessingOrder(adapter.itemList)
-                            } else {
-                                updateProcessingOrder(adapter.itemList)
+                                enforceUpscaleAtBottom(adapter)
                             }
+                            updateProcessingOrder(adapter.itemList)
                             adapter.notifyDataSetChanged()
                         }
                     }
@@ -306,11 +309,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun getStoredOrder(): MutableList<String> {
         val order = ParameterConfig.getProcessingOrder().toMutableList()
         Log.d(TAG, "getStoredOrder() - order: $order")
-        if (order.first() == "") {
-            // Remove empty string
-            order.removeAt(0)
-            order.addAll(DEFAULT_PROCESSING_ORDER)
-        }
+//        if (order.first() == "") {
+//            // Remove empty string
+//            order.removeAt(0)
+//            order.addAll(DEFAULT_PROCESSING_ORDER)
+//        }
         return order
     }
 

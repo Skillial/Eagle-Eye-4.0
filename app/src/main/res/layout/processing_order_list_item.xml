@@ -8,31 +8,43 @@
     card_view:cardElevation="4dp"
     android:layout_margin="4dp">
 
-    <LinearLayout
-        android:id="@+id/item_layout"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#F5F5F5"
-        android:padding="8dp">
+        android:layout_height="wrap_content">
 
-        <ImageView
-            android:id="@+id/drag_handle"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:foregroundGravity="center_vertical"
-            android:src="@drawable/ic_drag_handle"
-            android:layout_marginEnd="4dp"/>
-
-        <TextView
-            android:id="@+id/text"
-            android:layout_width="0dp"
+        <!-- Existing item content -->
+        <LinearLayout
+            android:id="@+id/item_layout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:textSize="12sp"/>
+            android:background="#F5F5F5"
+            android:padding="8dp">
 
-    </LinearLayout>
+            <ImageView
+                android:id="@+id/drag_handle"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:foregroundGravity="center_vertical"
+                android:src="@drawable/ic_drag_handle"
+                android:layout_marginEnd="4dp"/>
+
+            <TextView
+                android:id="@+id/text"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+        <!-- Overlay view for dimming effect -->
+        <View
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80AAAAAA"
+        android:visibility="gone"/>
+    </FrameLayout>
 </androidx.cardview.widget.CardView>
-

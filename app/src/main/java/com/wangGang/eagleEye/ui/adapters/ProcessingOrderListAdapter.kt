@@ -33,16 +33,12 @@ class ProcessingOrderListAdapter (
         val currentItemIsUpscale = item.second.equals("Upscale", ignoreCase = true)
         if (ParameterConfig.isScalingFactorGreaterThanOrEqual8() && currentItemIsUpscale) {
             holder.itemView.setOnLongClickListener { false }
-            // Dim the whole item to indicate it's fixed.
-            holder.itemView.alpha = 0.5f
-
-            // make the drag icon invisible
+            // Show the overlay to simulate dimming
+            holder.overlay.visibility = View.VISIBLE
             holder.dragIcon.visibility = View.INVISIBLE
         } else {
             holder.itemView.setOnLongClickListener { true }
-            holder.itemView.alpha = 1.0f
-
-            // make the drag icon visible
+            holder.overlay.visibility = View.GONE
             holder.dragIcon.visibility = View.VISIBLE
         }
     }
@@ -56,5 +52,6 @@ class ProcessingOrderListAdapter (
         DragItemAdapter.ViewHolder(itemView, grabHandleId, dragOnLongPress) {
         val textView: TextView = itemView.findViewById(R.id.text)
         val dragIcon: View = itemView.findViewById(R.id.drag_handle)
+        val overlay: View = itemView.findViewById(R.id.overlay)
     }
 }

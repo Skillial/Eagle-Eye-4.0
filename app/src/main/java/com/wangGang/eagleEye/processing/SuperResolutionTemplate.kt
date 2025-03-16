@@ -1,6 +1,8 @@
 // SuperResolutionTemplate.kt
 package com.wangGang.eagleEye.processing
 
+import android.graphics.Bitmap
+import com.wangGang.eagleEye.io.ImageUtils
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure
 import com.wangGang.eagleEye.model.multiple.SharpnessMeasure.SharpnessResult
 import com.wangGang.eagleEye.processing.process_observer.SRProcessManager
@@ -9,9 +11,9 @@ import org.opencv.core.Mat
 abstract class SuperResolutionTemplate {
 
     // Template method
-    fun superResolutionImage(imageInputMap: List<String>) {
+    fun superResolutionImage(imageInputMap: List<String>): Bitmap {
         val filteredMatList = initialize(imageInputMap)
-        performSuperResolution(filteredMatList, imageInputMap)
+        return performSuperResolution(filteredMatList, imageInputMap)
 //        finalizeProcess()
     }
 
@@ -19,6 +21,7 @@ abstract class SuperResolutionTemplate {
         SharpnessMeasure.initialize()
         val energyInputMatList = readEnergy(imageInputMap)
         val filteredMatList = applyFilter(energyInputMatList)
+        energyInputMatList.forEach { it.release() }
         return filteredMatList
     }
 
@@ -28,7 +31,7 @@ abstract class SuperResolutionTemplate {
 
     protected abstract fun measureSharpness(filteredMatList: Array<Mat>): SharpnessResult
 
-    protected abstract fun performSuperResolution(filteredMatList: Array<Mat>, imageInputMap: List<String>)
+    protected abstract fun performSuperResolution(filteredMatList: Array<Mat>, imageInputMap: List<String>): Bitmap
 
     protected open fun finalizeProcess() {
         SRProcessManager.getInstance().srProcessCompleted()
