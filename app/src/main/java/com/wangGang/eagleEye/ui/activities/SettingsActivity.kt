@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
+import com.wangGang.eagleEye.processing.commands.ProcessingCommand
 import com.wangGang.eagleEye.ui.adapters.CommandListAdapter
 import com.wangGang.eagleEye.ui.adapters.ProcessingOrderListAdapter
 import com.woxthebox.draglistview.DragListView
@@ -27,11 +28,9 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private val TAG = "SettingsActivity"
 
-        private val COMMAND_ITEMS: ArrayList<Pair<Long, String>> = ParameterConfig.ProcessingAlgorithm.entries
+        private val COMMAND_ITEMS: ArrayList<Pair<Long, String>> = ProcessingCommand.entries
             .mapIndexed { index, algorithm -> index.toLong() to algorithm.displayName }
             .toCollection(ArrayList())
-
-        private val DEFAULT_PROCESSING_ORDER = ParameterConfig.ProcessingAlgorithm.entries.map { it.displayName }
 
         private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }

@@ -4,6 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.util.Log
+import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.ProcessingCommand
+import com.wangGang.eagleEye.processing.commands.SuperResolution
+import com.wangGang.eagleEye.processing.commands.Upscale
 
 /**
  * Created by NeilDG on 3/5/2016.
@@ -97,7 +101,7 @@ class ParameterConfig private constructor(appContext: Context) {
         * Gets the processing order and returns it as a list of strings
         * */
         fun getProcessingOrder(): List<String> {
-            val defaultOrder = "${ProcessingAlgorithm.SUPER_RESOLUTION.displayName},${ProcessingAlgorithm.DEHAZE.displayName},${ProcessingAlgorithm.UPSCALE.displayName}"
+            val defaultOrder = "${SuperResolution.displayName},${Dehaze.displayName},${Upscale.displayName}"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
@@ -114,13 +118,13 @@ class ParameterConfig private constructor(appContext: Context) {
         // TODO: Modify this code when the app supports multiple Super Resolution Blocks
         @JvmStatic
         fun isSuperResolutionEnabled(): Boolean {
-            return getProcessingOrder().contains(ProcessingAlgorithm.SUPER_RESOLUTION.displayName)
+            return getProcessingOrder().contains(SuperResolution.displayName)
         }
 
         // TODO: Modify this code when the app supports multiple Dehaze Blocks
         @JvmStatic
         fun isDehazeEnabled(): Boolean {
-            return getProcessingOrder().contains(ProcessingAlgorithm.DEHAZE.displayName)
+            return getProcessingOrder().contains(Dehaze.displayName)
         }
 
         @JvmStatic
@@ -137,35 +141,13 @@ class ParameterConfig private constructor(appContext: Context) {
         fun isScalingFactorGreaterThanOrEqual8(): Boolean {
             return getScalingFactor() >= 8
         }
-
-        // Mix all colors
-        fun getColorBasedOnAlgo() {
-            val processingOrder = getProcessingOrder()
-            val colors = mutableListOf<Int>()
-            for (algo in processingOrder) {
-                when (algo) {
-                    ProcessingAlgorithm.SUPER_RESOLUTION.displayName -> {
-                        colors.add(Color.GREEN)
-                    }
-                    ProcessingAlgorithm.DEHAZE.displayName  -> {
-                        colors.add(Color.YELLOW)
-                    }
-                }
-            }
-
-            // mix all colors
-            var mixedColor = 0
-            for (color in colors) {
-                mixedColor = mixedColor or color
-            }
-        }
     }
 
-    enum class ProcessingAlgorithm(val displayName: String) {
-        SUPER_RESOLUTION("Super Resolution"),
-        DEHAZE("Dehaze"),
-        UPSCALE("Upscale")
-    }
+//    enum class ProcessingCommands(val displayName: String) {
+//        SUPER_RESOLUTION("Super Resolution"),
+//        DEHAZE("Dehaze"),
+//        UPSCALE("Upscale")
+//    }
 
     private val sharedPrefs: SharedPreferences = appContext.getSharedPreferences(PARAMETER_PREFS, Context.MODE_PRIVATE)
     private val editorPrefs: SharedPreferences.Editor = sharedPrefs.edit()

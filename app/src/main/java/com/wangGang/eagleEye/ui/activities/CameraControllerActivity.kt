@@ -187,7 +187,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private fun addEventListeners() {
         captureButton.setOnClickListener {
-            resetProgressBarBasedOnImageEnhancementType()
+            ProgressManager.getInstance().resetProgress()
             CameraController.getInstance().captureImage()
             Log.d("CameraControllerActivity", "Capture button clicked")
         }
@@ -299,7 +299,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             .into(thumbnailPreview)
     }
 
-    private fun showPhotoActivity() {
+    /*private fun showPhotoActivity() {
         if (thumbnailUri != null) {
             val intent = Intent(this, PhotoActivity::class.java)
             intent.putExtra("imageUri", thumbnailUri.toString())
@@ -307,19 +307,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         } else {
             Log.e("CameraControllerActivity", "thumbnailUri is null, cannot open PhotoActivity")
         }
-    }
-
-    // Other methods
-    private fun resetProgressBarBasedOnImageEnhancementType() {
-        if (ParameterConfig.isSuperResolutionEnabled()) {
-            progressManager.resetProgress(ImageEnhancementType.SUPER_RESOLUTION)
-        } else if (ParameterConfig.isDehazeEnabled()) {
-            progressManager.resetProgress(ImageEnhancementType.DEHAZE)
-        } else {
-            // normal image
-            progressManager.resetProgress(1)
-        }
-    }
+    }*/
 
     private fun setupObservers() {
         viewModel.loadingText.observe(this, Observer { text ->

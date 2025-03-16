@@ -4,29 +4,15 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.wangGang.eagleEye.constants.ImageEnhancementType
+import com.wangGang.eagleEye.constants.ParameterConfig
+import com.wangGang.eagleEye.processing.commands.ProcessingCommand
+import com.wangGang.eagleEye.processing.commands.SuperResolution
 
 class ProgressManager private constructor() {
 
     companion object {
         @Volatile
         private var INSTANCE: ProgressManager? = null
-
-        // Constants
-        val dehazeSteps = arrayOf(
-            "Capturing Images",
-            "Loading and Resizing Image",
-            "Loading Albedo Model",
-            "Preprocessing Image",
-            "Running Albedo Model",
-            "Loading Transmission Model",
-            "Running Transmission Model",
-            "Loading Airlight Model",
-            "Running Airlight Model",
-            "Processing Image",
-            "Saving Image"
-        )
-        private val TASKS_SUPER_RESOLUTION = 9
-        private val TASKS_DEHAZE = dehazeSteps.size
 
         fun getInstance(): ProgressManager {
             return INSTANCE ?: synchronized(this) {
@@ -45,7 +31,7 @@ class ProgressManager private constructor() {
 
     // Track progress
     private var completedTasks = 0
-    private var totalTasks = 1
+    private var totalTasks = 0
 
     init {
         _progress.value = 0
@@ -64,27 +50,27 @@ class ProgressManager private constructor() {
         Log.d("ProgressBar", "Progress: $completedTasks/$totalTasks")
     }
 
-    fun resetProgress() {
+    private fun resetValues() {
         completedTasks = 0
         _progress.postValue(0)
     }
 
-    fun resetProgress(newTotalTasks: Int) {
-        totalTasks = newTotalTasks
-        resetProgress()
+    fun resetProgress() {
+        resetValues()
+        calculateTotalTasks()
     }
 
-    fun resetProgress(type: ImageEnhancementType) {
-        Log.d("ProgressManager", "Resetting progress for type: $type")
-        val newTotalTasks = when (type) {
-            ImageEnhancementType.SUPER_RESOLUTION -> TASKS_SUPER_RESOLUTION
-            ImageEnhancementType.DEHAZE -> TASKS_DEHAZE
+
+    private fun calculateTotalTasks(): Int {
+        val order = ParameterConfig.getProcessingOrder()
+        var total = 0
+        for (item in order) {
+            if (ProcessingCommand.fromDisplayName(item) != null) {
+                total += ProcessingCommand.fromDisplayName(item)!!.calculate()
+            }
         }
-        totalTasks = newTotalTasks
-        resetProgress()
+        return total
     }
-
-
 
     private fun updateProgress() {
         val progressValue = (completedTasks.toFloat() / totalTasks.toFloat() * 100).toInt()

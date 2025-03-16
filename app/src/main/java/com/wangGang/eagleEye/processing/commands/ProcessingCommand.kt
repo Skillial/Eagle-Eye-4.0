@@ -1,0 +1,62 @@
+package com.wangGang.eagleEye.processing.commands
+
+import androidx.compose.ui.graphics.Color
+
+sealed class ProcessingCommand(val displayName: String, val tasks: List<String>, color: Color) {
+    // Function to return the size of the tasks list.
+    fun calculate(): Int = tasks.size
+
+    companion object {
+        // List of all available commands.
+        val entries: List<ProcessingCommand> = listOf(SuperResolution, Dehaze, Upscale)
+
+        // Factory function to retrieve a ProcessingCommand based on its displayName.
+        fun fromDisplayName(name: String): ProcessingCommand? {
+            return when (name) {
+                SuperResolution.displayName -> SuperResolution
+                Dehaze.displayName -> Dehaze
+                Upscale.displayName -> Upscale
+                else -> null
+            }
+        }
+    }
+}
+
+// Each command is represented as an object (singleton) inheriting from ProcessingCommand.
+data object SuperResolution : ProcessingCommand(
+    displayName = "Super Resolution",
+    tasks = listOf(
+        "Load High Resolution Model",
+        "Process Image",
+        "Post Process Image"
+    ),
+    color = Color.Green
+)
+
+data object Dehaze : ProcessingCommand(
+    displayName = "Dehaze",
+    tasks = listOf(
+        "Capturing Images",
+        "Loading and Resizing Image",
+        "Loading Albedo Model",
+        "Preprocessing Image",
+        "Running Albedo Model",
+        "Loading Transmission Model",
+        "Running Transmission Model",
+        "Loading Airlight Model",
+        "Running Airlight Model",
+        "Processing Image",
+        "Saving Image"
+    ),
+    color = Color.Yellow
+)
+
+data object Upscale : ProcessingCommand(
+    displayName = "Upscale",
+    tasks = listOf(
+        "Load Upscaling Model",
+        "Process Image",
+        "Enhance Details"
+    ),
+    color = Color.Blue
+)
