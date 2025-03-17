@@ -1,11 +1,8 @@
 package com.wangGang.eagleEye.camera
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.graphics.ImageFormat
-import android.graphics.Matrix
-import android.graphics.RectF
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
@@ -27,7 +24,6 @@ import android.view.TextureView
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
-import kotlin.math.max
 
 class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
 
@@ -65,12 +61,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private lateinit var captureRequest: CaptureRequest.Builder
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private lateinit var preview: TextureView
-
-    // This will hold our chosen preview size
-    private lateinit var optimalPreviewSize: Size
-
     private var cameraId: String = ""
-
     fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -118,52 +109,10 @@ class CameraController(private val context: Context, private val viewModel: Came
         )
     }
 
-    /**
-     * Adjusts the TextureView transform based on the optimal preview size.
-     * Uses Matrix.ScaleToFit.CENTER so that the entire preview is visible (i.e. no cropping)
-     * which better represents the field of view of the captured image.
-     */
-    private fun configureTransform(viewWidth: Int, viewHeight: Int) {
-        val rotation = (context as? Activity)?.windowManager?.defaultDisplay?.rotation ?: return
-        val matrix = Matrix()
 
-        val viewRect = RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
-        // When rotated, width and height may need to be swapped.
-        val bufferRect = RectF(0f, 0f, optimalPreviewSize.height.toFloat(), optimalPreviewSize.width.toFloat())
-        val centerX = viewRect.centerX()
-        val centerY = viewRect.centerY()
-
-        if (rotation == android.view.Surface.ROTATION_90 || rotation == android.view.Surface.ROTATION_270) {
-            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
-            // Use CENTER scaling to show the entire preview without cropping.
-            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.CENTER)
-            val scale = max(viewWidth.toFloat() / optimalPreviewSize.height, viewHeight.toFloat() / optimalPreviewSize.width)
-            matrix.postScale(scale, scale, centerX, centerY)
-            matrix.postRotate(90f * (rotation - 2), centerX, centerY)
-        } else if (rotation == android.view.Surface.ROTATION_180) {
-            matrix.postRotate(180f, centerX, centerY)
-        }
-        preview.setTransform(matrix)
-    }
 
     fun setPreview(textureView: TextureView) {
         preview = textureView
-        preview.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                configureTransform(width, height)
-                openCamera()
-            }
-
-            override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                configureTransform(width, height)
-            }
-
-            override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
-                return true
-            }
-
-            override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {}
-        }
     }
 
     @SuppressLint("MissingPermission")
@@ -175,20 +124,7 @@ class CameraController(private val context: Context, private val viewModel: Came
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-
-                val surfaceTexture = preview.surfaceTexture
-
-                // Determine the optimal preview size from the available sizes.
-                val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-                val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-                val choices = map?.getOutputSizes(SurfaceTexture::class.java)
-                    ?: arrayOf(Size(preview.width, preview.height))
-                optimalPreviewSize = chooseOptimalSize(choices, preview.width, preview.height)
-
-                // Set the SurfaceTexture buffer size to the optimal preview size.
-                surfaceTexture!!.setDefaultBufferSize(optimalPreviewSize.width, optimalPreviewSize.height)
-
-                val surface = Surface(surfaceTexture)
+                val surface = Surface(preview.surfaceTexture)
                 captureRequest.addTarget(surface)
 
                 val surfaces = listOf(surface, imageReader.surface)
@@ -247,18 +183,6 @@ class CameraController(private val context: Context, private val viewModel: Came
         }, handler)
     }
 
-    /**
-     * Chooses the smallest preview size that is at least as large as the TextureView.
-     */
-    private fun chooseOptimalSize(choices: Array<Size>, textureViewWidth: Int, textureViewHeight: Int): Size {
-        val bigEnough = choices.filter { it.width >= textureViewWidth && it.height >= textureViewHeight }
-        return if (bigEnough.isNotEmpty()) {
-            bigEnough.minByOrNull { it.width * it.height }!!
-        } else {
-            choices[0]
-        }
-    }
-
     private fun getCameraId(lensFacing: Int): String {
         for (cameraId in cameraManager.cameraIdList) {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
@@ -301,7 +225,8 @@ class CameraController(private val context: Context, private val viewModel: Came
         }
     }
 
-    // Helpers
+
+    // helpers
     fun getHighestResolution(): Size? {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
@@ -319,7 +244,7 @@ class CameraController(private val context: Context, private val viewModel: Came
         return characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 0
     }
 
-    // Getters
+    // getters
     fun getCameraCharacteristics(): CameraCharacteristics {
         return cameraManager.getCameraCharacteristics(cameraId)
     }
@@ -348,7 +273,7 @@ class CameraController(private val context: Context, private val viewModel: Came
         return captureRequest
     }
 
-    // Setters
+    // setters
     fun setCameraCaptureSession(cameraCaptureSession: CameraCaptureSession) {
         this.cameraCaptureSession = cameraCaptureSession
     }
@@ -369,6 +294,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     fun initializeCamera() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK)
+
         initializeHandlerThread()
     }
 
@@ -390,4 +316,5 @@ class CameraController(private val context: Context, private val viewModel: Came
             Log.e("CameraController", "Error closing camera: ", e)
         }
     }
+
 }
