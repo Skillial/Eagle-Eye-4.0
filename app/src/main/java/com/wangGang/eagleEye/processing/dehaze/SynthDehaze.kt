@@ -234,23 +234,41 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         Log.d(TAG, "Processing Image")
 //        Processing Image
-        for (i in 0 until hazyImgNorm.rows()) {
-            for (j in 0 until hazyImgNorm.cols()) {
-                val tVal = TResized.get(i, j)[0]
-                val tValMax = maxOf(tVal, 0.001)
+        val tValMax = Mat()
+        Core.max(TResized, Scalar(0.001), tValMax)
 
-                val hazyPixel = hazyImgNorm.get(i, j)
-                var clearRed = (hazyPixel[0] - airlightRed * (1 - tVal)) / tValMax
-                var clearGreen = (hazyPixel[1] - airlightGreen * (1 - tVal)) / tValMax
-                var clearBlue = (hazyPixel[2] - airlightBlue * (1 - tVal)) / tValMax
+// Create a matrix of ones with the same size and type as TResized, then compute (1 - TResized).
+        val onesMat = Mat.ones(TResized.size(), TResized.type())
+        val oneMinusT = Mat()
+        Core.subtract(onesMat, TResized, oneMinusT)
 
-                clearRed = clearRed.coerceIn(0.0, 1.0)
-                clearGreen = clearGreen.coerceIn(0.0, 1.0)
-                clearBlue = clearBlue.coerceIn(0.0, 1.0)
+// Split the normalized hazy image into its color channels.
+        val hazyChannels = mutableListOf<Mat>()
+        Core.split(hazyImgNorm, hazyChannels)
 
-                clearImg.put(i, j, clearRed * 255.0, clearGreen * 255.0, clearBlue * 255.0)
-            }
+// Airlight values for each channel.
+        val airlight = listOf(airlightRed, airlightGreen, airlightBlue)
+        val clearChannels = mutableListOf<Mat>()
+
+// Process each channel individually.
+        for (k in 0..2) {
+            val term = Mat()
+            // Multiply (1 - t) by the corresponding airlight value.
+            Core.multiply(oneMinusT, Scalar(airlight[k].toDouble()), term)
+            // Subtract the airlight term from the hazy channel.
+            Core.subtract(hazyChannels[k], term, term)
+            // Divide by the clamped transmission matrix.
+            Core.divide(term, tValMax, term)
+            // Clamp values to the [0.0, 1.0] range.
+            Core.max(term, Scalar(0.0), term)
+            Core.min(term, Scalar(1.0), term)
+            // Convert the normalized result to 8-bit (scale by 255).
+            term.convertTo(term, CvType.CV_8UC1, 255.0)
+            clearChannels.add(term)
         }
+
+// Merge the processed channels back into the output image.
+        Core.merge(clearChannels, clearImg)
         TResized.release()
         hazyImgNorm.release()
         ProgressManager.getInstance().nextTask()
