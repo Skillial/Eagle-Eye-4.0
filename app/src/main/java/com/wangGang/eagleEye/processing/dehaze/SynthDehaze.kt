@@ -85,6 +85,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
     }
 
     private fun preprocess(img: Mat, env: OrtEnvironment): OnnxTensor {
+        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
         val imgFloat = Mat()
         img.convertTo(imgFloat, CvType.CV_32F, 1.0 / 255.0)
 

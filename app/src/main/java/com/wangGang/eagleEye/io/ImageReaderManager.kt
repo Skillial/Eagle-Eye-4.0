@@ -13,10 +13,8 @@ import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.camera.CameraController.Companion.MAX_BURST_IMAGES
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
-import com.wangGang.eagleEye.processing.commands.Dehaze
-import com.wangGang.eagleEye.processing.commands.SuperResolution
-import com.wangGang.eagleEye.processing.commands.Upscale
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
+import com.wangGang.eagleEye.processing.shadow_remove.SynthShadowRemoval
 import com.wangGang.eagleEye.processing.upscale.Interpolation
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
@@ -31,13 +29,9 @@ class ImageReaderManager(
     private val concreteSuperResolution: ConcreteSuperResolution,
     private val viewModel: CameraViewModel
 ) {
-    private val TAG = "ImageReaderManager"
-
     private lateinit var imageReader: ImageReader
     private var imageList = mutableListOf<Bitmap>()
     private var saveAfter = true
-
-
     fun initializeImageReader() {
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
@@ -78,14 +72,15 @@ class ImageReaderManager(
         buffer.get(bytes)
         image.close()
         imageList.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
-        val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
-        Log.d(TAG, "Total captures: $totalCaptures")
-        Log.d(TAG, "Image list size: ${imageList.size}")
+        val order = ParameterConfig.getProcessingOrder()
+        val isSuperResolutionEnabled = order.contains("SR")
+        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
+        Log.d("ImageReaderManager", "Total captures: $totalCaptures")
         if (imageList.size == totalCaptures) {
-            ProgressManager.getInstance().showFirstTask()
             processImage()
         }
     }
+
 
     private suspend fun processImage() {
         val oldBitmap = imageList[0]
@@ -95,23 +90,19 @@ class ImageReaderManager(
             Log.d("order", ""+order)
             for (each in order) {
                 Log.d("ImageReaderManager", "Processing image with: $each")
-                when (each) {
-                    Dehaze.displayName -> {
-                        handleDehazeImage()
-                    }
-                    SuperResolution.displayName -> {
-                        handleSuperResolutionImage()
-                    }
-                    Upscale.displayName -> {
-                        handleUpscaleImage()
-                    }
+                if (each == "Dehaze") {
+                    handleDehazeImage()
+                } else if (each == "SR") {
+                    handleSuperResolutionImage()
+                } else if (each == "Upscale"){
+                    handleUpscaleImage()
+                } else if (each == "Shadow Removal"){
+                    handleShadowRemoval()
                 }
             }
         }
-
         saveImages(oldBitmap)
         setImageReaderListener()
-        Log.d(TAG, "processImage - Opening Camera")
         cameraController.openCamera()
         viewModel.setLoadingBoxVisible(false)
     }
@@ -120,8 +111,6 @@ class ImageReaderManager(
         Log.d("ImageReaderManager", "Upscaling image")
         val newImageList = mutableListOf<Bitmap>()
         val scale =  ParameterConfig.getScalingFactor().toFloat()
-
-//        Upscaling Images
         for (each in imageList.toList()){
             if (scale >= 8){
                 withContext(Dispatchers.IO) {
@@ -134,7 +123,6 @@ class ImageReaderManager(
                 newImageList.add(newBitmap)
             }
         }
-        ProgressManager.getInstance().nextTask()
         if (scale < 8){
             imageList.clear()
             imageList.addAll(newImageList)
@@ -146,7 +134,7 @@ class ImageReaderManager(
     private fun saveImages(oldBitmap: Bitmap) {
         FileImageWriter.getInstance()!!
             .saveBitmapToResultsDir(oldBitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
-        if (saveAfter && imageList.isNotEmpty()) {
+        if (saveAfter) {
             FileImageWriter.getInstance()!!
                 .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
             imageList.clear()
@@ -165,16 +153,26 @@ class ImageReaderManager(
         imageList.addAll(newImageList)
     }
 
+    private suspend fun handleShadowRemoval(){
+        val newImageList = mutableListOf<Bitmap>()
+        for (each in imageList.toList()){
+            val newBitmap = withContext(Dispatchers.IO) {
+                SynthShadowRemoval(context, viewModel).removeShadow(each)
+            }
+            newImageList.add(newBitmap)
+        }
+        imageList.clear()
+        imageList.addAll(newImageList)
+    }
+
+
+
     private suspend fun handleSuperResolutionImage() = withContext(Dispatchers.IO) {
-        Log.d("ImageReaderManager", "handleSuperResolutionImage")
         val newImageList = mutableListOf<Bitmap>()
         // Process each image sequentially
-        var debugInd = 0
-        for (each in imageList.toList()) {
-            Log.d(TAG, "Processing image: $debugInd")
-            Log.d(TAG, "Debug Index: $debugInd")
-            debugInd++
 
+        for (each in imageList.toList()) {
+            viewModel.updateLoadingText("Saving Images")
             // Save image synchronously
             FileImageWriter.getInstance()?.saveImageToStorage(each)?.let {
                 viewModel.addImageInput(it)
