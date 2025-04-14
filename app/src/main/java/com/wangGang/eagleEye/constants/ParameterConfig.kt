@@ -2,7 +2,12 @@ package com.wangGang.eagleEye.constants
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.util.Log
+import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.ProcessingCommand
+import com.wangGang.eagleEye.processing.commands.SuperResolution
+import com.wangGang.eagleEye.processing.commands.Upscale
 
 /**
  * Created by NeilDG on 3/5/2016.
@@ -15,11 +20,8 @@ class ParameterConfig private constructor(appContext: Context) {
         private const val PARAMETER_PREFS = "parameter_config"
         private const val SCALE_KEY = "scale"
 
-        const val DEBUGGING_FLAG_KEY = "DEBUGGING_FLAG_KEY"
-        const val DENOISE_FLAG_KEY = "DENOISE_FLAG_KEY"
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
-        const val SR_CHOICE_KEY = "SR_CHOICE_KEY"
 
         @JvmStatic
         fun hasInitialized(): Boolean {
@@ -42,16 +44,6 @@ class ParameterConfig private constructor(appContext: Context) {
         @JvmStatic
         fun getScalingFactor(): Int {
             return sharedInstance?.sharedPrefs?.getInt(SCALE_KEY, 2) ?: 2 // change to 2
-        }
-
-        @JvmStatic
-        fun setTechnique(technique: SRTechnique) {
-            sharedInstance?.currentTechnique = technique
-        }
-
-        @JvmStatic
-        fun getCurrentTechnique(): SRTechnique {
-            return sharedInstance?.currentTechnique ?: SRTechnique.MULTIPLE
         }
 
         @JvmStatic
@@ -109,7 +101,7 @@ class ParameterConfig private constructor(appContext: Context) {
         * Gets the processing order and returns it as a list of strings
         * */
         fun getProcessingOrder(): List<String> {
-            val defaultOrder = "SR,Dehaze"
+            val defaultOrder = "${SuperResolution.displayName},${Dehaze.displayName},${Upscale.displayName}"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
@@ -123,24 +115,18 @@ class ParameterConfig private constructor(appContext: Context) {
             setPrefs("algo_order", processingOrder)
         }
 
+        // TODO: Modify this code when the app supports multiple Super Resolution Blocks
         @JvmStatic
         fun isSuperResolutionEnabled(): Boolean {
-            return getPrefsBoolean("super_resolution_enabled", false)
+            Log.d(TAG, "isSuperResolutionEnabled: ${getProcessingOrder().contains(SuperResolution.displayName)}")
+            return getProcessingOrder().contains(SuperResolution.displayName)
         }
 
-        @JvmStatic
-        fun setSuperResolutionEnabled(enabled: Boolean) {
-            setPrefs("super_resolution_enabled", enabled)
-        }
-
+        // TODO: Modify this code when the app supports multiple Dehaze Blocks
         @JvmStatic
         fun isDehazeEnabled(): Boolean {
-            return getPrefsBoolean("dehaze_enabled", false)
-        }
-
-        @JvmStatic
-        fun setDehazeEnabled(enabled: Boolean) {
-            setPrefs("dehaze_enabled", enabled)
+            Log.d(TAG, "isDehazeEnabled: ${getProcessingOrder().contains(Dehaze.displayName)}")
+            return getProcessingOrder().contains(Dehaze.displayName)
         }
 
         @JvmStatic
@@ -159,12 +145,12 @@ class ParameterConfig private constructor(appContext: Context) {
         }
     }
 
-    enum class SRTechnique {
-        SINGLE,
-        MULTIPLE
-    }
+//    enum class ProcessingCommands(val displayName: String) {
+//        SUPER_RESOLUTION("Super Resolution"),
+//        DEHAZE("Dehaze"),
+//        UPSCALE("Upscale")
+//    }
 
-    private var currentTechnique: SRTechnique = SRTechnique.MULTIPLE
     private val sharedPrefs: SharedPreferences = appContext.getSharedPreferences(PARAMETER_PREFS, Context.MODE_PRIVATE)
     private val editorPrefs: SharedPreferences.Editor = sharedPrefs.edit()
 }

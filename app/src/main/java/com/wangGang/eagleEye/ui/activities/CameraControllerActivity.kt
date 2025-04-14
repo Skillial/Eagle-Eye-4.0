@@ -33,6 +33,7 @@ import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import com.wangGang.eagleEye.ui.views.GridOverlayView
+import androidx.core.view.isVisible
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -78,8 +79,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         instance = this
         activityCameraControllerBinding = ActivityCameraControllerBinding.inflate(layoutInflater)
         setContentView(activityCameraControllerBinding.root)
-
-        progressManager = ProgressManager.getInstance()
 
         assignViews()
         initializeCamera()
@@ -148,6 +147,10 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         CameraController.initialize(this, viewModel)
         concreteSuperResolution = ConcreteSuperResolution(viewModel)
 
+        // Initialize Progress Manager
+        // May introduce tight coupling, but it's necessary for now
+        initializeProgressManager()
+
         imageReaderManager = ImageReaderManager(
             this,
             CameraController.getInstance(),
@@ -155,6 +158,11 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             viewModel
         )
         imageReaderManager.initializeImageReader()
+    }
+
+    private fun initializeProgressManager() {
+        ProgressManager.initialize(viewModel)
+        progressManager = ProgressManager.getInstance()
     }
 
     /* ===== UI Methods ===== */
@@ -187,7 +195,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private fun addEventListeners() {
         captureButton.setOnClickListener {
-            resetProgressBarBasedOnImageEnhancementType()
+            ProgressManager.getInstance().resetProgress()
             CameraController.getInstance().captureImage()
             Log.d("CameraControllerActivity", "Capture button clicked")
         }
@@ -299,28 +307,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             .into(thumbnailPreview)
     }
 
-    private fun showPhotoActivity() {
-        if (thumbnailUri != null) {
-            val intent = Intent(this, PhotoActivity::class.java)
-            intent.putExtra("imageUri", thumbnailUri.toString())
-            startActivity(intent)
-        } else {
-            Log.e("CameraControllerActivity", "thumbnailUri is null, cannot open PhotoActivity")
-        }
-    }
-
-    // Other methods
-    private fun resetProgressBarBasedOnImageEnhancementType() {
-        if (ParameterConfig.isSuperResolutionEnabled()) {
-            progressManager.resetProgress(ImageEnhancementType.SUPER_RESOLUTION)
-        } else if (ParameterConfig.isDehazeEnabled()) {
-            progressManager.resetProgress(ImageEnhancementType.DEHAZE)
-        } else {
-            // normal image
-            progressManager.resetProgress(1)
-        }
-    }
-
     private fun setupObservers() {
         viewModel.loadingText.observe(this, Observer { text ->
             loadingText.text = text
@@ -349,7 +335,13 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         })
 
         viewModel.loadingBoxVisible.observe(this, Observer { visible ->
-            loadingBox.visibility = if (visible) View.VISIBLE else View.GONE
+            if (visible) {
+                loadingBox.visibility = View.VISIBLE
+                progressBar.visibility = View.VISIBLE
+            } else {
+                loadingBox.visibility = View.GONE
+                progressBar.visibility = View.GONE
+            }
 
             if (visible) {
                 Log.d("CameraControllerActivity", "Disabling UI interactivity")
@@ -361,7 +353,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         })
 
         progressManager.progress.observe(this, Observer { progress ->
-            if (progress > 0) {
+            if (loadingBox.isVisible) {
                 progressBar.visibility = View.VISIBLE
                 progressBar.progress = progress
                 idleAnimator?.cancel() // Cancel any idle animation if active

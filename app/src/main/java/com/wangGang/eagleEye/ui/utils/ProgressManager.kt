@@ -3,35 +3,27 @@ package com.wangGang.eagleEye.ui.utils
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.wangGang.eagleEye.constants.ImageEnhancementType
+import com.wangGang.eagleEye.constants.ParameterConfig
+import com.wangGang.eagleEye.processing.commands.ProcessingCommand
+import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 
-class ProgressManager private constructor() {
+class ProgressManager private constructor(private val viewModel: CameraViewModel) {
+    val TAG = "ProgressManager"
 
     companion object {
         @Volatile
         private var INSTANCE: ProgressManager? = null
 
-        // Constants
-        val dehazeSteps = arrayOf(
-            "Capturing Images",
-            "Loading and Resizing Image",
-            "Loading Albedo Model",
-            "Preprocessing Image",
-            "Running Albedo Model",
-            "Loading Transmission Model",
-            "Running Transmission Model",
-            "Loading Airlight Model",
-            "Running Airlight Model",
-            "Processing Image",
-            "Saving Image"
-        )
-        private val TASKS_SUPER_RESOLUTION = 9
-        private val TASKS_DEHAZE = dehazeSteps.size
+        fun initialize(viewModel: CameraViewModel) {
+            synchronized(this) {
+                if (INSTANCE == null) {
+                    INSTANCE = ProgressManager(viewModel)
+                }
+            }
+        }
 
         fun getInstance(): ProgressManager {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ProgressManager().also { INSTANCE = it }
-            }
+            return INSTANCE ?: throw IllegalStateException("ProgressManager is not initialized. Call initialize() first.")
         }
 
         fun destroyInstance() {
@@ -39,55 +31,113 @@ class ProgressManager private constructor() {
         }
     }
 
+    /* === CONSTANTS === */
     // Observers
     private val _progress = MutableLiveData<Int>()
     val progress: LiveData<Int> get() = _progress
 
     // Track progress
-    private var completedTasks = 0
-    private var totalTasks = 1
+    private var completedTasks: Int
+    private var totalTasks: Int
+    private var taskList: List<String>
 
     init {
         _progress.value = 0
+        completedTasks = 0
+        totalTasks = 0
+        taskList = emptyList()
     }
 
-    fun incrementProgress() {
+    fun resetProgress() {
+        resetValues()
+        calculateTotalTasks()
+        addTasks()
+        debugPrint()
+    }
+
+    fun showFirstTask() {
+        if (taskList.isNotEmpty()) {
+            viewModel.updateLoadingText(taskList[0])
+        }
+    }
+
+    fun nextTask() {
+        debugPrint()
+        showLoadingText()
+        incrementProgress()
+        onAllTasksCompleted()
+    }
+
+    private fun debugPrint() {
+        Log.d(TAG, "debugPrint()")
+        Log.d(TAG, "Progress: $completedTasks/$totalTasks")
+        Log.d(TAG, "Current Task Index: $completedTasks")
+        if (completedTasks < totalTasks && taskList.isNotEmpty()) {
+            Log.d(TAG, "Current Task: ${taskList[completedTasks]}")
+
+            if (completedTasks + 1 < totalTasks) {
+                Log.d(TAG, "Next Task: ${taskList[completedTasks + 1]}")
+            }
+        }
+    }
+
+    private fun showLoadingText() {
+        val ind = completedTasks
+        if (ind in taskList.indices) {
+            viewModel.updateLoadingText(taskList[ind])
+        } else {
+            Log.w(TAG, "updateLoadingText - Index out of bounds: $ind (taskList size: ${taskList.size})")
+        }
+    }
+
+    private fun addTasks() {
+        val order = ParameterConfig.getProcessingOrder()
+
+        for (item in order) {
+            if (ProcessingCommand.fromDisplayName(item) != null) {
+                taskList += ProcessingCommand.fromDisplayName(item)!!.tasks
+            }
+        }
+
+        Log.d(TAG, "addTasks - taskList: $taskList")
+    }
+
+    private fun onAllTasksCompleted() {
+        if (completedTasks == totalTasks) {
+            viewModel.setLoadingBoxVisible(false)
+            resetValues()
+        }
+    }
+
+    private fun calculateTotalTasks() {
+        val order = ParameterConfig.getProcessingOrder()
+        var total = 0
+        for (item in order) {
+            if (ProcessingCommand.fromDisplayName(item) != null) {
+                total += ProcessingCommand.fromDisplayName(item)!!.calculate()
+            }
+        }
+
+        Log.d(TAG, "calculateTotalTasks - total: $total")
+        totalTasks = total
+    }
+
+    private fun updateProgress() {
+        Log.d(TAG, "updateProgress()")
+        val progressValue = (completedTasks.toFloat() / totalTasks.toFloat() * 100).toInt()
+        _progress.postValue(progressValue)
+    }
+
+    private fun incrementProgress() {
         if (completedTasks < totalTasks) {
             completedTasks++
             updateProgress()
         }
     }
 
-    fun incrementProgress(debugMessage: String) {
-        incrementProgress()
-        Log.d("ProgressBar", "Finished: $debugMessage")
-        Log.d("ProgressBar", "Progress: $completedTasks/$totalTasks")
-    }
-
-    fun resetProgress() {
+    private fun resetValues() {
         completedTasks = 0
+        taskList = emptyList()
         _progress.postValue(0)
-    }
-
-    fun resetProgress(newTotalTasks: Int) {
-        totalTasks = newTotalTasks
-        resetProgress()
-    }
-
-    fun resetProgress(type: ImageEnhancementType) {
-        Log.d("ProgressManager", "Resetting progress for type: $type")
-        val newTotalTasks = when (type) {
-            ImageEnhancementType.SUPER_RESOLUTION -> TASKS_SUPER_RESOLUTION
-            ImageEnhancementType.DEHAZE -> TASKS_DEHAZE
-        }
-        totalTasks = newTotalTasks
-        resetProgress()
-    }
-
-
-
-    private fun updateProgress() {
-        val progressValue = (completedTasks.toFloat() / totalTasks.toFloat() * 100).toInt()
-        _progress.postValue(progressValue)
     }
 }

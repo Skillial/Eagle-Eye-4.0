@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
+import com.wangGang.eagleEye.processing.commands.ProcessingCommand
 import com.wangGang.eagleEye.ui.adapters.CommandListAdapter
 import com.wangGang.eagleEye.ui.adapters.ProcessingOrderListAdapter
 import com.woxthebox.draglistview.DragListView
@@ -27,12 +28,7 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private val TAG = "SettingsActivity"
 
-        private val COMMAND_ITEMS = arrayListOf(
-            Pair(0L, "SR"),
-            Pair(1L, "Dehaze"),
-            Pair(2L, "Upscale")
-        )
-
+        private lateinit var commandItems: ArrayList<Pair<Long, String>>
 
         private val SCALING_FACTORS = listOf(1, 2, 4, 8, 16)
     }
@@ -43,8 +39,6 @@ class SettingsActivity : AppCompatActivity() {
 
     /* === Switches === */
     private lateinit var gridOverlaySwitch: SwitchCompat
-//    private lateinit var superResolutionSwitch: SwitchCompat
-//    private lateinit var dehazeSwitch: SwitchCompat
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
@@ -62,6 +56,12 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        commandItems = ArrayList(
+            ProcessingCommand.entries.mapIndexed { index, algorithm ->
+                index.toLong() to algorithm.displayName
+            }
+        )
 
         assignViews()
         setupSwitchButtons()
@@ -143,7 +143,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupCommandListRecyclerView() {
-        commandListAdapter = CommandListAdapter(COMMAND_ITEMS)
+        commandListAdapter = CommandListAdapter(commandItems)
         commandListRecyclerView.layoutManager = LinearLayoutManager(this)
         commandListRecyclerView.adapter = commandListAdapter
     }
@@ -168,16 +168,14 @@ class SettingsActivity : AppCompatActivity() {
 
                     // If the drop position is below (i.e. a higher index than) the "Upscale" item,
                     // show a toast and enforce that "Upscale" remains at the bottom.
-                    if (upscaleIndex != -1) {
-                        if (toPosition > upscaleIndex) {
-                            Toast.makeText(
-                                this@SettingsActivity,
-                                "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            enforceUpscaleAtBottom(processingOrderListAdapter)
-                            processingOrderListAdapter.notifyDataSetChanged()
-                        }
+                    if (upscaleIndex != -1 && toPosition > upscaleIndex) {
+                        Toast.makeText(
+                            this@SettingsActivity,
+                            "Cannot drop item below 'Upscale' when scaling factor ≥ 8",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        enforceUpscaleAtBottom(processingOrderListAdapter)
+                        processingOrderListAdapter.notifyDataSetChanged()
                     }
                 }
                 updateProcessingOrder(processingOrderListAdapter.itemList)
