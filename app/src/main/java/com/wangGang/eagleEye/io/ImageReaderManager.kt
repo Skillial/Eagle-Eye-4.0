@@ -72,11 +72,10 @@ class ImageReaderManager(
         buffer.get(bytes)
         image.close()
         imageList.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
-        val order = ParameterConfig.getProcessingOrder()
-        val isSuperResolutionEnabled = order.contains("SR")
-        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
+        val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
         Log.d("ImageReaderManager", "Total captures: $totalCaptures")
         if (imageList.size == totalCaptures) {
+            ProgressManager.getInstance().showFirstTask()
             processImage()
         }
     }
@@ -123,6 +122,7 @@ class ImageReaderManager(
                 newImageList.add(newBitmap)
             }
         }
+        ProgressManager.getInstance().nextTask()
         if (scale < 8){
             imageList.clear()
             imageList.addAll(newImageList)
