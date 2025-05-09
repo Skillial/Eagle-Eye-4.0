@@ -93,7 +93,11 @@ class ShadowTest {
 
         for (fileName in imageFileNames) {
             val bitmap = loadBitmapFromAssets(fileName)
+
+            val startTime = System.currentTimeMillis()
             val resultBitmap = synthShadowRemoval.removeShadowTest(bitmap, fileName)
+            val endTime = System.currentTimeMillis()
+            Log.d("ShadowRemovalTiming", "$fileName: ${endTime - startTime}")
 
             FileImageWriter.getInstance()?.saveBitmapImage(resultBitmap, fileName, ImageFileAttribute.FileType.PNG)
             assertNotNull(resultBitmap)
