@@ -27,7 +27,7 @@ import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
 
-class SynthDehaze(private val context: Context, private val viewModel: CameraViewModel) {
+class SynthDehaze(private val context: Context) {
     private fun loadAndResize(bitmap: Bitmap, size: Size): Triple<Mat, Size, Mat> {
 
         // Save before image
@@ -122,15 +122,15 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         // Loading and Resizing Image
         val (origImg, imSize, hazyImg) = loadAndResize(bitmap, Size(256.0, 256.0))
         //val (origImg, imSize, hazyImg) = loadAndResizeFromAssets(Size(512.0, 512.0))
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Loading Albedo Image
         val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Preprocessing Image
         val hazyInput = preprocess(hazyImg, env)
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Running Albedo Model
         val albedoOutput = hazyInput.use { input ->
@@ -140,7 +140,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 }
             }
         }
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Close the session
         ortSessionAlbedo.close()
@@ -149,7 +149,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
 
         // Loading Transmission Model
         val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 256, 256))
 
@@ -161,7 +161,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 }
             }
         }
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Close the session
         ortSessionTransmission.close()
@@ -188,19 +188,19 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         // Resizing Image
         val hazyResized = Mat()
         Imgproc.resize(hazyImg, hazyResized, Size(128.0, 128.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Preprocessing Image
-        viewModel.updateLoadingText("Preprocessing Image")
+//        viewModel.updateLoadingText("Preprocessing Image")
         val airlightInput = preprocess(hazyResized, env)
         hazyResized.release()
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         Log.d(TAG, "Loading Airlight Model")
         // Loading Airlight Model
         val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
         sessionOptions.close()
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         Log.d(TAG, "Running Airlight Model")
         // Running Airlight Model
@@ -209,7 +209,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
                 (results.get(0) as OnnxTensor).floatBuffer.array()
             }
         }
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // Close the session
         ortSessionAirlight.close()
@@ -225,12 +225,12 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         val hazyImgNorm = Mat()
         Core.normalize(origImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
         hazyImg.release()
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         Log.d(TAG, "Clearing Image")
         // Clearing Image
         val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3)
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         Log.d(TAG, "Processing Image")
         // Processing Image
@@ -271,13 +271,13 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         Core.merge(clearChannels, clearImg)
         TResized.release()
         hazyImgNorm.release()
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         Log.d(TAG, "Converting Image")
         // Converting Image
         clearImg.convertTo(clearImg, CvType.CV_8U)
         Core.rotate(clearImg, clearImg, Core.ROTATE_90_COUNTERCLOCKWISE)
-        ProgressManager.getInstance().nextTask()
+//        ProgressManager.getInstance().nextTask()
 
         // convert clearImg to bitmap
         val clearBitmap = Bitmap.createBitmap(clearImg.cols(), clearImg.rows(), Bitmap.Config.ARGB_8888)
