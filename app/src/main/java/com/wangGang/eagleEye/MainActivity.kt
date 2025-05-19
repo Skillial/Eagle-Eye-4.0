@@ -48,8 +48,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeApp() {
-        val intent = Intent(this, CameraControllerActivity::class.java)
-        startActivity(intent)
+        /*val intent = Intent(this, CameraControllerActivity::class.java)
+        startActivity(intent)*/
+        startActivity(
+            Intent(this, com.wangGang.gallery.MainActivity::class.java)
+        )
         finish()    // Disable going back to main activity
     }
 

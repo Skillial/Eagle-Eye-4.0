@@ -37,6 +37,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "17"
@@ -62,6 +63,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":gallery"))
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
     implementation(libs.onnxruntime.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

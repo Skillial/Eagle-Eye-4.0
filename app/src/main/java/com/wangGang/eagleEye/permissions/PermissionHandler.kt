@@ -3,20 +3,35 @@ package com.wangGang.eagleEye.permissions
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 
 class PermissionsHandler(private val context: Context) {
-    private val requiredPermissions = if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.Q) {
-        arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.CAMERA
-        )
+
+    private val requiredPermissions = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.ACCESS_MEDIA_LOCATION  // optional, add if you use media location
+            )
+        }
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        }
+        else -> {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        }
     }
 
     fun requestPermissions(callback: (Boolean) -> Unit) {
@@ -36,3 +51,4 @@ class PermissionsHandler(private val context: Context) {
         }
     }
 }
+
