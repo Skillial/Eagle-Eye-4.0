@@ -75,7 +75,7 @@ class ViewAlbum : Fragment() {
         _binding = FragmentRecentBinding.inflate(inflater, container, false)
         initRecyclerView(requireContext())
 
-        (activity as AppCompatActivity).findViewById<ImageView>(R.id.app_logo).visibility = View.GONE
+//        (activity as AppCompatActivity).findViewById<ImageView>(R.id.app_logo).visibility = View.GONE
 
         toolbar = (activity as AppCompatActivity).findViewById(R.id.toolbar)
         selectableToolbar = (activity as AppCompatActivity).findViewById(R.id.selectable_toolbar)
@@ -151,7 +151,7 @@ class ViewAlbum : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         textAppbar.text = getString(R.string.app_name)
-        (activity as AppCompatActivity).findViewById<ImageView>(R.id.app_logo).visibility = View.VISIBLE
+//        (activity as AppCompatActivity).findViewById<ImageView>(R.id.app_logo).visibility = View.VISIBLE
         (activity as AppCompatActivity).supportActionBar?.setDisplayHomeAsUpEnabled(false)
         (activity as AppCompatActivity).supportActionBar?.setDisplayShowHomeEnabled(false)
         txtAlbumEmpty.visibility = View.GONE
@@ -259,7 +259,7 @@ class ViewAlbum : Fragment() {
                 recyclerView.swapAdapter(myAdapter, false)
 
                 if(media.isEmpty()){
-                    albumes?.remove(File(album.path))
+                    albums?.remove(File(album.path))
                     txtAlbumEmpty.visibility = View.VISIBLE
                 }
 
@@ -399,7 +399,7 @@ class ViewAlbum : Fragment() {
         val media = getImagesFromAlbum(album.path)
 
         if(media.isEmpty()){
-            albumes?.remove(File(album.path))
+            albums?.remove(File(album.path))
             txtAlbumEmpty.visibility = View.VISIBLE
         }
 

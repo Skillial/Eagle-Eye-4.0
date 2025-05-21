@@ -50,10 +50,6 @@
             android:immersive="true"
             android:theme="@style/AppTheme.PreviewWallpaper" />
 
-        <activity
-            android:name=".Splash"
-            android:exported="false" />
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.galleryprovider"

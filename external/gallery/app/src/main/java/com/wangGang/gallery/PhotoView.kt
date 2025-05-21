@@ -122,7 +122,7 @@ class PhotoView : AppCompatActivity() {
         btnShare.setOnClickListener {
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = if (imageExtensions.contains(currentFile.extension.lowercase())) "image/*" else "video/*"
-            val uri = FileProvider.getUriForFile(this, "${this.packageName}.provider", currentFile)
+            val uri = FileProvider.getUriForFile(this, "${this.packageName}.galleryprovider", currentFile)
             intent.putExtra(Intent.EXTRA_STREAM, uri)
             startActivity(Intent.createChooser(intent, getString(R.string.menu_share)))
         }

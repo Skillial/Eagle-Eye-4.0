@@ -39,7 +39,7 @@ class AlbumSelection : AppCompatActivity() {
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_back)
         supportActionBar?.title = ""
 
-        albums = albumes!!
+        albums = com.wangGang.gallery.albums!!
 
         initRecyclerView(this)
     }

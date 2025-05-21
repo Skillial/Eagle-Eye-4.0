@@ -18,7 +18,7 @@ val videoExtensions = arrayOf("mp4", "mkv", "avi", "wmv", "mov", "flv", "webm", 
 val fileExtensions = imageExtensions.plus(videoExtensions)
 var selectable = false
 
-var albumes: HashMap<File, List<File>>? = null
+var albums: HashMap<File, List<File>>? = null
 var itemsList = mutableListOf<Photo>()
 
 fun sortImagesByFolder(files: List<File>): Map<File, List<File>> {

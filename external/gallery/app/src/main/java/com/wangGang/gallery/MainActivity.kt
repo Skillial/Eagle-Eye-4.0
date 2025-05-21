@@ -26,6 +26,7 @@ import com.wangGang.gallery.databinding.ActivityMainBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
 import java.io.File
+import androidx.core.view.isVisible
 
 class MainActivity : AppCompatActivity() {
 
@@ -76,9 +77,13 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if(selectableToolbar.visibility == View.VISIBLE){
+                if(selectableToolbar.isVisible){
                     disableSelectable()
                 }else {
+                    if (!navController.navigateUp()) {
+                        finish()
+                    }
+
                     when(navController.currentDestination?.id) {
                         R.id.SecondFragment -> {
                             bottomNavView.selectedItemId = R.id.menu_photos
@@ -95,7 +100,7 @@ class MainActivity : AppCompatActivity() {
 
             val uriList = arrayListOf<Uri>()
             for(item in itemsList){
-                uriList.add(FileProvider.getUriForFile(this, "${this.packageName}.provider", File(item.path)))
+                uriList.add(FileProvider.getUriForFile(this, "${this.packageName}.galleryprovider", File(item.path)))
             }
             intentShare.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
             startActivity(intentShare)
