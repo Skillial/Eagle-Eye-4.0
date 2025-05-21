@@ -211,12 +211,17 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                     ?.let { reader ->
                         listOfNotNull(reader.getBeforeUriDefaultResultsFolder(), reader.getAfterUriDefaultResultsFolder())
                     } ?: emptyList()
-
-                launchBeforeAndAfterActivity(safeUriList)
+                startActivity(
+                    Intent(this, com.wangGang.gallery.MainActivity::class.java)
+                )
+//                launchBeforeAndAfterActivity(safeUriList)
             } else {
                 // normal image
                 val safeUriList = listOfNotNull(thumbnailUri)
-                launchBeforeAndAfterActivity(safeUriList)
+                startActivity(
+                    Intent(this, com.wangGang.gallery.MainActivity::class.java)
+                )
+//                launchBeforeAndAfterActivity(safeUriList)
             }
         }
 
