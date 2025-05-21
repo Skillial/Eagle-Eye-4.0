@@ -13,6 +13,10 @@ import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.camera.CameraController.Companion.MAX_BURST_IMAGES
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
+import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.SuperResolution
+import com.wangGang.eagleEye.processing.commands.Upscale
+import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
 import com.wangGang.eagleEye.processing.shadow_remove.SynthShadowRemoval
 import com.wangGang.eagleEye.processing.upscale.Interpolation
@@ -72,11 +76,10 @@ class ImageReaderManager(
         buffer.get(bytes)
         image.close()
         imageList.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
-        val order = ParameterConfig.getProcessingOrder()
-        val isSuperResolutionEnabled = order.contains("SR")
-        val totalCaptures = if (isSuperResolutionEnabled) MAX_BURST_IMAGES else 1
+        val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
         Log.d("ImageReaderManager", "Total captures: $totalCaptures")
         if (imageList.size == totalCaptures) {
+            ProgressManager.getInstance().showFirstTask()
             processImage()
         }
     }
@@ -86,18 +89,15 @@ class ImageReaderManager(
         val oldBitmap = imageList[0]
         val order = ParameterConfig.getProcessingOrder()
         cameraController.closeCamera()
-        if (order.isNotEmpty()){
+        if (order.isNotEmpty()) {
             Log.d("order", ""+order)
             for (each in order) {
                 Log.d("ImageReaderManager", "Processing image with: $each")
-                if (each == "Dehaze") {
-                    handleDehazeImage()
-                } else if (each == "SR") {
-                    handleSuperResolutionImage()
-                } else if (each == "Upscale"){
-                    handleUpscaleImage()
-                } else if (each == "Shadow Removal"){
-                    handleShadowRemoval()
+                when (each) {
+                    Dehaze.displayName -> handleDehazeImage()
+                    SuperResolution.displayName -> handleSuperResolutionImage()
+                    Upscale.displayName -> handleUpscaleImage()
+                    ShadowRemoval.displayName -> handleShadowRemoval()
                 }
             }
         }
@@ -123,6 +123,7 @@ class ImageReaderManager(
                 newImageList.add(newBitmap)
             }
         }
+        ProgressManager.getInstance().nextTask()
         if (scale < 8){
             imageList.clear()
             imageList.addAll(newImageList)
@@ -153,19 +154,24 @@ class ImageReaderManager(
         imageList.addAll(newImageList)
     }
 
-    private suspend fun handleShadowRemoval(){
+    private suspend fun handleShadowRemoval() {
         val newImageList = mutableListOf<Bitmap>()
-        for (each in imageList.toList()){
+
+        for (each in imageList.toList()) {
             val newBitmap = withContext(Dispatchers.IO) {
                 SynthShadowRemoval(context, viewModel).removeShadow(each)
             }
+
+            // Save the image to storage
+            FileImageWriter.getInstance()?.saveImageToStorage(newBitmap)?.let { savedFile ->
+                viewModel.addImageInput(savedFile)
+            }
+
             newImageList.add(newBitmap)
         }
         imageList.clear()
         imageList.addAll(newImageList)
     }
-
-
 
     private suspend fun handleSuperResolutionImage() = withContext(Dispatchers.IO) {
         val newImageList = mutableListOf<Bitmap>()

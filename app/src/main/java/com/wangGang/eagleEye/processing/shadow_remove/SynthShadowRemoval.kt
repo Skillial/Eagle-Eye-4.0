@@ -19,6 +19,8 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
+import androidx.core.graphics.scale
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 
 class SynthShadowRemoval(
     private val context: Context,
@@ -142,6 +144,9 @@ class SynthShadowRemoval(
     }
 
     fun removeShadow(bitmap: Bitmap): Bitmap {
+        val originalWidth = bitmap.width
+        val originalHeight = bitmap.height
+
         // Initialize the ONNX Runtime environment.
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions().apply {
@@ -151,8 +156,8 @@ class SynthShadowRemoval(
         }
 
         // Load and preprocess the input image from assets.
-        //val (imSize, img) = loadAndResize(bitmap, Size(512.0, 512.0))
-        val (_, img) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
+        val (imSize, img) = loadAndResize(bitmap, Size(512.0, 512.0))
+        //val (_, img) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
         val rgbTensor = preprocess(img, env)
 
         // Load and run the shadow matte model.
@@ -192,8 +197,14 @@ class SynthShadowRemoval(
         removalSession.close()
         img.release()
 
-        // Convert the final output to a Bitmap.
-        return convertToBitmap(shadowRemovedData)
+        env.close()
+
+        ProgressManager.getInstance().nextTask()
+
+        val outputBitmap = convertToBitmap(shadowRemovedData)
+
+        // Resize the result back to the original size
+        return outputBitmap.scale(originalWidth, originalHeight)
     }
 
 
@@ -268,7 +279,6 @@ class SynthShadowRemoval(
         removalSession.close()
         img.release()
 
-        // Convert the final output to a Bitmap.
         return convertToBitmap(shadowRemovedData)
     }
 }

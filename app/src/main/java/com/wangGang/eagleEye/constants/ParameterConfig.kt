@@ -145,12 +145,6 @@ class ParameterConfig private constructor(appContext: Context) {
         }
     }
 
-//    enum class ProcessingCommands(val displayName: String) {
-//        SUPER_RESOLUTION("Super Resolution"),
-//        DEHAZE("Dehaze"),
-//        UPSCALE("Upscale")
-//    }
-
     private val sharedPrefs: SharedPreferences = appContext.getSharedPreferences(PARAMETER_PREFS, Context.MODE_PRIVATE)
     private val editorPrefs: SharedPreferences.Editor = sharedPrefs.edit()
 }

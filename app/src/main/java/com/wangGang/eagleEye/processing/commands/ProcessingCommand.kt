@@ -9,7 +9,7 @@ sealed class ProcessingCommand(val displayName: String, val tasks: List<String>,
     companion object {
         // List of all available commands.
         val entries: List<ProcessingCommand> by lazy {
-            listOf(SuperResolution, Dehaze, Upscale)
+            listOf(SuperResolution, Dehaze, Upscale, ShadowRemoval)
         }
 
         // Factory function to retrieve a ProcessingCommand based on its displayName.
@@ -18,6 +18,7 @@ sealed class ProcessingCommand(val displayName: String, val tasks: List<String>,
                 SuperResolution.displayName -> SuperResolution
                 Dehaze.displayName -> Dehaze
                 Upscale.displayName -> Upscale
+                ShadowRemoval.displayName -> ShadowRemoval
                 else -> null
             }
         }
@@ -67,4 +68,12 @@ data object Upscale : ProcessingCommand(
         "Upscaling Images"
     ),
     color = Color.Blue
+)
+
+data object ShadowRemoval : ProcessingCommand(
+    displayName = "Shadow Removal",
+    tasks = listOf(
+        "Removing Shadows"
+    ),
+    color = Color.White
 )
