@@ -7,7 +7,6 @@ import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import org.opencv.android.Utils
 import org.opencv.core.Core
@@ -20,6 +19,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
+import androidx.core.graphics.scale
 
 class SynthShadowRemoval(
     private val context: Context,
@@ -143,6 +143,9 @@ class SynthShadowRemoval(
     }
 
     fun removeShadow(bitmap: Bitmap): Bitmap {
+        val originalWidth = bitmap.width
+        val originalHeight = bitmap.height
+
         // Initialize the ONNX Runtime environment.
         val env = OrtEnvironment.getEnvironment()
         val sessionOptions = OrtSession.SessionOptions().apply {
@@ -152,8 +155,8 @@ class SynthShadowRemoval(
         }
 
         // Load and preprocess the input image from assets.
-//        val (imSize, img) = loadAndResize(bitmap, Size(512.0, 512.0))
-        val (_, img) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
+        val (imSize, img) = loadAndResize(bitmap, Size(512.0, 512.0))
+        //val (_, img) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
         val rgbTensor = preprocess(img, env)
 
         // Load and run the shadow matte model.
@@ -166,7 +169,7 @@ class SynthShadowRemoval(
         // Process input by concatenating the RGB tensor and shadow matte.
         val shadowInput = processInput(env, rgbTensor, matteTensor)
 
-// Load and run the shadow removal model.
+        // Load and run the shadow removal model.
         val removalSession = loadModelFromAssets(env, sessionOptions, "model/shadow_removal.onnx")
         val shadowRemovedData = shadowInput.use { input ->
             removalSession.run(
@@ -189,9 +192,90 @@ class SynthShadowRemoval(
         rgbTensor.close()
         matteTensor.close()
 
-        ProgressManager.getInstance().nextTask()
+        matteSession.close()
+        removalSession.close()
+        img.release()
 
-        // Convert the final output to a Bitmap.
+        env.close()
+
+        val outputBitmap = convertToBitmap(shadowRemovedData)
+
+        // Resize the result back to the original size
+        return outputBitmap.scale(originalWidth, originalHeight)
+    }
+
+
+    private fun loadAndResizeFromAssetsTest(size: Size, filename: String): Pair<Size, Mat> {
+        val inputStream: InputStream = try {
+            context.assets.open("test/shadow/${filename}")
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Image not found in assets", e)
+        }
+        val byteArray = inputStream.readBytes()
+        val matOfByte = MatOfByte(*byteArray)
+        val img = Imgcodecs.imdecode(matOfByte, Imgcodecs.IMREAD_COLOR)
+        if (img.empty()) {
+            throw IllegalArgumentException("Image decoding failed")
+        }
+        val imSize = Size(img.cols().toDouble(), img.rows().toDouble())
+
+        // Convert BGR -> RGB, resize, and rotate to match the Python pipeline
+        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
+        Imgproc.resize(img, img, size)
+        Core.rotate(img, img, Core.ROTATE_90_COUNTERCLOCKWISE)
+        return Pair(imSize, img)
+    }
+
+    fun removeShadowTest(bitmap: Bitmap, filename: String): Bitmap {
+        // Initialize the ONNX Runtime environment.
+        val env = OrtEnvironment.getEnvironment()
+        val sessionOptions = OrtSession.SessionOptions().apply {
+            setMemoryPatternOptimization(true)
+            addConfigEntry("session.use_device_memory_mapping", "1")
+            addConfigEntry("session.enable_stream_execution", "1")
+        }
+
+        // Load and preprocess the input image from assets.
+        val (_, img) = loadAndResizeFromAssetsTest(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()), filename)
+        val rgbTensor = preprocess(img, env)
+
+        // Load and run the shadow matte model.
+        val matteSession = loadModelFromAssets(env, sessionOptions, "model/shadow_matte.onnx")
+        val matteResults = matteSession.run(
+            mapOf(matteSession.inputNames.first() to rgbTensor)
+        )
+        val matteTensor = matteResults.get(0) as OnnxTensor
+
+        // Process input by concatenating the RGB tensor and shadow matte.
+        val shadowInput = processInput(env, rgbTensor, matteTensor)
+
+        // Load and run the shadow removal model.
+        val removalSession = loadModelFromAssets(env, sessionOptions, "model/shadow_removal.onnx")
+        val shadowRemovedData = shadowInput.use { input ->
+            removalSession.run(
+                mapOf(removalSession.inputNames.first() to input)
+            ).use { outputs ->
+                // Assuming the output tensor is the first output.
+                (outputs.get(0) as OnnxTensor).use { outputTensor ->
+                    FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
+                        outputTensor.floatBuffer.get(array)
+                    }
+                }
+            }
+        }.map { value ->
+            // Rescale output from model (assumed output range is [-1,1]) to [0,1]
+            ((value + 1f) / 2f).coerceIn(0f, 1f)
+        }.toFloatArray()
+
+        // Close the intermediate tensors.
+        matteResults.close()
+        rgbTensor.close()
+        matteTensor.close()
+
+        matteSession.close()
+        removalSession.close()
+        img.release()
+
         return convertToBitmap(shadowRemovedData)
     }
 }
