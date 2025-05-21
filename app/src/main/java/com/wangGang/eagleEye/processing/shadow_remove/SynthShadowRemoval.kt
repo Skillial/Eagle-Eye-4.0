@@ -20,6 +20,7 @@ import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
 import androidx.core.graphics.scale
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 
 class SynthShadowRemoval(
     private val context: Context,
@@ -197,6 +198,8 @@ class SynthShadowRemoval(
         img.release()
 
         env.close()
+
+        ProgressManager.getInstance().nextTask()
 
         val outputBitmap = convertToBitmap(shadowRemovedData)
 
