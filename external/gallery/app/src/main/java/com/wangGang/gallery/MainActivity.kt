@@ -44,6 +44,9 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
 
+        val folders: HashMap<File, List<File>> = sortImagesByFolder(getAllImages(this)) as HashMap<File, List<File>>
+        albums = folders
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

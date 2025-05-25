@@ -31,6 +31,7 @@ class AlbumsFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         albums = com.wangGang.gallery.albums ?: hashMapOf()
     }
 
