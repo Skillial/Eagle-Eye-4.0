@@ -120,19 +120,27 @@ class SynthShadowRemoval(
     }
 
 
-    private fun convertToBitmap(shadowRemoved: FloatArray, OriginalHeight: Int, OriginalWidth: Int): Bitmap {
-        val intArray = IntArray(OriginalWidth * OriginalHeight)
-        val channelSize = OriginalWidth * OriginalHeight
+    private fun convertToBitmap(
+        shadowRemoved: FloatArray,
+        originalHeight: Int,
+        originalWidth: Int
+    ): Bitmap {
+        val expectedLength = 3 * originalHeight * originalWidth
+
+
+        val channelSize = expectedLength / 3
+        val intArray = IntArray(channelSize)
 
         for (i in 0 until channelSize) {
             val r = (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
             val g = (shadowRemoved[i + channelSize] * 255).coerceIn(0f, 255f).toInt()
             val b = (shadowRemoved[i + 2 * channelSize] * 255).coerceIn(0f, 255f).toInt()
-            intArray[i] = 0xFF shl 24 or (r shl 16) or (g shl 8) or b
+
+            intArray[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
 
-        return Bitmap.createBitmap(OriginalWidth, OriginalHeight, Bitmap.Config.ARGB_8888).apply {
-            setPixels(intArray, 0, OriginalWidth, 0, 0, OriginalWidth, OriginalHeight)
+        return Bitmap.createBitmap(originalWidth, originalHeight, Bitmap.Config.ARGB_8888).apply {
+            setPixels(intArray, 0, originalWidth, 0, 0, originalWidth, originalHeight)
         }
     }
 
@@ -449,7 +457,6 @@ class SynthShadowRemoval(
         env.close()
         var fullResult = reconstructFromPatches(processedPatch.toList(), originalHeight, originalWidth)
 
-        fullResult = fullResult.copyOfRange(0, paddedH * paddedW)
         // Convert the full result back to a bitmap
         val outputBitmap = convertToBitmap(fullResult, originalWidth, originalHeight)
 
