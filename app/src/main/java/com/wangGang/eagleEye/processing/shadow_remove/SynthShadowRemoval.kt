@@ -356,7 +356,7 @@ class SynthShadowRemoval(
         fullH: Int,
         fullW: Int
     ): FloatArray {
-        val fullImage = FloatArray(fullH * fullW)
+        val fullImage = FloatArray(3 * fullH * fullW)  // Fix: account for 3 channels
 
         for ((patch, i, j) in patches) {
             val patchHeight = patch[0].toInt()
@@ -377,6 +377,7 @@ class SynthShadowRemoval(
 
         return fullImage
     }
+
 
 
     fun removeShadow(bitmap: Bitmap): Bitmap {
