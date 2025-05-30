@@ -396,32 +396,39 @@ class SynthShadowRemoval(
 //        val (_, downImg) = loadAndResize(bitmap, Size(512.0, 512.0))
         val (_, downImg) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
         val downTensor = preprocess(downImg, env)
-
+        downImg.release()
         // Load and run the shadow matte model.
         val matteSession = loadModelFromAssets(env, sessionOptions, "model/shadow_matte.onnx")
         val matteResults = matteSession.run(
             mapOf(matteSession.inputNames.first() to downTensor)
         )
+        matteSession.close()
+        downTensor.close()
         val smallMatteTensor = matteResults.get(0) as OnnxTensor
+        matteResults.close()
         // interpolate tensor to match the input size
         val matteTensor = interpolateOnnxTensorBicubic(env, smallMatteTensor, originalHeight, originalWidth)
+        smallMatteTensor.close()
         // Process input by concatenating the RGB tensor and shadow matte.
         val img = load(bitmap)
         val rgbTensor = preprocess(img, env)
-
+        img.release()
         val (paddedRgb, paddedH, paddedW) = padToMultipleReflect(env,rgbTensor, 512)
+        rgbTensor.close()
         val (paddedMatte, _, _) = padToMultipleReflect(env, matteTensor, 512)
-
+        matteTensor.close()
         val rgbPatches = extractPatches(env, paddedRgb)
+        paddedRgb.close()
         val mattePatches = extractPatches(env, paddedMatte)
-
+        paddedMatte.close()
         val processedPatch = mutableListOf<Triple<FloatArray, Int, Int>>()
         val removalSession = loadModelFromAssets(env, sessionOptions, "model/shadow_removal.onnx")
         for ((rgbTriple, matteTriple) in rgbPatches.zip(mattePatches)) {
             val (rgbPatch, i, j) = rgbTriple
             val (mattePatch, _, _) = matteTriple
             val shadowInput = processInput(env, rgbPatch, mattePatch)
-
+            rgbPatch.close()
+            mattePatch.close()
             val shadowRemovedData = shadowInput.use { input ->
                 removalSession.run(
                     mapOf(removalSession.inputNames.first() to input)
@@ -439,22 +446,12 @@ class SynthShadowRemoval(
 
             processedPatch.add(Triple(shadowRemovedData,i,j))
         }
+        env.close()
         var fullResult = reconstructFromPatches(processedPatch.toList(), originalHeight, originalWidth)
 
         fullResult = fullResult.copyOfRange(0, paddedH * paddedW)
         // Convert the full result back to a bitmap
         val outputBitmap = convertToBitmap(fullResult, originalWidth, originalHeight)
-
-
-        matteResults.close()
-        rgbTensor.close()
-        matteTensor.close()
-
-        matteSession.close()
-        removalSession.close()
-        img.release()
-
-        env.close()
 
         ProgressManager.getInstance().nextTask()
 
