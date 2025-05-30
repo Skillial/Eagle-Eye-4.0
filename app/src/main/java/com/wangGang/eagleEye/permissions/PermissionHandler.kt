@@ -13,8 +13,8 @@ class PermissionsHandler(private val context: Context) {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
         )
-    } else {
-        arrayOf(
+        } else {
+            arrayOf(
             Manifest.permission.CAMERA
         )
     }
