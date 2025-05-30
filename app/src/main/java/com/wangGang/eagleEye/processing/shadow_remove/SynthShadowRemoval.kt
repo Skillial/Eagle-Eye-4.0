@@ -120,19 +120,31 @@ class SynthShadowRemoval(
     }
 
 
-    private fun convertToBitmap(shadowRemoved: FloatArray): Bitmap {
-        val intArray = IntArray(TARGET_WIDTH * TARGET_HEIGHT)
-        val channelSize = TARGET_WIDTH * TARGET_HEIGHT
+    private fun convertToBitmap(shadowRemoved: FloatArray, width: Int, height: Int): Bitmap {
+        val intArray = IntArray(width * height)
+        val channelCount = shadowRemoved.size / (width * height)
 
-        for (i in 0 until channelSize) {
-            val r = (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
-            val g = (shadowRemoved[i + channelSize] * 255).coerceIn(0f, 255f).toInt()
-            val b = (shadowRemoved[i + 2 * channelSize] * 255).coerceIn(0f, 255f).toInt()
+        for (i in 0 until width * height) {
+            val r = when (channelCount) {
+                1 -> (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
+                else -> (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
+            }
+
+            val g = when (channelCount) {
+                3 -> (shadowRemoved[i + width * height] * 255).coerceIn(0f, 255f).toInt()
+                else -> r
+            }
+
+            val b = when (channelCount) {
+                3 -> (shadowRemoved[i + 2 * width * height] * 255).coerceIn(0f, 255f).toInt()
+                else -> r
+            }
+
             intArray[i] = 0xFF shl 24 or (r shl 16) or (g shl 8) or b
         }
 
-        return Bitmap.createBitmap(TARGET_WIDTH, TARGET_HEIGHT, Bitmap.Config.ARGB_8888).apply {
-            setPixels(intArray, 0, TARGET_WIDTH, 0, 0, TARGET_WIDTH, TARGET_HEIGHT)
+        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+            setPixels(intArray, 0, width, 0, 0, width, height)
         }
     }
 
@@ -443,7 +455,7 @@ class SynthShadowRemoval(
 
         fullResult = fullResult.copyOfRange(0, paddedH * paddedW)
         // Convert the full result back to a bitmap
-        val outputBitmap = convertToBitmap(fullResult)
+        val outputBitmap = convertToBitmap(fullResult, originalWidth, originalHeight)
 
 
         matteResults.close()
@@ -483,56 +495,56 @@ class SynthShadowRemoval(
         return Pair(imSize, img)
     }
 
-    fun removeShadowTest(bitmap: Bitmap, filename: String): Bitmap {
-        // Initialize the ONNX Runtime environment.
-        val env = OrtEnvironment.getEnvironment()
-        val sessionOptions = OrtSession.SessionOptions().apply {
-            setMemoryPatternOptimization(true)
-            addConfigEntry("session.use_device_memory_mapping", "1")
-            addConfigEntry("session.enable_stream_execution", "1")
-        }
-
-        // Load and preprocess the input image from assets.
-        val (_, img) = loadAndResizeFromAssetsTest(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()), filename)
-        val rgbTensor = preprocess(img, env)
-
-        // Load and run the shadow matte model.
-        val matteSession = loadModelFromAssets(env, sessionOptions, "model/shadow_matte.onnx")
-        val matteResults = matteSession.run(
-            mapOf(matteSession.inputNames.first() to rgbTensor)
-        )
-        val matteTensor = matteResults.get(0) as OnnxTensor
-
-        // Process input by concatenating the RGB tensor and shadow matte.
-        val shadowInput = processInput(env, rgbTensor, matteTensor)
-
-        // Load and run the shadow removal model.
-        val removalSession = loadModelFromAssets(env, sessionOptions, "model/shadow_removal.onnx")
-        val shadowRemovedData = shadowInput.use { input ->
-            removalSession.run(
-                mapOf(removalSession.inputNames.first() to input)
-            ).use { outputs ->
-                // Assuming the output tensor is the first output.
-                (outputs.get(0) as OnnxTensor).use { outputTensor ->
-                    FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
-                        outputTensor.floatBuffer.get(array)
-                    }
-                }
-            }
-        }.map { value ->
-            // Rescale output from model (assumed output range is [-1,1]) to [0,1]
-            ((value + 1f) / 2f).coerceIn(0f, 1f)
-        }.toFloatArray()
-
-        // Close the intermediate tensors.
-        matteResults.close()
-        rgbTensor.close()
-        matteTensor.close()
-
-        matteSession.close()
-        removalSession.close()
-        img.release()
-
-        return convertToBitmap(shadowRemovedData)
-    }
+//    fun removeShadowTest(bitmap: Bitmap, filename: String): Bitmap {
+//        // Initialize the ONNX Runtime environment.
+//        val env = OrtEnvironment.getEnvironment()
+//        val sessionOptions = OrtSession.SessionOptions().apply {
+//            setMemoryPatternOptimization(true)
+//            addConfigEntry("session.use_device_memory_mapping", "1")
+//            addConfigEntry("session.enable_stream_execution", "1")
+//        }
+//
+//        // Load and preprocess the input image from assets.
+//        val (_, img) = loadAndResizeFromAssetsTest(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()), filename)
+//        val rgbTensor = preprocess(img, env)
+//
+//        // Load and run the shadow matte model.
+//        val matteSession = loadModelFromAssets(env, sessionOptions, "model/shadow_matte.onnx")
+//        val matteResults = matteSession.run(
+//            mapOf(matteSession.inputNames.first() to rgbTensor)
+//        )
+//        val matteTensor = matteResults.get(0) as OnnxTensor
+//
+//        // Process input by concatenating the RGB tensor and shadow matte.
+//        val shadowInput = processInput(env, rgbTensor, matteTensor)
+//
+//        // Load and run the shadow removal model.
+//        val removalSession = loadModelFromAssets(env, sessionOptions, "model/shadow_removal.onnx")
+//        val shadowRemovedData = shadowInput.use { input ->
+//            removalSession.run(
+//                mapOf(removalSession.inputNames.first() to input)
+//            ).use { outputs ->
+//                // Assuming the output tensor is the first output.
+//                (outputs.get(0) as OnnxTensor).use { outputTensor ->
+//                    FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
+//                        outputTensor.floatBuffer.get(array)
+//                    }
+//                }
+//            }
+//        }.map { value ->
+//            // Rescale output from model (assumed output range is [-1,1]) to [0,1]
+//            ((value + 1f) / 2f).coerceIn(0f, 1f)
+//        }.toFloatArray()
+//
+//        // Close the intermediate tensors.
+//        matteResults.close()
+//        rgbTensor.close()
+//        matteTensor.close()
+//
+//        matteSession.close()
+//        removalSession.close()
+//        img.release()
+//
+////        return convertToBitmap(shadowRemovedData, )
+//    }
 }
