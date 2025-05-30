@@ -82,18 +82,18 @@ class SynthShadowRemoval(
         val channels = mutableListOf<Mat>()
         Core.split(imgFloat, channels)
 
-        val chwData = FloatArray(3 * TARGET_HEIGHT * TARGET_WIDTH)
+        val chwData = FloatArray(3 * img.height() * img.width())
         for (c in 0 until 3) {
-            val channelBuffer = FloatArray(TARGET_HEIGHT * TARGET_WIDTH)
+            val channelBuffer = FloatArray(img.height() * img.width())
             channels[c].get(0, 0, channelBuffer)
-            System.arraycopy(channelBuffer, 0, chwData, c * TARGET_HEIGHT * TARGET_WIDTH, channelBuffer.size)
+            System.arraycopy(channelBuffer, 0, chwData, c * img.height() * img.width(), channelBuffer.size)
         }
 
         // Release resources.
         imgFloat.release()
         channels.forEach { it.release() }
 
-        val inputShape = longArrayOf(1, 3, TARGET_HEIGHT.toLong(), TARGET_WIDTH.toLong())
+        val inputShape = longArrayOf(1, 3, img.height().toLong(), img.width().toLong())
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(chwData), inputShape)
     }
 
