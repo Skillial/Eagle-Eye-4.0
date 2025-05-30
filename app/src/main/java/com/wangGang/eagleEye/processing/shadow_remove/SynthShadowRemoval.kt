@@ -120,31 +120,19 @@ class SynthShadowRemoval(
     }
 
 
-    private fun convertToBitmap(shadowRemoved: FloatArray, width: Int, height: Int): Bitmap {
-        val intArray = IntArray(width * height)
-        val channelCount = shadowRemoved.size / (width * height)
+    private fun convertToBitmap(shadowRemoved: FloatArray, OriginalHeight: Int, OriginalWidth: Int): Bitmap {
+        val intArray = IntArray(OriginalWidth * OriginalHeight)
+        val channelSize = OriginalWidth * OriginalHeight
 
-        for (i in 0 until width * height) {
-            val r = when (channelCount) {
-                1 -> (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
-                else -> (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
-            }
-
-            val g = when (channelCount) {
-                3 -> (shadowRemoved[i + width * height] * 255).coerceIn(0f, 255f).toInt()
-                else -> r
-            }
-
-            val b = when (channelCount) {
-                3 -> (shadowRemoved[i + 2 * width * height] * 255).coerceIn(0f, 255f).toInt()
-                else -> r
-            }
-
+        for (i in 0 until channelSize) {
+            val r = (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
+            val g = (shadowRemoved[i + channelSize] * 255).coerceIn(0f, 255f).toInt()
+            val b = (shadowRemoved[i + 2 * channelSize] * 255).coerceIn(0f, 255f).toInt()
             intArray[i] = 0xFF shl 24 or (r shl 16) or (g shl 8) or b
         }
 
-        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-            setPixels(intArray, 0, width, 0, 0, width, height)
+        return Bitmap.createBitmap(OriginalWidth, OriginalHeight, Bitmap.Config.ARGB_8888).apply {
+            setPixels(intArray, 0, OriginalWidth, 0, 0, OriginalWidth, OriginalHeight)
         }
     }
 
@@ -545,6 +533,6 @@ class SynthShadowRemoval(
 //        removalSession.close()
 //        img.release()
 //
-////        return convertToBitmap(shadowRemovedData, )
+//        return convertToBitmap(shadowRemovedData)
 //    }
 }
