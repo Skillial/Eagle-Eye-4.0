@@ -7,6 +7,7 @@ import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.compose.ui.graphics.Shape
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import org.opencv.android.Utils
 import org.opencv.core.Core
@@ -22,6 +23,7 @@ import java.nio.FloatBuffer
 import androidx.core.graphics.scale
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import kotlin.math.ceil
+import kotlin.math.min
 
 class SynthShadowRemoval(
     private val context: Context,
@@ -354,49 +356,30 @@ class SynthShadowRemoval(
 
     fun reconstructFromPatches(
         patches: List<Triple<FloatArray, Int, Int>>,
-        paddedHeight: Int,
-        paddedWidth: Int,
-        env: Any? = null  // your env type here, optional if unused
+        fullH: Int,
+        fullW: Int
     ): FloatArray {
-        // Create the full image float array (assumed single channel)
-        val fullImage = FloatArray(paddedHeight * paddedWidth)
+        val fullImage = FloatArray(fullH * fullW)
 
-        // Calculate patch size from first patch
-        val patchHeight = patches[0].second
-        val patchWidth = patches[0].third
+        for ((patch, i, j) in patches) {
+            val patchHeight = patch[0].toInt()
+            val patchWidth = patch[1].toInt()
+            val valid_h = min(patchHeight, (fullH - i))
+            val valid_w = min(patchWidth, (fullW - j))
 
-        // Calculate how many patches fit per row and column
-        val patchesPerRow = paddedWidth / patchWidth
-        val patchesPerCol = paddedHeight / patchHeight
-
-        var patchIndex = 0
-        for (row in 0 until patchesPerCol) {
-            for (col in 0 until patchesPerRow) {
-                if (patchIndex >= patches.size) break
-
-                val (patchData, h, w) = patches[patchIndex]
-
-                // Sanity check patch size matches expected
-                if (h != patchHeight || w != patchWidth) {
-                    throw IllegalArgumentException("Patch sizes are inconsistent!")
-                }
-
-                // Copy patch pixels into the full image
-                for (r in 0 until patchHeight) {
-                    for (c in 0 until patchWidth) {
-                        val fullRow = row * patchHeight + r
-                        val fullCol = col * patchWidth + c
-                        fullImage[fullRow * paddedWidth + fullCol] = patchData[r * patchWidth + c]
+            for (c in 0 until 3) {
+                for (h in 0 until valid_h) {
+                    for (w in 0 until valid_w) {
+                        val patchIdx = c * patchHeight * patchWidth + h * patchWidth + w
+                        val fullIdx = c * fullH * fullW + (i + h) * fullW + (j + w)
+                        fullImage[fullIdx] = patch[patchIdx]
                     }
                 }
-
-                patchIndex++
             }
         }
 
         return fullImage
     }
-
 
 
     fun removeShadow(bitmap: Bitmap): Bitmap {
@@ -436,7 +419,6 @@ class SynthShadowRemoval(
 
         val processed_patch = mutableListOf<Triple<FloatArray, Int, Int>>()
         val removalSession = loadModelFromAssets(env, sessionOptions, "model/shadow_removal.onnx")
-        var c: LongArray? = null
         for ((rgbTriple, matteTriple) in rgb_patches.zip(matte_patches)) {
             val (rgbPatch, i, j) = rgbTriple
             val (mattePatch, _, _) = matteTriple
@@ -447,10 +429,6 @@ class SynthShadowRemoval(
                     mapOf(removalSession.inputNames.first() to input)
                 ).use { outputs ->
                     (outputs.get(0) as OnnxTensor).use { outputTensor ->
-                        // Capture shape once
-                        if (c == null) {
-                            c = outputTensor.info.shape
-                        }
                         // Convert to FloatArray
                         FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
                             outputTensor.floatBuffer.get(array)
@@ -463,7 +441,7 @@ class SynthShadowRemoval(
 
             processed_patch.add(Triple(shadowRemovedData,i,j))
         }
-        var full_result = reconstructFromPatches(processed_patch.toList(), padded_h, padded_w, env)
+        var full_result = reconstructFromPatches(processed_patch.toList(), originalHeight, originalWidth)
 
         full_result = full_result.copyOfRange(0, padded_h * padded_w)
         // Convert the full result back to a bitmap
