@@ -393,8 +393,8 @@ class SynthShadowRemoval(
         }
 
         // Load and preprocess the input image from assets.
-        val (_, downImg) = loadAndResize(bitmap, Size(512.0, 512.0))
-        //val (_, img) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
+//        val (_, downImg) = loadAndResize(bitmap, Size(512.0, 512.0))
+        val (_, downImg) = loadAndResizeFromAssets(Size(TARGET_WIDTH.toDouble(), TARGET_HEIGHT.toDouble()))
         val downTensor = preprocess(downImg, env)
 
         // Load and run the shadow matte model.
