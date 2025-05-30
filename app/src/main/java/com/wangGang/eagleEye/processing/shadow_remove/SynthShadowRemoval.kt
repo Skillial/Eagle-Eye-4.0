@@ -173,7 +173,7 @@ class SynthShadowRemoval(
             val r = (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
             val g = (shadowRemoved[i + channelSize] * 255).coerceIn(0f, 255f).toInt()
             val b = (shadowRemoved[i + 2 * channelSize] * 255).coerceIn(0f, 255f).toInt()
-
+            Log.d("SynthShadowRemoval", "Pixel $i: R=$r, G=$g, B=$b")
             intArray[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
 
@@ -354,7 +354,6 @@ class SynthShadowRemoval(
 
         // Create new tensor from FloatBuffer and shape
         val paddedTensor = OnnxTensor.createTensor(env, floatBuffer, shape)
-        Log.d("tenosr size", paddedTensor.info.shape.contentToString())
         return Triple(paddedTensor, origH, origW)
     }
 
@@ -405,17 +404,15 @@ class SynthShadowRemoval(
         fullH: Int,
         fullW: Int
     ): FloatArray {
-        val fullImage = FloatArray(3 * fullH * fullW)  // Fix: account for 3 channels
+
+        val fullImage = FloatArray(3 * patches.size * 512 * patches.size * 512)  // Fix: account for 3 channels
 
         for ((patch, i, j) in patches) {
-            val patchHeight = patch[0].toInt()
-            val patchWidth = patch[1].toInt()
-            val validH = min(patchHeight, (fullH - i))
-            val validW = min(patchWidth, (fullW - j))
-
+            val patchHeight = 512
+            val patchWidth = 512
             for (c in 0 until 3) {
-                for (h in 0 until validH) {
-                    for (w in 0 until validW) {
+                for (h in 0 until patchHeight) {
+                    for (w in 0 until patchWidth) {
                         val patchIdx = c * patchHeight * patchWidth + h * patchWidth + w
                         val fullIdx = c * fullH * fullW + (i + h) * fullW + (j + w)
                         fullImage[fullIdx] = patch[patchIdx]
