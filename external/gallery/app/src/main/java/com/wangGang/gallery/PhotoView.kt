@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.*
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.drawable.InsetDrawable
 import android.net.Uri
 import android.os.Build
@@ -25,6 +26,7 @@ import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -63,6 +65,7 @@ class PhotoView : AppCompatActivity() {
     private val SD_CARD_PERMISSION_GRANTED_KEY = "sd_card_permission_granted"
     private lateinit var destinationPath: String
 
+    @SuppressLint("ResourceType")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -87,6 +90,11 @@ class PhotoView : AppCompatActivity() {
         supportActionBar?.setDisplayShowHomeEnabled(true)
         supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_back)
         supportActionBar?.title = ""
+
+        toolbar.navigationIcon?.setColorFilter(
+            Color.BLACK,
+            PorterDuff.Mode.SRC_ATOP
+        )
 
         val bundle = intent.extras
         position = bundle?.getInt("position")!!
