@@ -75,5 +75,5 @@ data object ShadowRemoval : ProcessingCommand(
     tasks = listOf(
         "Removing Shadows"
     ),
-    color = Color.White
+    color = Color.Gray
 )
