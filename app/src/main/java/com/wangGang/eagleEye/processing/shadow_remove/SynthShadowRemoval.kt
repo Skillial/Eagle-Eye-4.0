@@ -23,7 +23,8 @@ import kotlin.math.ceil
 import kotlin.math.min
 
 class SynthShadowRemoval(
-    private val context: Context
+    private val context: Context,
+    private val viewModel: CameraViewModel
 ) {
     companion object {
         private const val TAG = "SynthShadowRemoval"
