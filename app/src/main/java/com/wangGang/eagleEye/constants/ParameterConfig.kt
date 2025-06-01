@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.util.Log
 import com.wangGang.eagleEye.processing.commands.Dehaze
 import com.wangGang.eagleEye.processing.commands.ProcessingCommand
+import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.eagleEye.processing.commands.Upscale
 
@@ -127,6 +128,12 @@ class ParameterConfig private constructor(appContext: Context) {
         fun isDehazeEnabled(): Boolean {
             Log.d(TAG, "isDehazeEnabled: ${getProcessingOrder().contains(Dehaze.displayName)}")
             return getProcessingOrder().contains(Dehaze.displayName)
+        }
+
+        @JvmStatic
+        fun isShadowRemovalEnabled(): Boolean {
+            Log.d(TAG, "isShadowRemovalEnabled: ${getProcessingOrder().contains(ShadowRemoval.displayName)}")
+            return getProcessingOrder().contains(ShadowRemoval.displayName)
         }
 
         @JvmStatic
