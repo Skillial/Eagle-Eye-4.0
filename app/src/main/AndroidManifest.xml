@@ -45,10 +45,6 @@
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
         <activity
-            android:name=".ui.activities.PhotoActivity"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-
-        <activity
             android:name=".ui.activities.SettingsActivity"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
 
