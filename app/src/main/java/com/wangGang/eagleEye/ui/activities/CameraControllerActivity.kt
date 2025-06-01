@@ -35,6 +35,9 @@ import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import com.wangGang.eagleEye.ui.views.GridOverlayView
 import androidx.core.view.isVisible
+import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.ShadowRemoval
+import com.wangGang.eagleEye.processing.commands.SuperResolution
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -249,26 +252,30 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     }
 
     private fun setBackground() {
-        val superResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
-        val dehazeEnabled = ParameterConfig.isDehazeEnabled()
-        val shadowRemovalEnabled = ParameterConfig.isShadowRemovalEnabled()
+        val orderedNames = ParameterConfig.getProcessingOrder()
+
+        val enabledSet = mutableSetOf<String>()
+        if (ParameterConfig.isSuperResolutionEnabled()) enabledSet.add(SuperResolution.displayName)
+        if (ParameterConfig.isDehazeEnabled()) enabledSet.add(Dehaze.displayName)
+        if (ParameterConfig.isShadowRemovalEnabled()) enabledSet.add(ShadowRemoval.displayName)
 
         val activeImageEnhancementTechniques = mutableListOf<ImageEnhancementType>()
 
-        if (superResolutionEnabled) {
-            activeImageEnhancementTechniques.add(ImageEnhancementType.SUPER_RESOLUTION)
-        }
-
-        if (dehazeEnabled) {
-            activeImageEnhancementTechniques.add(ImageEnhancementType.DEHAZE)
-        }
-
-        if (shadowRemovalEnabled) {
-            activeImageEnhancementTechniques.add(ImageEnhancementType.SHADOW_REMOVAL)
+        for (name in orderedNames) {
+            if (name in enabledSet) {
+                val type = when (name) {
+                    SuperResolution.displayName -> ImageEnhancementType.SUPER_RESOLUTION
+                    Dehaze.displayName -> ImageEnhancementType.DEHAZE
+                    ShadowRemoval.displayName -> ImageEnhancementType.SHADOW_REMOVAL
+                    else -> null
+                }
+                type?.let { activeImageEnhancementTechniques.add(it) }
+            }
         }
 
         updateAlgoIndicators(activeImageEnhancementTechniques)
     }
+
 
     private fun updateScreenBorder() {
         val rootView = activityCameraControllerBinding.root
