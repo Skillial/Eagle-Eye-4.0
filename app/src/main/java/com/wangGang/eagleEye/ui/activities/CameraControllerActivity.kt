@@ -10,6 +10,7 @@ import android.graphics.SurfaceTexture
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.graphics.ColorUtils
 import android.util.Log
 import android.view.TextureView
 import android.view.View
@@ -186,6 +187,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         return when (algo) {
             ImageEnhancementType.SUPER_RESOLUTION -> R.drawable.ic_super_resolution
             ImageEnhancementType.DEHAZE -> R.drawable.ic_dehaze
+            ImageEnhancementType.SHADOW_REMOVAL -> R.drawable.ic_shadow_removal
         }
     }
 
@@ -249,6 +251,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private fun setBackground() {
         val superResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
         val dehazeEnabled = ParameterConfig.isDehazeEnabled()
+        val shadowRemovalEnabled = ParameterConfig.isShadowRemovalEnabled()
 
         val activeImageEnhancementTechniques = mutableListOf<ImageEnhancementType>()
 
@@ -260,30 +263,43 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             activeImageEnhancementTechniques.add(ImageEnhancementType.DEHAZE)
         }
 
+        if (shadowRemovalEnabled) {
+            activeImageEnhancementTechniques.add(ImageEnhancementType.SHADOW_REMOVAL)
+        }
+
         updateAlgoIndicators(activeImageEnhancementTechniques)
     }
 
     private fun updateScreenBorder() {
         val rootView = activityCameraControllerBinding.root
 
-        val srEnabled = ParameterConfig.isSuperResolutionEnabled()
-        val dehazeEnabled = ParameterConfig.isDehazeEnabled()
+        val enabledColors = mutableListOf<Int>()
 
-        // TODO: update this once chaining is supported
-        val borderColor = when {
-            /*srEnabled && dehazeEnabled -> {
-                ColorUtils.blendARGB(Color.GREEN, Color.YELLOW, 0.5f)
-            }*/
-            srEnabled -> Color.GREEN
-            dehazeEnabled -> Color.YELLOW
-            else -> Color.BLACK
+        if (ParameterConfig.isSuperResolutionEnabled()) enabledColors += Color.GREEN
+        if (ParameterConfig.isDehazeEnabled()) enabledColors += Color.YELLOW
+        if (ParameterConfig.isShadowRemovalEnabled()) enabledColors += Color.WHITE
+
+        val borderColor = when (enabledColors.size) {
+            0 -> Color.BLACK
+            1 -> enabledColors[0]
+            else -> blendColors(enabledColors)
         }
 
         val borderDrawable = GradientDrawable().apply {
             setColor(Color.BLACK)
             setStroke(2.dpToPx(), borderColor)
         }
+
         rootView.background = borderDrawable
+    }
+
+    private fun blendColors(colors: List<Int>): Int {
+        if (colors.isEmpty()) return Color.BLACK
+        var blended = colors[0]
+        for (i in 1 until colors.size) {
+            blended = ColorUtils.blendARGB(blended, colors[i], 0.5f)
+        }
+        return blended
     }
 
     private fun updateAlgoIndicators(activeImageEnhancementTechniques: List<ImageEnhancementType>) {
