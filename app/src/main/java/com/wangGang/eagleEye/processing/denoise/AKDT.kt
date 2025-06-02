@@ -42,6 +42,8 @@ class AKDT(private val context: Context, private val viewModel: CameraViewModel)
         }
 
         Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
+        // rotate image
+        Core.rotate(img, img, Core.ROTATE_90_COUNTERCLOCKWISE)
         return img
     }
     private fun loadModelFromAssets(modelPath: String): OrtSession {
@@ -174,10 +176,12 @@ class AKDT(private val context: Context, private val viewModel: CameraViewModel)
         // Convert back to BGR uint8
         val outputBgr = Mat()
         finalOutputImage.convertTo(outputBgr, CvType.CV_8U, 255.0)
-        Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
+//        Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
         // Convert Mat to Bitmap
         val outputBitmap = Bitmap.createBitmap(outputBgr.cols(), outputBgr.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(outputBgr, outputBitmap)
+        Log.d("AKDT", "Denoising completed successfully")
+        Log.d("AKDT", "Output image size: ${outputBitmap.width}x${outputBitmap.height}")
         return outputBitmap
     }
 }
