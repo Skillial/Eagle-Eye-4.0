@@ -135,10 +135,10 @@ class ImageReaderManager(
 
     private fun saveImages(oldBitmap: Bitmap) {
         FileImageWriter.getInstance()!!
-            .saveBitmapToResultsDir(oldBitmap, ImageFileAttribute.FileType.JPEG, ResultType.BEFORE)
+            .saveBitmapToResultsDir(oldBitmap, ImageFileAttribute.FileType.PNG, ResultType.BEFORE)
         if (saveAfter) {
             FileImageWriter.getInstance()!!
-                .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.JPEG, ResultType.AFTER)
+                .saveBitmapToResultsDir(imageList[0], ImageFileAttribute.FileType.PNG, ResultType.AFTER)
             imageList.clear()
         }
     }
