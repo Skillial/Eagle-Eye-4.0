@@ -187,12 +187,12 @@
         fun saveBitmapToResultsDir(bitmap: Bitmap, fileType: ImageFileAttribute.FileType, resultType: ResultType): Uri? {
             val imageFileName = resultType.toString()
             val imageFile = File("$proposedPath/${DirectoryStorage.RESULT_ALBUM_NAME_PREFIX}", "$imageFileName${ImageFileAttribute.getFileExtension(fileType)}")
-
+            Log.d(TAG, "imageFile: ${imageFile.absolutePath}")
             val rotatedBitmap = ImageUtils.rotateBitmap(bitmap, 90f)
 
             try {
                 FileOutputStream(imageFile).use { out ->
-                    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                    rotatedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                 }
                 Log.d(TAG, "Saved: ${imageFile.absolutePath}")
             } catch (e: IOException) {
