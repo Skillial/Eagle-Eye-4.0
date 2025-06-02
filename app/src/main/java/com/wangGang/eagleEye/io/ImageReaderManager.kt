@@ -18,6 +18,7 @@ import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.eagleEye.processing.commands.Upscale
 import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
+import com.wangGang.eagleEye.processing.denoise.AKDT
 import com.wangGang.eagleEye.processing.shadow_remove.SynthShadowRemoval
 import com.wangGang.eagleEye.processing.upscale.Interpolation
 import com.wangGang.eagleEye.ui.utils.ProgressManager
@@ -146,7 +147,8 @@ class ImageReaderManager(
         val newImageList = mutableListOf<Bitmap>()
         for (each in imageList.toList()){
             val newBitmap = withContext(Dispatchers.IO) {
-                SynthDehaze(context, viewModel).dehazeImage(each)
+//                SynthDehaze(context, viewModel).dehazeImage(each)
+                AKDT(context, viewModel).denoiseImage(each)
             }
             newImageList.add(newBitmap)
         }
