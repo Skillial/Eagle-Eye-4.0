@@ -47,6 +47,10 @@ class SynthShadowRemoval(
         Utils.bitmapToMat(bitmap, img)
         require(!img.empty()) { "Bitmap to Mat conversion failed." }
 
+        if (img.channels() == 4) {
+            Imgproc.cvtColor(img, img, Imgproc.COLOR_BGRA2BGR)
+        }
+
         val originalSize = Size(img.cols().toDouble(), img.rows().toDouble())
         Imgproc.resize(img, img, size, 0.0, 0.0, Imgproc.INTER_AREA)
         return Pair(originalSize, img)
