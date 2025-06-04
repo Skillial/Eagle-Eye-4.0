@@ -124,6 +124,17 @@ class CameraController(private val context: Context, private val viewModel: Came
             override fun onOpened(p0: CameraDevice) {
                 cameraDevice = p0
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                val availableSizes = map?.getOutputSizes(SurfaceTexture::class.java)
+
+                val previewSize = chooseOptimalSize(
+                    availableSizes ?: arrayOf(Size(1920, 1080)),
+                    preview.height,
+                    preview.width
+                )
+
+                preview.surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
                 val surface = Surface(preview.surfaceTexture)
                 captureRequest.addTarget(surface)
 
@@ -208,6 +219,19 @@ class CameraController(private val context: Context, private val viewModel: Came
 
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+                val layoutParams = textureView.layoutParams
+                val screenAspectRatio = width.toFloat() / height
+                val viewAspectRatio = textureView.width.toFloat() / textureView.height
+
+                if (screenAspectRatio > viewAspectRatio) {
+                    // Width constrained
+                    layoutParams.height = (textureView.width / screenAspectRatio).toInt()
+                } else {
+                    // Height constrained
+                    layoutParams.width = (textureView.height * screenAspectRatio).toInt()
+                }
+
+                textureView.layoutParams = layoutParams
                 openCamera()
             }
 
@@ -316,5 +340,23 @@ class CameraController(private val context: Context, private val viewModel: Came
             Log.e("CameraController", "Error closing camera: ", e)
         }
     }
+    private fun chooseOptimalSize(choices: Array<Size>, width: Int, height: Int): Size {
+        val targetRatio = width.toFloat() / height
+        Log.d("ChooseOptimalSize", "Target width: $width, height: $height, aspectRatio: $targetRatio")
+
+        choices.forEachIndexed { index, size ->
+            val ratio = size.width.toFloat() / size.height
+            Log.d("ChooseOptimalSize", "Choice[$index]: ${size.width}x${size.height}, ratio: $ratio")
+        }
+
+        val optimal = choices.minByOrNull {
+            val ratio = it.width.toFloat() / it.height
+            kotlin.math.abs(ratio - targetRatio)
+        } ?: choices[0]
+
+        Log.d("ChooseOptimalSize", "Chosen optimal size: ${optimal.width}x${optimal.height}")
+        return optimal
+    }
+
 
 }
