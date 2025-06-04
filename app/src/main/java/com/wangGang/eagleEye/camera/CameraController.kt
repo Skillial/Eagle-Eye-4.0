@@ -2,6 +2,7 @@ package com.wangGang.eagleEye.camera
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
@@ -119,19 +120,29 @@ class CameraController(private val context: Context, private val viewModel: Came
     fun openCamera() {
         initializeHandlerThread()
 
-        Log.d("CameraController", "Opening camera")
+        val displayMetrics = Resources.getSystem().displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+
+// 4:3 aspect ratio: height = 4/3 * width
+        val calculatedHeight = screenWidth * 4 / 3
+
+// Set TextureView layout height programmatically
+        preview.layoutParams.height = calculatedHeight
+        preview.requestLayout()
+
         cameraManager.openCamera(cameraId, object : CameraDevice.StateCallback() {
-            override fun onOpened(p0: CameraDevice) {
-                cameraDevice = p0
+            override fun onOpened(camera: CameraDevice) {
+                cameraDevice = camera
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+
                 val characteristics = cameraManager.getCameraCharacteristics(cameraId)
                 val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                 val availableSizes = map?.getOutputSizes(SurfaceTexture::class.java)
 
                 val previewSize = chooseOptimalSize(
                     availableSizes ?: arrayOf(Size(1920, 1080)),
-                    preview.height,
-                    preview.width
+                    calculatedHeight,
+                    screenWidth
                 )
 
                 preview.surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
