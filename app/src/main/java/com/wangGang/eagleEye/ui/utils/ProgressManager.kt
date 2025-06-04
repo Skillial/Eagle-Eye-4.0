@@ -56,15 +56,16 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
     }
 
     fun showFirstTask() {
+        Log.d(TAG, "showFirstTask()")
         if (taskList.isNotEmpty()) {
             viewModel.updateLoadingText(taskList[0])
         }
     }
 
     fun nextTask() {
+        incrementProgress()
         debugPrint()
         showLoadingText()
-        incrementProgress()
         onAllTasksCompleted()
     }
 
@@ -81,9 +82,19 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         }
     }
 
+    fun getCurrentTask(): String? {
+        return if (completedTasks < taskList.size) {
+            taskList[completedTasks]
+        } else {
+            Log.w(TAG, "getCurrentTask - Index out of bounds: $completedTasks (taskList size: ${taskList.size})")
+            null
+        }
+    }
+
     private fun showLoadingText() {
         val ind = completedTasks
         if (ind in taskList.indices) {
+            Log.d(TAG, "updateLoadingText - Current Task: ${taskList[ind]} at index $ind")
             viewModel.updateLoadingText(taskList[ind])
         } else {
             Log.w(TAG, "updateLoadingText - Index out of bounds: $ind (taskList size: ${taskList.size})")
@@ -105,6 +116,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
     private fun onAllTasksCompleted() {
         if (completedTasks == totalTasks) {
             viewModel.setLoadingBoxVisible(false)
+            debugPrint()
             resetValues()
         }
     }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
-import android.graphics.Matrix
 import android.media.Image
 import android.media.ImageReader
 import android.util.Log
@@ -14,9 +13,10 @@ import com.wangGang.eagleEye.camera.CameraController.Companion.MAX_BURST_IMAGES
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.processing.ConcreteSuperResolution
 import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.Denoising
+import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.eagleEye.processing.commands.Upscale
-import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.dehaze.SynthDehaze
 import com.wangGang.eagleEye.processing.denoise.AKDT
 import com.wangGang.eagleEye.processing.shadow_remove.SynthShadowRemoval
@@ -37,6 +37,8 @@ class ImageReaderManager(
     private lateinit var imageReader: ImageReader
     private var imageList = mutableListOf<Bitmap>()
     private var saveAfter = true
+    private val TAG = "ImageReaderManager"
+
     fun initializeImageReader() {
         concreteSuperResolution.initialize(viewModel.getImageInputMap()!!)
         val highestResolution = cameraController.getHighestResolution()
@@ -58,7 +60,7 @@ class ImageReaderManager(
         val handler = cameraController.getHandler()
 
         if (handler.looper.thread.isAlive) {
-            Log.d("ImageReaderManager", "Handler is alive")
+            Log.d(TAG, "Handler is alive")
 
             imageReader.setOnImageAvailableListener({ reader ->
                 val image = reader?.acquireNextImage()
@@ -78,7 +80,7 @@ class ImageReaderManager(
         image.close()
         imageList.add(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
         val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
-        Log.d("ImageReaderManager", "Total captures: $totalCaptures")
+        Log.d(TAG, "Total captures: $totalCaptures")
         if (imageList.size == totalCaptures) {
             ProgressManager.getInstance().showFirstTask()
             processImage()
@@ -93,12 +95,13 @@ class ImageReaderManager(
         if (order.isNotEmpty()) {
             Log.d("order", ""+order)
             for (each in order) {
-                Log.d("ImageReaderManager", "Processing image with: $each")
+                Log.d(TAG, "Processing image with: $each")
                 when (each) {
                     Dehaze.displayName -> handleDehazeImage()
                     SuperResolution.displayName -> handleSuperResolutionImage()
                     Upscale.displayName -> handleUpscaleImage()
                     ShadowRemoval.displayName -> handleShadowRemoval()
+                    Denoising.displayName -> handleDenoisingImage()
                 }
             }
         }
@@ -109,7 +112,7 @@ class ImageReaderManager(
     }
 
     private suspend fun handleUpscaleImage() {
-        Log.d("ImageReaderManager", "Upscaling image")
+        Log.d(TAG, "Upscaling image")
         val newImageList = mutableListOf<Bitmap>()
         val scale =  ParameterConfig.getScalingFactor().toFloat()
         for (each in imageList.toList()){
@@ -143,12 +146,25 @@ class ImageReaderManager(
         }
     }
 
-    private suspend fun handleDehazeImage() {
+    private suspend fun handleDenoisingImage() {
+        Log.d(TAG, "handleDenoisingImage()")
         val newImageList = mutableListOf<Bitmap>()
         for (each in imageList.toList()){
             val newBitmap = withContext(Dispatchers.IO) {
-//                SynthDehaze(context, viewModel).dehazeImage(each)
-                AKDT(context, viewModel).denoiseImage(each)
+                AKDT(context).denoiseImage(each)
+            }
+            newImageList.add(newBitmap)
+        }
+        imageList.clear()
+        imageList.addAll(newImageList)
+    }
+
+    private suspend fun handleDehazeImage() {
+        Log.d(TAG, "handleDehazeImage()")
+        val newImageList = mutableListOf<Bitmap>()
+        for (each in imageList.toList()){
+            val newBitmap = withContext(Dispatchers.IO) {
+                SynthDehaze(context).dehazeImage(each)
             }
             newImageList.add(newBitmap)
         }
@@ -157,11 +173,12 @@ class ImageReaderManager(
     }
 
     private suspend fun handleShadowRemoval() {
+        Log.d(TAG, "handleShadowRemoval()")
         val newImageList = mutableListOf<Bitmap>()
 
         for (each in imageList.toList()) {
             val newBitmap = withContext(Dispatchers.IO) {
-                SynthShadowRemoval(context, viewModel).removeShadow(each)
+                SynthShadowRemoval(context).removeShadow(each)
             }
 
             // Save the image to storage
@@ -176,6 +193,8 @@ class ImageReaderManager(
     }
 
     private suspend fun handleSuperResolutionImage() = withContext(Dispatchers.IO) {
+        Log.d(TAG, "handleSuperResolutionImage()")
+
         val newImageList = mutableListOf<Bitmap>()
         // Process each image sequentially
 

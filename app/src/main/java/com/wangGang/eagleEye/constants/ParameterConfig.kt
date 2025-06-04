@@ -115,18 +115,22 @@ class ParameterConfig private constructor(appContext: Context) {
             setPrefs("algo_order", processingOrder)
         }
 
-        // TODO: Modify this code when the app supports multiple Super Resolution Blocks
         @JvmStatic
         fun isSuperResolutionEnabled(): Boolean {
             Log.d(TAG, "isSuperResolutionEnabled: ${getProcessingOrder().contains(SuperResolution.displayName)}")
             return getProcessingOrder().contains(SuperResolution.displayName)
         }
 
-        // TODO: Modify this code when the app supports multiple Dehaze Blocks
         @JvmStatic
         fun isDehazeEnabled(): Boolean {
             Log.d(TAG, "isDehazeEnabled: ${getProcessingOrder().contains(Dehaze.displayName)}")
             return getProcessingOrder().contains(Dehaze.displayName)
+        }
+
+        @JvmStatic
+        fun isDenoisingEnabled(): Boolean {
+            Log.d(TAG, "isDenoisingEnabled: ${getProcessingOrder().contains("Denoising")}")
+            return getProcessingOrder().contains("Denoising")
         }
 
         @JvmStatic

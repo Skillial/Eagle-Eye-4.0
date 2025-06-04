@@ -316,7 +316,6 @@ class SynthShadowRemoval(
     }
 
     fun removeShadow(bitmap: Bitmap): Bitmap {
-        ProgressManager.getInstance().nextTask()
 
         val (originalSize, downsampledInput) = loadAndResize(bitmap, Size(TARGET_DIMENSION.toDouble(), TARGET_DIMENSION.toDouble()))
 
@@ -324,11 +323,21 @@ class SynthShadowRemoval(
         val originalHeight = originalSize.height.toInt()
         Log.d(TAG, "Original image size: ${originalHeight} x ${originalWidth}")
 
+        ProgressManager.getInstance().nextTask()
+        Log.d(TAG, "327 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
         val downsampledInputTensor = preprocess(downsampledInput, ortEnvironment)
+
+        ProgressManager.getInstance().nextTask()
+        Log.d(TAG, "Line 332 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
         downsampledInput.release()
         val matteSession = loadModelFromAssets(MODEL_SHADOW_MATTE)
         var smallMatteTensor: OnnxTensor?
         var matteResult: OrtSession.Result?
+
+        ProgressManager.getInstance().nextTask()
+        Log.d(TAG, "Line 340 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
 
         var finalOutputMat: Mat? = null
 
@@ -337,9 +346,15 @@ class SynthShadowRemoval(
             smallMatteTensor = matteResult.get(0) as OnnxTensor
             downsampledInputTensor.close()
 
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 350 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
             val matteTensor = interpolateOnnxTensorBicubic(ortEnvironment, smallMatteTensor, originalHeight, originalWidth)
             matteResult.close()
             smallMatteTensor.close()
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 357 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
 
             val fullImageMat = loadAndPad(bitmap)
             Log.d(TAG, "Full image mat size for patching: ${fullImageMat.rows()} x ${fullImageMat.cols()}")
@@ -352,9 +367,15 @@ class SynthShadowRemoval(
             matteTensor.close()
             paddedMatte.close()
 
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 371 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
             val removalSession = loadModelFromAssets(MODEL_SHADOW_REMOVAL)
 
             finalOutputMat = Mat(paddedHeight, paddedWidth, CvType.CV_32FC3, Scalar(0.0, 0.0, 0.0))
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 378 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
 
             for ((mattePatch, i, j) in mattePatches) {
                 val currentPatchActualHeight = min(TARGET_DIMENSION, fullImageMat.rows() - i)
@@ -412,9 +433,14 @@ class SynthShadowRemoval(
             }
             fullImageMat.release()
 
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 437 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
             val croppedMat = Mat(finalOutputMat, org.opencv.core.Rect(0, 0, originalWidth, originalHeight))
             val outputBitmap = convertToBitmap(croppedMat)
             croppedMat.release()
+
+            ProgressManager.getInstance().nextTask()
 
             return outputBitmap
 

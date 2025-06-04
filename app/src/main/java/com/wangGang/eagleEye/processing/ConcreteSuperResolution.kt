@@ -65,7 +65,6 @@ class ConcreteSuperResolution(private val viewModel: CameraViewModel) : SuperRes
 
 
     override fun applyFilter(energyInputMatList: Array<Mat>): Array<Mat> {
-        viewModel.updateLoadingText("Applying filter")
 
         val yangFilter = YangFilter(energyInputMatList)
         yangFilter.perform()

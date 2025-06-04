@@ -6,6 +6,7 @@ import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.wangGang.eagleEye.ui.utils.ProgressManager
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -101,12 +102,17 @@ class AKDT(private val context: Context) {
             val paddedW = imagePadded.cols()
             outputImage = Mat.zeros(imagePadded.size(), imagePadded.type())
 
+            ProgressManager.getInstance().nextTask()
+
             denoiseSession = loadModelFromAssets("model/akdt.onnx")
             val inputName = denoiseSession.inputNames.iterator().next()
             // val outputName = denoiseSession.outputNames.iterator().next()
 
             val totalPatches = ((paddedH - 2 * overlap) / validPatchSize) * ((paddedW - 2 * overlap) / validPatchSize)
             var patchCount = 0
+
+            ProgressManager.getInstance().nextTask()
+            Log.d("AKDT", "denoiseImage - Denoising Image")
 
             for (i in overlap until paddedH - overlap step validPatchSize) {
                 for (j in overlap until paddedW - overlap step validPatchSize) {
@@ -222,6 +228,9 @@ class AKDT(private val context: Context) {
 
             Log.d("AKDT", "Denoising completed successfully")
             Log.d("AKDT", "Output image size: ${outputBitmap.width}x${outputBitmap.height}")
+
+            ProgressManager.getInstance().nextTask()
+
             return outputBitmap
 
         } finally {
