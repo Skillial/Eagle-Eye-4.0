@@ -23,8 +23,7 @@ import kotlin.math.ceil
 import kotlin.math.min
 
 class SynthShadowRemoval(
-    private val context: Context,
-    private val viewModel: CameraViewModel
+    private val context: Context
 ) {
     companion object {
         private const val TAG = "SynthShadowRemoval"
@@ -46,6 +45,10 @@ class SynthShadowRemoval(
         val img = Mat()
         Utils.bitmapToMat(bitmap, img)
         require(!img.empty()) { "Bitmap to Mat conversion failed." }
+
+        if (img.channels() == 4) {
+            Imgproc.cvtColor(img, img, Imgproc.COLOR_BGRA2BGR)
+        }
 
         val originalSize = Size(img.cols().toDouble(), img.rows().toDouble())
         Imgproc.resize(img, img, size, 0.0, 0.0, Imgproc.INTER_AREA)
@@ -74,26 +77,15 @@ class SynthShadowRemoval(
         Utils.bitmapToMat(bitmap, img)
         require(!img.empty()) { "Bitmap to Mat conversion failed." }
 
+        // Handle alpha channel if present
         if (img.channels() == 4) {
-            Imgproc.cvtColor(img, img, Imgproc.COLOR_RGBA2RGB)
-
-            if (img.channels() == 4 && img.type() == CvType.CV_8UC4) {
+            if (img.type() == CvType.CV_8UC4) {
                 Imgproc.cvtColor(img, img, Imgproc.COLOR_BGRA2BGR)
-            } else if (img.channels() == 4) {
+            } else {
                 Imgproc.cvtColor(img, img, Imgproc.COLOR_RGBA2RGB)
             }
         }
 
-        return padToMultiple512(img)
-    }
-
-    private fun loadFromAssets(assetPath: String): Mat {
-        val inputStream: InputStream = context.assets.open(assetPath)
-        val byteArray = inputStream.readBytes()
-        val img = Imgcodecs.imdecode(MatOfByte(*byteArray), Imgcodecs.IMREAD_COLOR)
-        require(!img.empty()) { "Image decoding from assets failed for $assetPath." }
-
-        Imgproc.cvtColor(img, img, Imgproc.COLOR_BGR2RGB)
         return padToMultiple512(img)
     }
 
@@ -144,23 +136,33 @@ class SynthShadowRemoval(
         return OnnxTensor.createTensor(env, FloatBuffer.wrap(combinedData), combinedShape)
     }
 
-    private fun convertToBitmap(
-        shadowRemoved: FloatArray,
-        height: Int,
-        width: Int
-    ): Bitmap {
-        val channelSize = height * width
-        val intArray = IntArray(channelSize)
+    private fun floatArrayToMat(data: FloatArray, height: Int, width: Int, channels: Int): Mat {
+        val mat = Mat(height, width, CvType.CV_32FC(channels))
 
-        for (i in 0 until channelSize) {
-            val r = (shadowRemoved[i] * 255).coerceIn(0f, 255f).toInt()
-            val g = (shadowRemoved[i + channelSize] * 255).coerceIn(0f, 255f).toInt()
-            val b = (shadowRemoved[i + 2 * channelSize] * 255).coerceIn(0f, 255f).toInt()
-            intArray[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+        val hwcData = FloatArray(data.size)
+        val channelSize = height * width
+        for (c in 0 until channels) {
+            for (h in 0 until height) {
+                for (w in 0 until width) {
+                    val nchwIdx = c * channelSize + h * width + w
+                    val hwcIdx = h * width * channels + w * channels + c
+                    hwcData[hwcIdx] = data[nchwIdx]
+                }
+            }
         }
-        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-            setPixels(intArray, 0, width, 0, 0, width, height)
-        }
+        mat.put(0, 0, hwcData)
+        return mat
+    }
+
+    private fun convertToBitmap(mat: Mat): Bitmap {
+        val convertedMat = Mat()
+
+        mat.convertTo(convertedMat, CvType.CV_8UC3, 255.0)
+        Imgproc.cvtColor(convertedMat, convertedMat, Imgproc.COLOR_RGB2BGRA)
+        val bitmap = Bitmap.createBitmap(convertedMat.cols(), convertedMat.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(convertedMat, bitmap)
+        convertedMat.release()
+        return bitmap
     }
 
     private fun loadModelFromAssets(modelPath: String): OrtSession {
@@ -313,41 +315,144 @@ class SynthShadowRemoval(
         return patches
     }
 
-    private fun reconstructFromPatches(
-        patches: List<Triple<FloatArray, Int, Int>>,
-        fullH: Int,
-        fullW: Int,
-        numChannels: Int = 3
-    ): FloatArray {
-        val fullImage = FloatArray(numChannels * fullH * fullW)
-
-        for ((patchData, i, j) in patches) {
-            val patchHeight = TARGET_DIMENSION
-            val patchWidth = TARGET_DIMENSION
-
-            for (c in 0 until numChannels) {
-                for (h_patch in 0 until patchHeight) {
-                    val currentH = i + h_patch
-                    if (currentH >= fullH) continue
-
-                    for (w_patch in 0 until patchWidth) {
-                        val currentW = j + w_patch
-                        if (currentW >= fullW) continue
-
-                        val patchIdx = c * patchHeight * patchWidth + h_patch * patchWidth + w_patch
-                        val fullIdx = c * fullH * fullW + currentH * fullW + currentW
-                        fullImage[fullIdx] = patchData[patchIdx]
-                    }
-                }
-            }
-        }
-        return fullImage
-    }
-
     fun removeShadow(bitmap: Bitmap): Bitmap {
-        ProgressManager.getInstance().nextTask()
 
         val (originalSize, downsampledInput) = loadAndResize(bitmap, Size(TARGET_DIMENSION.toDouble(), TARGET_DIMENSION.toDouble()))
+
+        val originalWidth = originalSize.width.toInt()
+        val originalHeight = originalSize.height.toInt()
+        Log.d(TAG, "Original image size: ${originalHeight} x ${originalWidth}")
+
+        ProgressManager.getInstance().nextTask()
+        Log.d(TAG, "327 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+        val downsampledInputTensor = preprocess(downsampledInput, ortEnvironment)
+
+        ProgressManager.getInstance().nextTask()
+        Log.d(TAG, "Line 332 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+        downsampledInput.release()
+        val matteSession = loadModelFromAssets(MODEL_SHADOW_MATTE)
+        var smallMatteTensor: OnnxTensor?
+        var matteResult: OrtSession.Result?
+
+        ProgressManager.getInstance().nextTask()
+        Log.d(TAG, "Line 340 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+        var finalOutputMat: Mat? = null
+
+        try {
+            matteResult = matteSession.run(mapOf(matteSession.inputNames.first() to downsampledInputTensor))
+            smallMatteTensor = matteResult.get(0) as OnnxTensor
+            downsampledInputTensor.close()
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 350 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+            val matteTensor = interpolateOnnxTensorBicubic(ortEnvironment, smallMatteTensor, originalHeight, originalWidth)
+            matteResult.close()
+            smallMatteTensor.close()
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 357 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+            val fullImageMat = loadAndPad(bitmap)
+            Log.d(TAG, "Full image mat size for patching: ${fullImageMat.rows()} x ${fullImageMat.cols()}")
+
+            val (paddedMatte, _, _) = padToMultipleReflect(ortEnvironment, matteTensor, TARGET_DIMENSION)
+            Log.d(TAG, "Padded matte size: ${paddedMatte.info.shape[2]} x ${paddedMatte.info.shape[3]}")
+            val paddedHeight = paddedMatte.info.shape[2].toInt()
+            val paddedWidth = paddedMatte.info.shape[3].toInt()
+            val mattePatches = extractPatches(ortEnvironment, paddedMatte)
+            matteTensor.close()
+            paddedMatte.close()
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 371 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+            val removalSession = loadModelFromAssets(MODEL_SHADOW_REMOVAL)
+
+            finalOutputMat = Mat(paddedHeight, paddedWidth, CvType.CV_32FC3, Scalar(0.0, 0.0, 0.0))
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 378 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+            for ((mattePatch, i, j) in mattePatches) {
+                val currentPatchActualHeight = min(TARGET_DIMENSION, fullImageMat.rows() - i)
+                val currentPatchActualWidth = min(TARGET_DIMENSION, fullImageMat.cols() - j)
+
+                if (currentPatchActualHeight <= 0 || currentPatchActualWidth <= 0) {
+                    mattePatch.close()
+                    continue
+                }
+
+                val imgPatchMat = fullImageMat.submat(
+                    i, i + currentPatchActualHeight,
+                    j, j + currentPatchActualWidth
+                )
+
+                val rgbPatchTensor = preprocess(imgPatchMat, ortEnvironment)
+                imgPatchMat.release()
+
+                val shadowInputTensor = processInput(ortEnvironment, rgbPatchTensor, mattePatch)
+                Log.d(TAG, "Processing patch at (${i}, ${j}) with size ${currentPatchActualHeight} x ${currentPatchActualWidth}")
+
+                shadowInputTensor.use { input ->
+                    removalSession.run(
+                        mapOf(removalSession.inputNames.first() to input)
+                    ).use { outputs ->
+                        (outputs.get(0) as OnnxTensor).use { outputTensor ->
+                            val outputFloatArray = FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
+                                outputTensor.floatBuffer.get(array)
+                            }
+
+                            val processedPatchMat = floatArrayToMat(
+                                outputFloatArray,
+                                currentPatchActualHeight,
+                                currentPatchActualWidth,
+                                outputTensor.info.shape[1].toInt()
+                            )
+                            Core.add(processedPatchMat, Scalar(1.0, 1.0, 1.0), processedPatchMat)
+                            Core.divide(processedPatchMat, Scalar(2.0, 2.0, 2.0), processedPatchMat)
+
+                            Core.max(processedPatchMat, Scalar(0.0, 0.0, 0.0), processedPatchMat)
+                            Core.min(processedPatchMat, Scalar(1.0, 1.0, 1.0), processedPatchMat)
+
+                            val roi = finalOutputMat.submat(
+                                i, i + currentPatchActualHeight,
+                                j, j + currentPatchActualWidth
+                            )
+                            processedPatchMat.copyTo(roi)
+                            roi.release()
+                            processedPatchMat.release()
+                        }
+                    }
+                }
+                rgbPatchTensor.close()
+                mattePatch.close()
+            }
+            fullImageMat.release()
+
+            ProgressManager.getInstance().nextTask()
+            Log.d(TAG, "Line 437 Current task: ${ProgressManager.getInstance().getCurrentTask()}")
+
+            val croppedMat = Mat(finalOutputMat, org.opencv.core.Rect(0, 0, originalWidth, originalHeight))
+            val outputBitmap = convertToBitmap(croppedMat)
+            croppedMat.release()
+
+            ProgressManager.getInstance().nextTask()
+
+            return outputBitmap
+
+        } finally {
+            matteSession.close()
+            finalOutputMat?.release()
+        }
+    }
+
+    fun removeShadowTest(bitmap: Bitmap, filename: String): Bitmap {
+        val (originalSize, downsampledInput) = loadAndResizeFromAssetsTest(Size(TARGET_DIMENSION.toDouble(), TARGET_DIMENSION.toDouble()), filename)
+
         val originalWidth = originalSize.width.toInt()
         val originalHeight = originalSize.height.toInt()
         Log.d(TAG, "Original image size: ${originalHeight} x ${originalWidth}")
@@ -358,6 +463,8 @@ class SynthShadowRemoval(
         var smallMatteTensor: OnnxTensor?
         var matteResult: OrtSession.Result?
 
+        var finalOutputMat: Mat? = null
+
         try {
             matteResult = matteSession.run(mapOf(matteSession.inputNames.first() to downsampledInputTensor))
             smallMatteTensor = matteResult.get(0) as OnnxTensor
@@ -365,6 +472,7 @@ class SynthShadowRemoval(
 
             val matteTensor = interpolateOnnxTensorBicubic(ortEnvironment, smallMatteTensor, originalHeight, originalWidth)
             matteResult.close()
+            smallMatteTensor.close()
 
             val fullImageMat = loadAndPad(bitmap)
             Log.d(TAG, "Full image mat size for patching: ${fullImageMat.rows()} x ${fullImageMat.cols()}")
@@ -378,126 +486,77 @@ class SynthShadowRemoval(
             paddedMatte.close()
 
             val removalSession = loadModelFromAssets(MODEL_SHADOW_REMOVAL)
-            val processedPatches = mutableListOf<Triple<FloatArray, Int, Int>>()
+
+            finalOutputMat = Mat(paddedHeight, paddedWidth, CvType.CV_32FC3, Scalar(0.0, 0.0, 0.0))
 
             for ((mattePatch, i, j) in mattePatches) {
+                val currentPatchActualHeight = min(TARGET_DIMENSION, fullImageMat.rows() - i)
+                val currentPatchActualWidth = min(TARGET_DIMENSION, fullImageMat.cols() - j)
+
+                if (currentPatchActualHeight <= 0 || currentPatchActualWidth <= 0) {
+                    mattePatch.close()
+                    continue // Skip if patch is empty
+                }
+
                 val imgPatchMat = fullImageMat.submat(
-                    i, min(i + TARGET_DIMENSION, fullImageMat.rows()),
-                    j, min(j + TARGET_DIMENSION, fullImageMat.cols())
+                    i, i + currentPatchActualHeight,
+                    j, j + currentPatchActualWidth
                 )
+
                 val rgbPatchTensor = preprocess(imgPatchMat, ortEnvironment)
                 imgPatchMat.release()
 
                 val shadowInputTensor = processInput(ortEnvironment, rgbPatchTensor, mattePatch)
+                Log.d(TAG, "Processing patch at (${i}, ${j}) with size ${currentPatchActualHeight} x ${currentPatchActualWidth}")
 
-                val shadowRemovedPatchData = shadowInputTensor.use { input ->
+                shadowInputTensor.use { input ->
                     removalSession.run(
                         mapOf(removalSession.inputNames.first() to input)
                     ).use { outputs ->
                         (outputs.get(0) as OnnxTensor).use { outputTensor ->
-                            FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
+                            val outputFloatArray = FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
                                 outputTensor.floatBuffer.get(array)
-                            }.map { value ->
-                                ((value + 1f) / 2f).coerceIn(0f, 1f)
-                            }.toFloatArray()
+                            }
+
+                            // Convert NCHW output to HWC Mat and apply normalization
+                            val processedPatchMat = floatArrayToMat(
+                                outputFloatArray,
+                                currentPatchActualHeight,
+                                currentPatchActualWidth,
+                                outputTensor.info.shape[1].toInt() // Number of channels
+                            )
+                            // Normalize output from [-1, 1] to [0, 1]
+                            Core.add(processedPatchMat, Scalar(1.0, 1.0, 1.0), processedPatchMat)
+                            Core.divide(processedPatchMat, Scalar(2.0, 2.0, 2.0), processedPatchMat)
+
+                            Core.max(processedPatchMat, Scalar(0.0, 0.0, 0.0), processedPatchMat)
+                            Core.min(processedPatchMat, Scalar(1.0, 1.0, 1.0), processedPatchMat)
+
+                            val roi = finalOutputMat.submat(
+                                i, i + currentPatchActualHeight,
+                                j, j + currentPatchActualWidth
+                            )
+                            processedPatchMat.copyTo(roi)
+                            roi.release()
+                            processedPatchMat.release()
                         }
                     }
                 }
                 rgbPatchTensor.close()
                 mattePatch.close()
-
-                processedPatches.add(Triple(shadowRemovedPatchData, i, j))
             }
             fullImageMat.release()
 
-            val fullResult = reconstructFromPatches(processedPatches, paddedHeight, paddedWidth)
+            val croppedMat = Mat(finalOutputMat, org.opencv.core.Rect(0, 0, originalWidth, originalHeight))
+            Imgproc.cvtColor(croppedMat, croppedMat, Imgproc.COLOR_BGR2RGB)
+            val outputBitmap = convertToBitmap(croppedMat)
+            croppedMat.release()
 
-            val outputBitmap = convertToBitmap(fullResult, paddedHeight, paddedWidth)
-            val croppedBitmap = Bitmap.createBitmap(outputBitmap, 0, 0, originalWidth, originalHeight)
-
-            return croppedBitmap
-
-        } finally {
-            matteSession.close()
-        }
-    }
-
-    fun removeShadowTest(bitmap: Bitmap, filename: String): Bitmap {
-        val (originalSize, downsampledInput) = loadAndResizeFromAssetsTest(Size(TARGET_DIMENSION.toDouble(), TARGET_DIMENSION.toDouble()), filename)
-        val originalWidth = originalSize.width.toInt()
-        val originalHeight = originalSize.height.toInt()
-        Log.d(TAG, "Original test image size: ${originalHeight} x ${originalWidth}")
-
-        val downsampledInputTensor = preprocess(downsampledInput, ortEnvironment)
-        downsampledInput.release()
-
-        val matteSession = loadModelFromAssets(MODEL_SHADOW_MATTE)
-        var smallMatteTensor: OnnxTensor?
-        var matteResult: OrtSession.Result?
-
-        val removalSession = loadModelFromAssets(MODEL_SHADOW_REMOVAL)
-
-        try {
-            matteResult = matteSession.run(mapOf(matteSession.inputNames.first() to downsampledInputTensor))
-            smallMatteTensor = matteResult.get(0) as OnnxTensor
-            downsampledInputTensor.close()
-
-            val matteTensor = interpolateOnnxTensorBicubic(ortEnvironment, smallMatteTensor, originalHeight, originalWidth)
-            matteResult.close()
-
-            val fullImageMat = loadAndPad(bitmap)
-            Log.d(TAG, "Full test image mat size for patching: ${fullImageMat.rows()} x ${fullImageMat.cols()}")
-
-            val (paddedMatte, _, _) = padToMultipleReflect(ortEnvironment, matteTensor, TARGET_DIMENSION)
-            Log.d(TAG, "Padded matte size: ${paddedMatte.info.shape[2]} x ${paddedMatte.info.shape[3]}")
-            val paddedHeight = paddedMatte.info.shape[2].toInt()
-            val paddedWidth = paddedMatte.info.shape[3].toInt()
-            val mattePatches = extractPatches(ortEnvironment, paddedMatte)
-            matteTensor.close()
-            paddedMatte.close()
-
-            val processedPatches = mutableListOf<Triple<FloatArray, Int, Int>>()
-
-            for ((mattePatch, i, j) in mattePatches) {
-                val imgPatchMat = fullImageMat.submat(
-                    i, min(i + TARGET_DIMENSION, fullImageMat.rows()),
-                    j, min(j + TARGET_DIMENSION, fullImageMat.cols())
-                )
-                val rgbPatchTensor = preprocess(imgPatchMat, ortEnvironment)
-                imgPatchMat.release()
-
-                val shadowInputTensor = processInput(ortEnvironment, rgbPatchTensor, mattePatch)
-
-                val shadowRemovedPatchData = shadowInputTensor.use { input ->
-                    removalSession.run(
-                        mapOf(removalSession.inputNames.first() to input)
-                    ).use { outputs ->
-                        (outputs.get(0) as OnnxTensor).use { outputTensor ->
-                            FloatArray(outputTensor.floatBuffer.remaining()).also { array ->
-                                outputTensor.floatBuffer.get(array)
-                            }.map { value ->
-                                ((value + 1f) / 2f).coerceIn(0f, 1f)
-                            }.toFloatArray()
-                        }
-                    }
-                }
-                rgbPatchTensor.close()
-                mattePatch.close()
-
-                processedPatches.add(Triple(shadowRemovedPatchData, i, j))
-            }
-            fullImageMat.release()
-
-            val fullResult = reconstructFromPatches(processedPatches, paddedHeight, paddedWidth)
-
-            val outputBitmap = convertToBitmap(fullResult, paddedHeight, paddedWidth)
-            val croppedBitmap = Bitmap.createBitmap(outputBitmap, 0, 0, originalWidth, originalHeight)
-
-            return croppedBitmap
+            return outputBitmap
 
         } finally {
             matteSession.close()
-            removalSession.close()
+            finalOutputMat?.release()
         }
     }
 

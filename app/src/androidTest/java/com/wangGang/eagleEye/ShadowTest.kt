@@ -1,8 +1,11 @@
 package com.wangGang.eagleEye
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -26,6 +29,7 @@ import org.opencv.core.Mat
 import org.opencv.core.Scalar
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
+import java.io.IOException
 
 
 @RunWith(AndroidJUnit4::class)
@@ -99,8 +103,47 @@ class ShadowTest {
             val endTime = System.currentTimeMillis()
             Log.d("ShadowRemovalTiming", "$fileName: ${endTime - startTime}")
 
-            FileImageWriter.getInstance()?.saveBitmapImage(resultBitmap, fileName, ImageFileAttribute.FileType.PNG)
+            saveBitmapImage(resultBitmap, fileName, ImageFileAttribute.FileType.PNG)
             assertNotNull(resultBitmap)
         }
+    }
+}
+
+private fun saveBitmapImage(bitmap: Bitmap, fileName: String, fileType: ImageFileAttribute.FileType) {
+    try {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mimeType = when (fileType) {
+            ImageFileAttribute.FileType.PNG -> "image/png"
+            ImageFileAttribute.FileType.JPEG, ImageFileAttribute.FileType.JPEG -> "image/jpeg"
+        }
+
+        val format = when (fileType) {
+            ImageFileAttribute.FileType.PNG -> Bitmap.CompressFormat.PNG
+            ImageFileAttribute.FileType.JPEG, ImageFileAttribute.FileType.JPEG -> Bitmap.CompressFormat.JPEG
+        }
+
+        val contentValues = ContentValues().apply {
+            val nameWithoutExtension = fileName.substringBeforeLast('.')
+            put(MediaStore.Images.Media.DISPLAY_NAME, "$nameWithoutExtension${ImageFileAttribute.getFileExtension(fileType)}")
+            put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/eagleEyeTest")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+        uri?.let {
+            resolver.openOutputStream(it)?.use { out ->
+                bitmap.compress(format, 100, out)
+            }
+            contentValues.clear()
+            contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(it, contentValues, null, null)
+            Log.d("saveBitmapImage", "Saved to MediaStore: $uri")
+        } ?: Log.e("saveBitmapImage", "Failed to insert MediaStore record.")
+
+    } catch (e: IOException) {
+        e.printStackTrace()
     }
 }

@@ -27,7 +27,7 @@ import org.opencv.imgproc.Imgproc
 import java.io.InputStream
 import java.nio.FloatBuffer
 
-class SynthDehaze(private val context: Context, private val viewModel: CameraViewModel) {
+class SynthDehaze(private val context: Context) {
     private fun loadAndResize(bitmap: Bitmap, size: Size): Triple<Mat, Size, Mat> {
 
         // Save before image
@@ -191,7 +191,7 @@ class SynthDehaze(private val context: Context, private val viewModel: CameraVie
         ProgressManager.getInstance().nextTask()
 
         // Preprocessing Image
-        viewModel.updateLoadingText("Preprocessing Image")
+//        viewModel.updateLoadingText("Preprocessing Image")
         val airlightInput = preprocess(hazyResized, env)
         hazyResized.release()
         ProgressManager.getInstance().nextTask()
