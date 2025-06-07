@@ -2,6 +2,8 @@ package com.wangGang.gallery
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -57,6 +59,20 @@ class MainActivity : AppCompatActivity() {
         selectableToolbar = findViewById(R.id.selectable_toolbar)
         deleteButton = findViewById(R.id.btn_delete)
         shareButton = findViewById(R.id.btn_share)
+
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_back)
+
+        toolbar.navigationIcon?.setColorFilter(
+            Color.BLACK,
+            PorterDuff.Mode.SRC_ATOP
+        )
+
+        toolbar.setNavigationOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
 
         bottomNavView.setItemOnTouchListener(R.id.menu_photos) { v, _ ->
             if (navController.currentDestination?.id == R.id.SecondFragment) {
