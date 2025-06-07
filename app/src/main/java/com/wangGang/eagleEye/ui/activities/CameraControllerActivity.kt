@@ -36,6 +36,7 @@ import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import com.wangGang.eagleEye.ui.views.GridOverlayView
 import androidx.core.view.isVisible
 import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 
@@ -191,6 +192,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             ImageEnhancementType.SUPER_RESOLUTION -> R.drawable.ic_super_resolution
             ImageEnhancementType.DEHAZE -> R.drawable.ic_dehaze
             ImageEnhancementType.SHADOW_REMOVAL -> R.drawable.ic_shadow_removal
+            ImageEnhancementType.DENOISING -> R.drawable.ic_denoising
         }
     }
 
@@ -259,6 +261,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         if (ParameterConfig.isSuperResolutionEnabled()) enabledSet.add(SuperResolution.displayName)
         if (ParameterConfig.isDehazeEnabled()) enabledSet.add(Dehaze.displayName)
         if (ParameterConfig.isShadowRemovalEnabled()) enabledSet.add(ShadowRemoval.displayName)
+        if (ParameterConfig.isDenoisingEnabled()) enabledSet.add(Denoising.displayName)
 
         val activeImageEnhancementTechniques = mutableListOf<ImageEnhancementType>()
 
@@ -268,6 +271,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                     SuperResolution.displayName -> ImageEnhancementType.SUPER_RESOLUTION
                     Dehaze.displayName -> ImageEnhancementType.DEHAZE
                     ShadowRemoval.displayName -> ImageEnhancementType.SHADOW_REMOVAL
+                    Denoising.displayName -> ImageEnhancementType.DENOISING
                     else -> null
                 }
                 type?.let { activeImageEnhancementTechniques.add(it) }
@@ -286,6 +290,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         if (ParameterConfig.isSuperResolutionEnabled()) enabledColors += Color.GREEN
         if (ParameterConfig.isDehazeEnabled()) enabledColors += Color.YELLOW
         if (ParameterConfig.isShadowRemovalEnabled()) enabledColors += Color.WHITE
+        if (ParameterConfig.isDenoisingEnabled()) enabledColors += Color.CYAN
 
         val borderColor = when (enabledColors.size) {
             0 -> Color.BLACK

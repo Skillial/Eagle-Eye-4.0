@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.util.Log
 import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ProcessingCommand
 import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
@@ -102,7 +103,7 @@ class ParameterConfig private constructor(appContext: Context) {
         * Gets the processing order and returns it as a list of strings
         * */
         fun getProcessingOrder(): List<String> {
-            val defaultOrder = "${SuperResolution.displayName},${Dehaze.displayName},${Upscale.displayName},${ShadowRemoval.displayName}"
+            val defaultOrder = "${SuperResolution.displayName},${Dehaze.displayName},${Upscale.displayName},${ShadowRemoval.displayName},${Denoising.displayName}"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
@@ -137,7 +138,7 @@ class ParameterConfig private constructor(appContext: Context) {
         @JvmStatic
         fun isDenoisingEnabled(): Boolean {
             Log.d(TAG, "isDenoisingEnabled: ${getProcessingOrder().contains("Denoising")}")
-            return getProcessingOrder().contains("Denoising")
+            return getProcessingOrder().contains(Denoising.displayName)
         }
 
         @JvmStatic
