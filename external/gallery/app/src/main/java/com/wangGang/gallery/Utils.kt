@@ -6,12 +6,16 @@ import android.content.*
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import android.provider.MediaStore.MediaColumns.*
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import java.io.File
 import java.util.*
+
+val TAG = "GalleryUtils"
 
 val imageExtensions = arrayOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
 val videoExtensions = arrayOf("mp4", "mkv", "avi", "wmv", "mov", "flv", "webm", "ogg", "ogv")
@@ -51,7 +55,9 @@ fun getAllImages(context: Context): List<File> {
     return videoList + imageList
 }
 
-fun getAllImagesAndVideosSortedByRecent(context: Context): List<Photo> {
+/*fun getAllImagesAndVideosSortedByRecent(context: Context): List<Photo> {
+    Log.d(TAG, "getAllImagesAndVideosSortedByRecent() called")
+
     val sortOrder = MediaStore.Images.Media.DATE_TAKEN + " DESC"
     val sortOrderVideos = MediaStore.Video.Media.DATE_TAKEN + " DESC"
 
@@ -60,9 +66,73 @@ fun getAllImagesAndVideosSortedByRecent(context: Context): List<Photo> {
     val videoList = queryUri(context, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, sortOrderVideos)
         .use { it?.getResultsFromCursor() ?: listOf() }
 
-    val resultList = (imageList + videoList).sortedWith(compareByDescending { it.lastModified() })
-    return resultList.map { file -> Photo(path = file.absolutePath, position = 0, selected = false) }
+    Log.d(TAG, "Images before filter: ${imageList.size}")
+    Log.d(TAG, "Videos before filter: ${videoList.size}")
+
+    val filtered = (imageList + videoList)
+        .filterNot { file ->
+            val path = file.absolutePath
+            path.contains("/Pictures/EagleEye0/") ||
+                    path.contains("/Pictures/SR0/")
+        }
+        .sortedByDescending { it.lastModified() }
+
+    return filtered.map { file ->
+        Log.d(TAG, "Found media: ${file.absolutePath}")
+        Photo(path = file.absolutePath, position = 0, selected = false)
+    }
+
+    *//*val resultList = (imageList + videoList).sortedWith(compareByDescending { it.lastModified() })
+    return resultList.map { file -> Photo(path = file.absolutePath, position = 0, selected = false) }*//*
+}*/
+
+fun getAllImagesAndVideosSortedByRecent(context: Context): List<Photo> {
+    Log.d(TAG, "▶ getAllImagesAndVideosSortedByRecent() called")
+
+    val sortOrderImages = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+    val sortOrderVideos = "${MediaStore.Video.Media.DATE_TAKEN} DESC"
+
+    val imageList = queryUri(
+        context,
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        null, null,
+        sortOrderImages
+    ).use { it?.getResultsFromCursor() ?: emptyList() }
+
+    val videoList = queryUri(
+        context,
+        MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+        null, null,
+        sortOrderVideos
+    ).use { it?.getResultsFromCursor() ?: emptyList() }
+
+    Log.d(TAG, "Images before filter: ${imageList.size}")
+    Log.d(TAG, "Videos before filter: ${videoList.size}")
+
+    // Re-enable the filterNot to drop anything under EagleEye0 or SR0
+    val picturesRoot = Environment
+        .getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+        .absolutePath
+
+    val filtered = (imageList + videoList)
+        .filterNot { file ->
+            val path = file.absolutePath
+            // if it lives in /Pictures/EagleEye0 or /Pictures/SR0, drop it
+            path.startsWith("$picturesRoot/EagleEye0") ||
+                    path.startsWith("$picturesRoot/SR0")
+        }
+        .sortedByDescending { it.lastModified() }
+
+    Log.d(TAG, "Total after filter: ${filtered.size}")
+    filtered.forEach { file ->
+        Log.d(TAG, "  ✔️ keep: ${file.absolutePath}")
+    }
+
+    return filtered.map { file ->
+        Photo(path = file.absolutePath, position = 0, selected = false)
+    }
 }
+
 
 fun getImagesFromPage(page: Int, data: List<Photo>): List<Photo> {
     val startIndex = (page - 1) * 100
