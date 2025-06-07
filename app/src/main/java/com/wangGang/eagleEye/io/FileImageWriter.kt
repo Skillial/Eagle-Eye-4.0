@@ -2,10 +2,12 @@
 
     import android.app.Activity
     import android.content.Context
+    import android.content.Intent
     import android.graphics.Bitmap
     import android.graphics.Matrix
     import android.media.MediaScannerConnection
     import android.net.Uri
+    import android.os.Build
     import android.os.Environment
     import android.util.Log
     import android.widget.Toast
@@ -18,6 +20,8 @@
     import java.text.SimpleDateFormat
     import java.util.Date
     import android.view.Gravity
+    import android.webkit.MimeTypeMap
+    import java.util.Locale
 
     class FileImageWriter private constructor(private val context: Context) {
 
