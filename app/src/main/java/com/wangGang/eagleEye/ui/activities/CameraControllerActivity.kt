@@ -204,6 +204,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             CameraController.getInstance().switchCamera(textureView)
         }
 
+        // TODO: fix thumbnail functionality
         thumbnailPreview.setOnClickListener {
             // if normal image showPhotoActivity
             if (ParameterConfig.isDehazeEnabled() || ParameterConfig.isSuperResolutionEnabled()) {
