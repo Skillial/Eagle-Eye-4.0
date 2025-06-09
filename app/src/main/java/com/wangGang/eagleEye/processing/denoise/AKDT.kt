@@ -72,7 +72,7 @@ class AKDT(private val context: Context) {
         val overlap = 28
         val validPatchSize = 512 - overlap * 2
 
-        var mat: Mat? = null
+        var mat: Mat = Mat()
         var imagePadded: Mat? = null
         var outputImage: Mat? = null
         var denoiseSession: OrtSession? = null
@@ -81,7 +81,15 @@ class AKDT(private val context: Context) {
         var outputBitmap: Bitmap? = null
 
         try {
-            mat = loadFromAssets()
+            Utils.bitmapToMat(bitmap, mat)
+            if (mat.channels() == 4) {
+                val tmp = Mat()
+                Imgproc.cvtColor(mat, tmp, Imgproc.COLOR_RGBA2RGB)
+                mat.release()
+                mat = tmp
+            }
+            
+
             mat.convertTo(mat, CvType.CV_32F, 1.0 / 255.0)
 
             val h = mat.rows()
