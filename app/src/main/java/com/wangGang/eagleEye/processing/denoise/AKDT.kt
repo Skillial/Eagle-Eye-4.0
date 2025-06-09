@@ -7,6 +7,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.wangGang.eagleEye.ui.utils.ProgressManager
+import com.wangGang.eagleEye.processing.imagetools.ImageOperator.bitmapToMat
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
@@ -81,7 +82,7 @@ class AKDT(private val context: Context) {
         var outputBitmap: Bitmap? = null
 
         try {
-            mat = loadFromAssets()
+            mat = bitmapToMat(bitmap)
             mat.convertTo(mat, CvType.CV_32F, 1.0 / 255.0)
 
             val h = mat.rows()
