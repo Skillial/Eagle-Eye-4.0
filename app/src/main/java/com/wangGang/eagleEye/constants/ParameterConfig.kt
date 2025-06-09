@@ -5,7 +5,9 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.util.Log
 import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ProcessingCommand
+import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.eagleEye.processing.commands.Upscale
 
@@ -101,7 +103,7 @@ class ParameterConfig private constructor(appContext: Context) {
         * Gets the processing order and returns it as a list of strings
         * */
         fun getProcessingOrder(): List<String> {
-            val defaultOrder = "${SuperResolution.displayName},${Dehaze.displayName},${Upscale.displayName}"
+            val defaultOrder = "${SuperResolution.displayName},${Dehaze.displayName},${Upscale.displayName},${ShadowRemoval.displayName},${Denoising.displayName}"
             val stored = getPrefsString("algo_order", defaultOrder)
             return stored.split(",")
         }
@@ -128,9 +130,15 @@ class ParameterConfig private constructor(appContext: Context) {
         }
 
         @JvmStatic
+        fun isShadowRemovalEnabled(): Boolean {
+            Log.d(TAG, "isShadowRemovalEnabled: ${getProcessingOrder().contains(ShadowRemoval.displayName)}")
+            return getProcessingOrder().contains(ShadowRemoval.displayName)
+        }
+
+        @JvmStatic
         fun isDenoisingEnabled(): Boolean {
             Log.d(TAG, "isDenoisingEnabled: ${getProcessingOrder().contains("Denoising")}")
-            return getProcessingOrder().contains("Denoising")
+            return getProcessingOrder().contains(Denoising.displayName)
         }
 
         @JvmStatic

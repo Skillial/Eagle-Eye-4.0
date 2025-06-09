@@ -10,6 +10,7 @@ import android.graphics.SurfaceTexture
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.graphics.ColorUtils
 import android.util.Log
 import android.view.TextureView
 import android.view.View
@@ -34,6 +35,10 @@ import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import com.wangGang.eagleEye.ui.views.GridOverlayView
 import androidx.core.view.isVisible
+import com.wangGang.eagleEye.processing.commands.Dehaze
+import com.wangGang.eagleEye.processing.commands.Denoising
+import com.wangGang.eagleEye.processing.commands.ShadowRemoval
+import com.wangGang.eagleEye.processing.commands.SuperResolution
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -186,6 +191,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         return when (algo) {
             ImageEnhancementType.SUPER_RESOLUTION -> R.drawable.ic_super_resolution
             ImageEnhancementType.DEHAZE -> R.drawable.ic_dehaze
+            ImageEnhancementType.SHADOW_REMOVAL -> R.drawable.ic_shadow_removal
+            ImageEnhancementType.DENOISING -> R.drawable.ic_denoising
         }
     }
 
@@ -212,12 +219,17 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
                     ?.let { reader ->
                         listOfNotNull(reader.getBeforeUriDefaultResultsFolder(), reader.getAfterUriDefaultResultsFolder())
                     } ?: emptyList()
-
-                launchBeforeAndAfterActivity(safeUriList)
+                startActivity(
+                    Intent(this, com.wangGang.gallery.MainActivity::class.java)
+                )
+//                launchBeforeAndAfterActivity(safeUriList)
             } else {
                 // normal image
                 val safeUriList = listOfNotNull(thumbnailUri)
-                launchBeforeAndAfterActivity(safeUriList)
+                startActivity(
+                    Intent(this, com.wangGang.gallery.MainActivity::class.java)
+                )
+//                launchBeforeAndAfterActivity(safeUriList)
             }
         }
 
@@ -243,43 +255,64 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     }
 
     private fun setBackground() {
-        val superResolutionEnabled = ParameterConfig.isSuperResolutionEnabled()
-        val dehazeEnabled = ParameterConfig.isDehazeEnabled()
+        val orderedNames = ParameterConfig.getProcessingOrder()
+
+        val enabledSet = mutableSetOf<String>()
+        if (ParameterConfig.isSuperResolutionEnabled()) enabledSet.add(SuperResolution.displayName)
+        if (ParameterConfig.isDehazeEnabled()) enabledSet.add(Dehaze.displayName)
+        if (ParameterConfig.isShadowRemovalEnabled()) enabledSet.add(ShadowRemoval.displayName)
+        if (ParameterConfig.isDenoisingEnabled()) enabledSet.add(Denoising.displayName)
 
         val activeImageEnhancementTechniques = mutableListOf<ImageEnhancementType>()
 
-        if (superResolutionEnabled) {
-            activeImageEnhancementTechniques.add(ImageEnhancementType.SUPER_RESOLUTION)
-        }
-
-        if (dehazeEnabled) {
-            activeImageEnhancementTechniques.add(ImageEnhancementType.DEHAZE)
+        for (name in orderedNames) {
+            if (name in enabledSet) {
+                val type = when (name) {
+                    SuperResolution.displayName -> ImageEnhancementType.SUPER_RESOLUTION
+                    Dehaze.displayName -> ImageEnhancementType.DEHAZE
+                    ShadowRemoval.displayName -> ImageEnhancementType.SHADOW_REMOVAL
+                    Denoising.displayName -> ImageEnhancementType.DENOISING
+                    else -> null
+                }
+                type?.let { activeImageEnhancementTechniques.add(it) }
+            }
         }
 
         updateAlgoIndicators(activeImageEnhancementTechniques)
     }
 
+
     private fun updateScreenBorder() {
         val rootView = activityCameraControllerBinding.root
 
-        val srEnabled = ParameterConfig.isSuperResolutionEnabled()
-        val dehazeEnabled = ParameterConfig.isDehazeEnabled()
+        val enabledColors = mutableListOf<Int>()
 
-        // TODO: update this once chaining is supported
-        val borderColor = when {
-            /*srEnabled && dehazeEnabled -> {
-                ColorUtils.blendARGB(Color.GREEN, Color.YELLOW, 0.5f)
-            }*/
-            srEnabled -> Color.GREEN
-            dehazeEnabled -> Color.YELLOW
-            else -> Color.BLACK
+        if (ParameterConfig.isSuperResolutionEnabled()) enabledColors += Color.GREEN
+        if (ParameterConfig.isDehazeEnabled()) enabledColors += Color.YELLOW
+        if (ParameterConfig.isShadowRemovalEnabled()) enabledColors += Color.WHITE
+        if (ParameterConfig.isDenoisingEnabled()) enabledColors += Color.CYAN
+
+        val borderColor = when (enabledColors.size) {
+            0 -> Color.BLACK
+            1 -> enabledColors[0]
+            else -> blendColors(enabledColors)
         }
 
         val borderDrawable = GradientDrawable().apply {
             setColor(Color.BLACK)
             setStroke(2.dpToPx(), borderColor)
         }
+
         rootView.background = borderDrawable
+    }
+
+    private fun blendColors(colors: List<Int>): Int {
+        if (colors.isEmpty()) return Color.BLACK
+        var blended = colors[0]
+        for (i in 1 until colors.size) {
+            blended = ColorUtils.blendARGB(blended, colors[i], 0.5f)
+        }
+        return blended
     }
 
     private fun updateAlgoIndicators(activeImageEnhancementTechniques: List<ImageEnhancementType>) {

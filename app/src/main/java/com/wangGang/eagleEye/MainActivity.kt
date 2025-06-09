@@ -1,11 +1,9 @@
 package com.wangGang.eagleEye
 
-
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.commit
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.io.DirectoryStorage
 import com.wangGang.eagleEye.io.FileImageReader
@@ -15,21 +13,22 @@ import com.wangGang.eagleEye.permissions.PermissionsHandler
 import com.wangGang.eagleEye.ui.activities.CameraControllerActivity
 import org.opencv.android.OpenCVLoader
 
-
 class MainActivity : AppCompatActivity() {
+
     private lateinit var permissionHandler: PermissionsHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+//        setContentView(R.layout.activity_main)
 
         initializeOpenCV()
         loadComponents()
+
+        permissionHandler = PermissionsHandler(this)
         requestPermissions()
     }
 
     private fun requestPermissions() {
-        permissionHandler = PermissionsHandler(this)
         permissionHandler.requestPermissions { allPermissionsGranted ->
             if (allPermissionsGranted) {
                 initializeApp()
@@ -50,11 +49,10 @@ class MainActivity : AppCompatActivity() {
     private fun initializeApp() {
         val intent = Intent(this, CameraControllerActivity::class.java)
         startActivity(intent)
-        finish()    // Disable going back to main activity
+        finish()
     }
 
     private fun loadComponents() {
-        // Initialize components
         DirectoryStorage.getSharedInstance().createDirectory()
         FileImageWriter.initialize(this)
         FileImageReader.initialize(this)

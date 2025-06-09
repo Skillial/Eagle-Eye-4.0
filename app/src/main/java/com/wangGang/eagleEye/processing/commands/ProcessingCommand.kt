@@ -84,7 +84,7 @@ data object ShadowRemoval : ProcessingCommand(
         "Running Shadow Model",
         "Cropping Final Output"
     ),
-    color = Color.White
+    color = Color.Gray
 )
 
 data object Denoising : ProcessingCommand(
