@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.wangGang.eagleEye.processing.imagetools.ImageOperator.bitmapToMat
 import com.wangGang.eagleEye.ui.utils.ProgressManager
-import com.wangGang.eagleEye.processing.imagetools.ImageOperator.bitmapToMat
 import org.opencv.android.Utils
 import org.opencv.core.Core
 import org.opencv.core.CvType
