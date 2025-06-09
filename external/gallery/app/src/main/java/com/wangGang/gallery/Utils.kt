@@ -156,6 +156,74 @@ private fun queryUri(context: Context, uri: Uri, selection: String?, selectionAr
         sortOrder)
 }
 
+fun getLatestImageUri(context: Context): Uri? {
+    val imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    val videoUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+
+    // We'll query both images and videos and then pick the latest based on DATE_MODIFIED
+    val projection = arrayOf(
+        MediaStore.MediaColumns._ID,
+        MediaStore.MediaColumns.DATE_MODIFIED, // Use DATE_MODIFIED for the latest file change
+        MediaStore.MediaColumns.MIME_TYPE
+    )
+
+    val sortOrder = "${MediaStore.MediaColumns.DATE_MODIFIED} DESC LIMIT 1"
+
+    var latestMediaUri: Uri? = null
+    var latestModifiedTime: Long = 0L
+
+    // Query images
+    context.contentResolver.query(
+        imageUri,
+        projection,
+        null,
+        null,
+        sortOrder
+    )?.use { cursor ->
+        if (cursor.moveToFirst()) {
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
+            val mediaId = cursor.getLong(idColumn)
+            val modifiedTime = cursor.getLong(dateModifiedColumn) * 1000L // Convert to milliseconds
+
+            if (modifiedTime > latestModifiedTime) {
+                latestModifiedTime = modifiedTime
+                latestMediaUri = Uri.withAppendedPath(imageUri, mediaId.toString())
+            }
+        }
+    }
+
+    // Query videos
+    context.contentResolver.query(
+        videoUri,
+        projection,
+        null,
+        null,
+        sortOrder
+    )?.use { cursor ->
+        if (cursor.moveToFirst()) {
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
+            val mediaId = cursor.getLong(idColumn)
+            val modifiedTime = cursor.getLong(dateModifiedColumn) * 1000L // Convert to milliseconds
+
+            // Compare with the latest found so far (could be an image or a previous video)
+            if (modifiedTime > latestModifiedTime) {
+                latestModifiedTime = modifiedTime
+                latestMediaUri = Uri.withAppendedPath(videoUri, mediaId.toString())
+            }
+        }
+    }
+
+    if (latestMediaUri != null) {
+        Log.d(TAG, "Found latest media URI: $latestMediaUri (Modified: ${Date(latestModifiedTime)})")
+    } else {
+        Log.d(TAG, "No media found in gallery.")
+    }
+
+    return latestMediaUri
+}
+
 private fun Cursor.getResultsFromCursor(): List<File> {
     val results = mutableListOf<File>()
 

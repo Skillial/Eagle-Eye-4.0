@@ -114,7 +114,8 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
     }
 
     private fun onAllTasksCompleted() {
-        if (completedTasks == totalTasks) {
+        if (completedTasks >= totalTasks) {
+            Log.d(TAG, "onAllTasksCompleted - All tasks completed")
             viewModel.setLoadingBoxVisible(false)
             debugPrint()
             resetValues()
@@ -151,5 +152,7 @@ class ProgressManager private constructor(private val viewModel: CameraViewModel
         completedTasks = 0
         taskList = emptyList()
         _progress.postValue(0)
+        Log.d(TAG, "===== resetValues() =====")
+        Log.d(TAG, "values = completedTasks: $completedTasks, totalTasks: $totalTasks, taskList: $taskList")
     }
 }
