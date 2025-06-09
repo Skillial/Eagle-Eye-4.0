@@ -82,7 +82,7 @@ class AKDT(private val context: Context) {
         var outputBitmap: Bitmap? = null
 
         try {
-            mat = loadFromAssets()
+            mat = bitmapToMat(bitmap)
             mat.convertTo(mat, CvType.CV_32F, 1.0 / 255.0)
 
             val h = mat.rows()
