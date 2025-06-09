@@ -422,6 +422,21 @@
             return imageFile.absolutePath
         }
 
+        @Synchronized
+        fun getDCIMPath(fileType: ImageFileAttribute.FileType) : String {
+            val dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val cameraDir = File(dcimDir, "Camera")
+            if (!cameraDir.exists()) cameraDir.mkdirs()
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val suffix = "after"
+            val genericName = "IMG_${timeStamp}_$suffix"
+            val processedImageFile = File(
+                cameraDir,
+                "$genericName${ImageFileAttribute.getFileExtension(fileType)}"
+            )
+            return processedImageFile.absolutePath
+        }
+
         // getSharedResultPath
         @Synchronized
         fun getSharedResultPath(fileType: ImageFileAttribute.FileType): String {

@@ -10,11 +10,13 @@ import org.opencv.imgproc.Imgproc
 class Interpolation(private val viewModel: CameraViewModel) {
     fun upscaleImageWithImageSave(bitmap: Bitmap, scale: Float) {
         val oldMat = ImageOperator.bitmapToMat(bitmap)
+        Core.rotate(oldMat, oldMat, Core.ROTATE_90_CLOCKWISE)
         return ImageOperator.performInterpolationWithImageSave(oldMat, scale)
     }
 
     fun upscaleImage(bitmap: Bitmap, scale: Float): Bitmap {
         val oldMat = ImageOperator.bitmapToMat(bitmap)
+        Core.rotate(oldMat, oldMat, Core.ROTATE_90_CLOCKWISE)
         return ImageOperator.performJNIInterpolationWithMerge(oldMat, scale)
     }
 }

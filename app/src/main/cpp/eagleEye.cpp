@@ -228,10 +228,11 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrantsWithFileSave(
         JNIEnv *env, jobject thiz, jobjectArray filenames, jint divisionFactor,
-        jint interpolationValue, jint quadrantWidth, jint quadrantHeight, jstring outputFilePath) {
+        jint interpolationValue, jint quadrantWidth, jint quadrantHeight, jstring outputFilePath, jstring outputFilePath1) {
     // TODO: implement mergeQuadrantsWithFileSave()
     // Calculate total dimensions and initialize the merged image (BGR)
     const char* outputPath = env->GetStringUTFChars(outputFilePath, nullptr);
+    const char* outputPath1 = env->GetStringUTFChars(outputFilePath1, nullptr);
     // Start time to measure the time taken for the operation (optional)
     long long startTime = cv::getTickCount();
 
@@ -278,7 +279,7 @@ Java_com_wangGang_eagleEye_processing_imagetools_ImageOperator_mergeQuadrantsWit
 
     // Save the final image to the specified file path
     cv::imwrite(outputPath, mergedImage);
-
+    cv::imwrite(outputPath1, mergedImage);
     // Calculate and log elapsed time
     long long elapsedTime = (cv::getTickCount() - startTime) / cv::getTickFrequency();
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Time taken to merge and save the image: %lld seconds", elapsedTime);

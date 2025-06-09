@@ -222,7 +222,7 @@ class AKDT(private val context: Context) {
 
             outputBgr = Mat()
             finalOutputImage.convertTo(outputBgr, CvType.CV_8U, 255.0)
-            // Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
+             Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
 
             outputBitmap = Bitmap.createBitmap(outputBgr.cols(), outputBgr.rows(), Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(outputBgr, outputBitmap)

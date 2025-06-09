@@ -14,6 +14,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import java.io.File
 import java.util.*
+import android.os.Bundle
 
 val TAG = "GalleryUtils"
 
@@ -160,47 +161,56 @@ fun getLatestImageUri(context: Context): Uri? {
     val imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
     val videoUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
 
-    // We'll query both images and videos and then pick the latest based on DATE_MODIFIED
     val projection = arrayOf(
         MediaStore.MediaColumns._ID,
-        MediaStore.MediaColumns.DATE_MODIFIED, // Use DATE_MODIFIED for the latest file change
+        MediaStore.MediaColumns.DATE_MODIFIED,
         MediaStore.MediaColumns.MIME_TYPE
     )
-
-    val sortOrder = "${MediaStore.MediaColumns.DATE_MODIFIED} DESC LIMIT 1"
 
     var latestMediaUri: Uri? = null
     var latestModifiedTime: Long = 0L
 
-    // Query images
-    context.contentResolver.query(
-        imageUri,
-        projection,
-        null,
-        null,
-        sortOrder
-    )?.use { cursor ->
+    // Define common query arguments for API 30+
+    val queryArgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        Bundle().apply {
+            putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(MediaStore.MediaColumns.DATE_MODIFIED))
+            putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+            putInt(ContentResolver.QUERY_ARG_LIMIT, 1) // Correct way to limit
+        }
+    } else {
+        null // For older APIs, we don't use Bundle queryArgs
+    }
+
+    // Define sortOrder for older APIs (no LIMIT in string)
+    val sortOrderForOldApi = "${MediaStore.MediaColumns.DATE_MODIFIED} DESC"
+
+    // --- Query images ---
+    val imageCursor: Cursor? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        context.contentResolver.query(imageUri, projection, queryArgs, null)
+    } else {
+        context.contentResolver.query(imageUri, projection, null, null, sortOrderForOldApi)
+    }
+
+    imageCursor?.use { cursor ->
         if (cursor.moveToFirst()) {
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
             val mediaId = cursor.getLong(idColumn)
             val modifiedTime = cursor.getLong(dateModifiedColumn) * 1000L // Convert to milliseconds
 
-            if (modifiedTime > latestModifiedTime) {
-                latestModifiedTime = modifiedTime
-                latestMediaUri = Uri.withAppendedPath(imageUri, mediaId.toString())
-            }
+            latestModifiedTime = modifiedTime
+            latestMediaUri = Uri.withAppendedPath(imageUri, mediaId.toString())
         }
     }
 
-    // Query videos
-    context.contentResolver.query(
-        videoUri,
-        projection,
-        null,
-        null,
-        sortOrder
-    )?.use { cursor ->
+    // --- Query videos ---
+    val videoCursor: Cursor? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        context.contentResolver.query(videoUri, projection, queryArgs, null)
+    } else {
+        context.contentResolver.query(videoUri, projection, null, null, sortOrderForOldApi)
+    }
+
+    videoCursor?.use { cursor ->
         if (cursor.moveToFirst()) {
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
@@ -208,7 +218,7 @@ fun getLatestImageUri(context: Context): Uri? {
             val modifiedTime = cursor.getLong(dateModifiedColumn) * 1000L // Convert to milliseconds
 
             // Compare with the latest found so far (could be an image or a previous video)
-            if (modifiedTime > latestModifiedTime) {
+            if (modifiedTime > latestModifiedTime) { // This comparison is crucial if you want the *absolute* latest
                 latestModifiedTime = modifiedTime
                 latestMediaUri = Uri.withAppendedPath(videoUri, mediaId.toString())
             }
