@@ -6,6 +6,7 @@ import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.wangGang.eagleEye.processing.imagetools.ImageOperator.bitmapToMat
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import org.opencv.android.Utils
 import org.opencv.core.Core
@@ -89,7 +90,6 @@ class AKDT(private val context: Context) {
                 mat = tmp
             }
             
-
             mat.convertTo(mat, CvType.CV_32F, 1.0 / 255.0)
 
             val h = mat.rows()
@@ -229,7 +229,7 @@ class AKDT(private val context: Context) {
 
             outputBgr = Mat()
             finalOutputImage.convertTo(outputBgr, CvType.CV_8U, 255.0)
-            // Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
+             Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
 
             outputBitmap = Bitmap.createBitmap(outputBgr.cols(), outputBgr.rows(), Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(outputBgr, outputBitmap)

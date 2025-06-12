@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.wangGang.gallery.MainActivity">
+    <item
+        android:id="@+id/menu_photos"
+        android:enabled="true"
+        android:icon="@drawable/ic_image"
+        android:title="@string/menu_photos"/>
+    <item
+        android:id="@+id/menu_album"
+        android:enabled="true"
+        android:icon="@drawable/ic_album"
+        android:title="@string/menu_albums"/>
+</menu>
