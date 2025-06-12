@@ -39,6 +39,7 @@ import com.wangGang.eagleEye.processing.commands.Dehaze
 import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
+import com.wangGang.gallery.getLatestImageUri
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -89,13 +90,12 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         initializeCamera()
         addEventListeners()
         setupObservers()
-        setupThumbnail()
 
         doneSetup = true
     }
 
     private fun setupThumbnail() {
-        thumbnailUri = FileImageReader.getInstance()?.getAfterUriDefaultResultsFolder()
+        thumbnailUri = getLatestImageUri(this)
         updateThumbnail()
     }
 
@@ -109,6 +109,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
         setGridOverlay()
         setBackground()
+        setupThumbnail()
         updateScreenBorder()
 
         if (textureView.isAvailable) {
@@ -134,6 +135,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         super.onStop()
         Log.d("CameraControllerActivity", "onStop")
         Log.d("CameraControllerActivity", "Closing camera")
+        CameraController.getInstance().shutdownBackgroundThread()
         CameraController.getInstance().closeCamera()
     }
 
@@ -185,6 +187,12 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         switchCameraButton.isEnabled = true
         textureView.isEnabled = true
         thumbnailPreview.isEnabled = true
+
+        // Reset progress bar and loading text
+        progressBar.progress = 0
+        viewModel.updateLoadingText("")
+
+        setupThumbnail()
     }
 
     private fun getAlgoIcon(algo: ImageEnhancementType): Int {

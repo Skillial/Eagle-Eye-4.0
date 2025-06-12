@@ -25,6 +25,7 @@ import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -107,6 +108,7 @@ class ImageReaderManager(
         }
         saveImages(oldBitmap)
         setImageReaderListener()
+        cameraController.initializeCamera()
         cameraController.openCamera()
         viewModel.setLoadingBoxVisible(false)
     }

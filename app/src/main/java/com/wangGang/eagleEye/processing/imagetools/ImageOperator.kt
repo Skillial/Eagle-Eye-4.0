@@ -40,7 +40,8 @@ object ImageOperator {
         interpolationValue: Int,
         quadrantWidth: Int,
         quadrantHeight: Int,
-        outputFile: String
+        outputFile: String,
+        outputFile1: String
     )
     /*
      * Adds random noise. Returns the same mat with the noise operator applied.
@@ -341,7 +342,6 @@ object ImageOperator {
         val mat = Mat()
         val bmp32 = bitmap.copy(Bitmap.Config.ARGB_8888, true) // Ensure it's in ARGB_8888 format
         Utils.bitmapToMat(bmp32, mat)
-        Core.rotate(mat, mat, Core.ROTATE_90_CLOCKWISE)
         Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2BGR)
         return mat
     }
@@ -468,14 +468,16 @@ object ImageOperator {
             fileList[i] = FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
                 resizedQuadrant,
                 filenames[i],
-                ImageFileAttribute.FileType.JPEG
+                ImageFileAttribute.FileType.PNG
             ).toString()
             quadrant.release()
             resizedQuadrant.release()
         }
-        val outputFile = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.JPEG)
+        val outputFile = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.PNG)
             ?: throw IllegalStateException("Failed to get output file path 1")
-        mergeQuadrantsWithFileSave(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, outputFile)
+        val outputFile1 = FileImageWriter.getInstance()?.getDCIMPath(ImageFileAttribute.FileType.PNG)
+            ?: throw IllegalStateException("Failed to get output file path 2")
+        mergeQuadrantsWithFileSave(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, outputFile, outputFile1)
     }
     fun performJNIInterpolation(fromMat: Mat, count: Int): Array<String> {
         val divisionFactor = 4
