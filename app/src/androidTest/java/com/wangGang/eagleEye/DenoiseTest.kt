@@ -79,6 +79,31 @@ class DenoiseTest {
             assertNotNull(resultBitmap)
         }
     }
+
+    @Test
+    fun testSingleDenoise() {
+        if (!OpenCVLoader.initDebug()) {
+            Log.e("OpenCV", "Initialization Failed")
+        } else {
+            Log.d("OpenCV", "Initialization Successful")
+        }
+        DirectoryStorage.getSharedInstance().createDirectory()
+        FileImageWriter.initialize(context)
+        FileImageReader.initialize(context)
+        ParameterConfig.initialize(context)
+        AttributeHolder.initialize(context)
+        val fileName = "input.png"
+        val bitmap = loadBitmapFromAssets(fileName)
+
+        val startTime = System.currentTimeMillis()
+        val resultBitmap = AKDT.denoiseImageTest(bitmap, "input.png")
+        val endTime = System.currentTimeMillis()
+        Log.d("DenoiseTiming", "$fileName: ${endTime - startTime}")
+
+        saveBitmapImage(resultBitmap, fileName, ImageFileAttribute.FileType.PNG)
+        assertNotNull(resultBitmap)
+
+    }
 }
 
 private fun saveBitmapImage(bitmap: Bitmap, fileName: String, fileType: ImageFileAttribute.FileType) {
