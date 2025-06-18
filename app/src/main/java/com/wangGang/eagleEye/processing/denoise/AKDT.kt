@@ -5,6 +5,7 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Debug
 import android.util.Log
 import com.wangGang.eagleEye.processing.imagetools.ImageOperator.bitmapToMat
 import com.wangGang.eagleEye.ui.utils.ProgressManager
@@ -229,7 +230,7 @@ class AKDT(private val context: Context) {
 
             outputBgr = Mat()
             finalOutputImage.convertTo(outputBgr, CvType.CV_8U, 255.0)
-             Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2BGR)
+            Imgproc.cvtColor(outputBgr, outputBgr, Imgproc.COLOR_RGB2RGBA)
 
             outputBitmap = Bitmap.createBitmap(outputBgr.cols(), outputBgr.rows(), Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(outputBgr, outputBitmap)
@@ -251,7 +252,9 @@ class AKDT(private val context: Context) {
         }
     }
 
-    fun denoiseImageTest(bitmap: Bitmap, filename: String): Bitmap {
+    val TAG = "DenoiseImageTest"
+
+    fun denoiseImageTest(bitmap: Bitmap, filename: String): Bitmap { // Context parameter removed
         val patchWithOverlap = 512
         val overlap = 28
         val validPatchSize = 512 - overlap * 2
@@ -264,13 +267,17 @@ class AKDT(private val context: Context) {
         var outputBgr: Mat? = null
         var outputBitmap: Bitmap? = null
 
+        val ortEnvironment = OrtEnvironment.getEnvironment() // Get environment here if not global
+
+        logMemoryUsage("Start of denoiseImageTest") // Context parameter removed
+
         try {
             mat = loadAndResizeFromAssetsTest(filename)
             mat.convertTo(mat, CvType.CV_32F, 1.0 / 255.0)
+            logMemoryUsage("After loadAndResizeFromAssetsTest (initial Mat)") // Context parameter removed
 
             val h = mat.rows()
             val w = mat.cols()
-            // val c = mat.channels()
 
             val padH = (validPatchSize - (h % validPatchSize)) % validPatchSize
             val padW = (validPatchSize - (w % validPatchSize)) % validPatchSize
@@ -281,14 +288,16 @@ class AKDT(private val context: Context) {
                 Core.BORDER_REFLECT
             )
             mat.release()
+            logMemoryUsage("After image padding (imagePadded Mat)") // Context parameter removed
 
             val paddedH = imagePadded.rows()
             val paddedW = imagePadded.cols()
             outputImage = Mat.zeros(imagePadded.size(), imagePadded.type())
+            logMemoryUsage("After initializing outputImage (zeros Mat)") // Context parameter removed
 
             denoiseSession = loadModelFromAssets("model/akdt.onnx")
             val inputName = denoiseSession.inputNames.iterator().next()
-            // val outputName = denoiseSession.outputNames.iterator().next()
+            logMemoryUsage("After loading denoiseSession") // Context parameter removed
 
             val totalPatches = ((paddedH - 2 * overlap) / validPatchSize) * ((paddedW - 2 * overlap) / validPatchSize)
             var patchCount = 0
@@ -297,8 +306,9 @@ class AKDT(private val context: Context) {
                 for (j in overlap until paddedW - overlap step validPatchSize) {
                     patchCount++
                     val progress = (patchCount.toDouble() / totalPatches * 100).toInt()
-                    if (patchCount % 5 == 0 || patchCount == totalPatches) {
-                        Log.d("DenoiseImage", "Processing patch $patchCount of $totalPatches ($progress%)")
+                    if (patchCount % 50 == 0 || patchCount == totalPatches) {
+                        Log.d(TAG, "Processing patch $patchCount of $totalPatches ($progress%)")
+                        logMemoryUsage("During patch loop: patch $patchCount") // Context parameter removed
                     }
 
                     var iStart = i - overlap
@@ -316,7 +326,8 @@ class AKDT(private val context: Context) {
 
                     val patch = imagePadded.submat(iStart, iEnd, jStart, jEnd)
 
-                    val inputShape = longArrayOf(1, patch.channels().toLong(), patch.rows().toLong(), patch.cols().toLong())
+                    val inputShape = longArrayOf(1, patch.channels().toLong(), patchWithOverlap.toLong(), patchWithOverlap.toLong())
+
                     val patchData = FloatArray(patch.rows() * patch.cols() * patch.channels())
                     patch.get(0, 0, patchData)
 
@@ -333,6 +344,7 @@ class AKDT(private val context: Context) {
                             }
                         }
                     }
+                    patch.release()
 
                     var inputTensor: OnnxTensor? = null
                     var results: OrtSession.Result? = null
@@ -394,18 +406,25 @@ class AKDT(private val context: Context) {
                     }
                 }
             }
+            logMemoryUsage("After patch processing loop completed") // Context parameter removed
 
             finalOutputImage = outputImage.submat(overlap, h + overlap, overlap, w + overlap)
             outputImage.release()
+            logMemoryUsage("After cropping finalOutputImage") // Context parameter removed
 
             outputBgr = Mat()
             finalOutputImage.convertTo(outputBgr, CvType.CV_8U, 255.0)
+            finalOutputImage.release()
+            logMemoryUsage("After converting to 8-bit BGR Mat") // Context parameter removed
 
             outputBitmap = Bitmap.createBitmap(outputBgr.cols(), outputBgr.rows(), Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(outputBgr, outputBitmap)
+            outputBgr.release()
+            logMemoryUsage("After converting to Bitmap") // Context parameter removed
 
-            Log.d("AKDT", "Denoising completed successfully")
-            Log.d("AKDT", "Output image size: ${outputBitmap.width}x${outputBitmap.height}")
+
+            Log.d(TAG, "Denoising completed successfully")
+            Log.d(TAG, "Output image size: ${outputBitmap.width}x${outputBitmap.height}")
             return outputBitmap
 
         } finally {
@@ -415,7 +434,27 @@ class AKDT(private val context: Context) {
             denoiseSession?.close()
             finalOutputImage?.release()
             outputBgr?.release()
+            ortEnvironment.close()
+            logMemoryUsage("End of denoiseImageTest (in finally block)") // Context parameter removed
         }
+    }
+
+    // Modified logMemoryUsage function - no Context needed
+    private fun logMemoryUsage(stage: String) {
+        Log.d(TAG, "Memory Usage - $stage:")
+
+        val nativeHeapAllocated = Debug.getNativeHeapAllocatedSize()
+        val nativeHeapSize = Debug.getNativeHeapSize()
+        val nativeHeapFree = nativeHeapSize - nativeHeapAllocated
+
+        Log.d(TAG, "  Native Heap: Allocated = ${nativeHeapAllocated / (1024 * 1024)} MB, Free = ${nativeHeapFree / (1024 * 1024)} MB, Total = ${nativeHeapSize / (1024 * 1024)} MB")
+
+        val totalMemory = Runtime.getRuntime().totalMemory()
+        val freeMemory = Runtime.getRuntime().freeMemory()
+        val usedJavaMemory = totalMemory - freeMemory
+
+        Log.d(TAG, "  Java Memory: Used = ${usedJavaMemory / (1024 * 1024)} MB, Total = ${totalMemory / (1024 * 1024)} MB")
+        Log.d(TAG, "----------------------------------------------------")
     }
 
     private fun loadAndResizeFromAssetsTest(filename: String): Mat {

@@ -5,6 +5,7 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Debug
 import android.util.Log
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
@@ -158,7 +159,7 @@ class SynthShadowRemoval(
         val convertedMat = Mat()
 
         mat.convertTo(convertedMat, CvType.CV_8UC3, 255.0)
-        Imgproc.cvtColor(convertedMat, convertedMat, Imgproc.COLOR_RGB2BGRA)
+        Imgproc.cvtColor(convertedMat, convertedMat, Imgproc.COLOR_RGB2RGBA)
         val bitmap = Bitmap.createBitmap(convertedMat.cols(), convertedMat.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(convertedMat, bitmap)
         convertedMat.release()
@@ -451,7 +452,12 @@ class SynthShadowRemoval(
     }
 
     fun removeShadowTest(bitmap: Bitmap, filename: String): Bitmap {
+        val ortEnvironment = OrtEnvironment.getEnvironment() // Assuming OrtEnvironment is managed globally or passed
+
+        logMemoryUsage("Start of removeShadowTest")
+
         val (originalSize, downsampledInput) = loadAndResizeFromAssetsTest(Size(TARGET_DIMENSION.toDouble(), TARGET_DIMENSION.toDouble()), filename)
+        logMemoryUsage("After loadAndResizeFromAssetsTest")
 
         val originalWidth = originalSize.width.toInt()
         val originalHeight = originalSize.height.toInt()
@@ -459,6 +465,8 @@ class SynthShadowRemoval(
 
         val downsampledInputTensor = preprocess(downsampledInput, ortEnvironment)
         downsampledInput.release()
+        logMemoryUsage("After preprocess (downsampledInputTensor created)")
+
         val matteSession = loadModelFromAssets(MODEL_SHADOW_MATTE)
         var smallMatteTensor: OnnxTensor?
         var matteResult: OrtSession.Result?
@@ -469,13 +477,16 @@ class SynthShadowRemoval(
             matteResult = matteSession.run(mapOf(matteSession.inputNames.first() to downsampledInputTensor))
             smallMatteTensor = matteResult.get(0) as OnnxTensor
             downsampledInputTensor.close()
+            logMemoryUsage("After matteSession run and downsampledInputTensor closed")
 
             val matteTensor = interpolateOnnxTensorBicubic(ortEnvironment, smallMatteTensor, originalHeight, originalWidth)
             matteResult.close()
             smallMatteTensor.close()
+            logMemoryUsage("After interpolateOnnxTensorBicubic and matte tensors closed")
 
             val fullImageMat = loadAndPad(bitmap)
             Log.d(TAG, "Full image mat size for patching: ${fullImageMat.rows()} x ${fullImageMat.cols()}")
+            logMemoryUsage("After loadAndPad (fullImageMat created)")
 
             val (paddedMatte, _, _) = padToMultipleReflect(ortEnvironment, matteTensor, TARGET_DIMENSION)
             Log.d(TAG, "Padded matte size: ${paddedMatte.info.shape[2]} x ${paddedMatte.info.shape[3]}")
@@ -484,10 +495,13 @@ class SynthShadowRemoval(
             val mattePatches = extractPatches(ortEnvironment, paddedMatte)
             matteTensor.close()
             paddedMatte.close()
+            logMemoryUsage("After padToMultipleReflect and extractPatches (mattePatches created)")
 
             val removalSession = loadModelFromAssets(MODEL_SHADOW_REMOVAL)
+            logMemoryUsage("After loading removalSession")
 
             finalOutputMat = Mat(paddedHeight, paddedWidth, CvType.CV_32FC3, Scalar(0.0, 0.0, 0.0))
+            logMemoryUsage("After initializing finalOutputMat")
 
             for ((mattePatch, i, j) in mattePatches) {
                 val currentPatchActualHeight = min(TARGET_DIMENSION, fullImageMat.rows() - i)
@@ -502,12 +516,15 @@ class SynthShadowRemoval(
                     i, i + currentPatchActualHeight,
                     j, j + currentPatchActualWidth
                 )
+                // logMemoryUsage("Inside loop: After imgPatchMat creation") // Too frequent, might spam logs
 
                 val rgbPatchTensor = preprocess(imgPatchMat, ortEnvironment)
                 imgPatchMat.release()
+                // logMemoryUsage("Inside loop: After preprocess (rgbPatchTensor created)")
 
                 val shadowInputTensor = processInput(ortEnvironment, rgbPatchTensor, mattePatch)
                 Log.d(TAG, "Processing patch at (${i}, ${j}) with size ${currentPatchActualHeight} x ${currentPatchActualWidth}")
+                // logMemoryUsage("Inside loop: After processInput (shadowInputTensor created)")
 
                 shadowInputTensor.use { input ->
                     removalSession.run(
@@ -539,25 +556,46 @@ class SynthShadowRemoval(
                             processedPatchMat.copyTo(roi)
                             roi.release()
                             processedPatchMat.release()
+                            // logMemoryUsage("Inside loop: After patch processing and copyTo finalOutputMat")
                         }
                     }
                 }
                 rgbPatchTensor.close()
                 mattePatch.close()
+                // logMemoryUsage("Inside loop: After closing tensors for current patch")
             }
             fullImageMat.release()
+            logMemoryUsage("After patch processing loop and fullImageMat released")
 
             val croppedMat = Mat(finalOutputMat, org.opencv.core.Rect(0, 0, originalWidth, originalHeight))
             Imgproc.cvtColor(croppedMat, croppedMat, Imgproc.COLOR_BGR2RGB)
             val outputBitmap = convertToBitmap(croppedMat)
             croppedMat.release()
+            logMemoryUsage("After cropping, color conversion, and bitmap conversion")
 
             return outputBitmap
 
         } finally {
             matteSession.close()
             finalOutputMat?.release()
+            ortEnvironment.close() // Ensure OrtEnvironment is closed if managed here
+            logMemoryUsage("End of removeShadowTest (in finally block)")
         }
+    }
+
+    private fun logMemoryUsage(stage: String) {
+        val totalMemory = Runtime.getRuntime().totalMemory()
+        val freeMemory = Runtime.getRuntime().freeMemory()
+        val usedJavaMemory = totalMemory - freeMemory
+
+        val nativeHeapSize = Debug.getNativeHeapSize()
+        val nativeHeapAllocated = Debug.getNativeHeapAllocatedSize()
+        val nativeHeapFree = nativeHeapSize - nativeHeapAllocated
+
+        Log.d(TAG, "Memory Usage - $stage:")
+        Log.d(TAG, "  Java Memory: Used = ${usedJavaMemory / (1024 * 1024)} MB, Total = ${totalMemory / (1024 * 1024)} MB")
+        Log.d(TAG, "  Native Heap: Allocated = ${nativeHeapAllocated / (1024 * 1024)} MB, Free = ${nativeHeapFree / (1024 * 1024)} MB, Total = ${nativeHeapSize / (1024 * 1024)} MB")
+        Log.d(TAG, "----------------------------------------------------")
     }
 
     private fun loadAndResizeFromAssetsTest(size: Size, filename: String): Pair<Size, Mat> {

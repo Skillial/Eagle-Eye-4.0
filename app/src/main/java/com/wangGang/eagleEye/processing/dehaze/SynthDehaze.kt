@@ -5,6 +5,7 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Debug
 import android.util.Log
 import com.wangGang.eagleEye.io.FileImageReader
 import com.wangGang.eagleEye.io.FileImageWriter
@@ -284,5 +285,216 @@ class SynthDehaze(private val context: Context) {
         Utils.matToBitmap(clearImg, clearBitmap)
         clearImg.release()
         return clearBitmap
+    }
+
+    fun dehazeImageTest(bitmap: Bitmap): Bitmap {
+        val env = OrtEnvironment.getEnvironment()
+        val sessionOptions = OrtSession.SessionOptions().apply {
+            setMemoryPatternOptimization(true)
+            addConfigEntry("session.use_device_memory_mapping", "1")
+            addConfigEntry("session.enable_stream_execution", "1")
+        }
+
+        logMemoryUsage("Start of dehazeImage function") // Memory log
+
+        // Loading and Resizing Image
+        val (origImg, imSize, hazyImg) = loadAndResize(bitmap, Size(256.0, 256.0))
+        logMemoryUsage("After loadAndResize (origImg, imSize, hazyImg created)") // Memory log
+
+        // Loading Albedo Image
+        val ortSessionAlbedo = loadModelFromAssets(env, sessionOptions, "model/albedo_model.onnx")
+        logMemoryUsage("After loading Albedo Model") // Memory log
+
+        // Preprocessing Image
+        val hazyInput = preprocess(hazyImg, env)
+        logMemoryUsage("After preprocess (hazyInput tensor created)") // Memory log
+
+        // Running Albedo Model
+        val albedoOutput = hazyInput.use { input ->
+            ortSessionAlbedo.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).use { tensor ->
+                    FloatArray(tensor.floatBuffer.remaining()).also { tensor.floatBuffer.get(it) }
+                }
+            }
+        }
+        logMemoryUsage("After running Albedo Model (albedoOutput array created)") // Memory log
+
+        // Close the session
+        ortSessionAlbedo.close()
+        Log.d("dehaze", "Albedo output computed successfully")
+        logMemoryUsage("After closing Albedo session") // Memory log
+
+        // Loading Transmission Model
+        val ortSessionTransmission = loadModelFromAssets(env, sessionOptions, "model/transmission_model.onnx")
+        logMemoryUsage("After loading Transmission Model") // Memory log
+
+        val transmissionInput = OnnxTensor.createTensor(env, FloatBuffer.wrap(albedoOutput), longArrayOf(1, 3, 256, 256))
+        logMemoryUsage("After creating Transmission Input Tensor") // Memory log
+
+        // Running Transmission Model
+        val transmissionOutput = transmissionInput.use { input ->
+            ortSessionTransmission.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).use { tensor ->
+                    FloatArray(tensor.floatBuffer.remaining()).also { tensor.floatBuffer.get(it) }
+                }
+            }
+        }
+        logMemoryUsage("After running Transmission Model (transmissionOutput array created)") // Memory log
+
+        // Close the session
+        ortSessionTransmission.close()
+        val size = 256
+        val reshapedTransmission = Array(size) { FloatArray(size) }
+        for (h in 0 until size) {
+            for (w in 0 until size) {
+                reshapedTransmission[h][w] = transmissionOutput[h * size + w]
+            }
+        }
+        val transmissionMat = Mat(size, size, CvType.CV_32F)
+        for (h in 0 until size) {
+            for (w in 0 until size) {
+                transmissionMat.put(h, w, floatArrayOf(reshapedTransmission[h][w] * 0.5f + 0.5f))  // Wrap the value in a FloatArray
+            }
+        }
+        val TResized = Mat()
+        Imgproc.resize(transmissionMat, TResized, imSize, 0.0, 0.0, Imgproc.INTER_CUBIC)
+        transmissionMat.release() // Release as soon as it's no longer needed
+        TResized.convertTo(TResized, CvType.CV_32F)
+        Core.min(TResized, Scalar(1.0), TResized)
+        Core.max(TResized, Scalar(0.0), TResized)
+        Log.d("dehaze", "Transmission output computed successfully")
+        logMemoryUsage("After processing Transmission output and resizing (TResized Mat created)") // Memory log
+
+        // Resizing Image
+        val hazyResized = Mat()
+        Imgproc.resize(hazyImg, hazyResized, Size(128.0, 128.0), 0.0, 0.0, Imgproc.INTER_CUBIC)
+        logMemoryUsage("After resizing hazy image for Airlight model (hazyResized Mat created)") // Memory log
+
+        // Preprocessing Image
+        val airlightInput = preprocess(hazyResized, env)
+        hazyResized.release() // Release as soon as it's no longer needed
+        logMemoryUsage("After preprocess for Airlight (airlightInput tensor created)") // Memory log
+
+        Log.d(TAG, "Loading Airlight Model")
+        // Loading Airlight Model
+        val ortSessionAirlight = loadModelFromAssets(env, sessionOptions, "model/airlight_model.onnx")
+        sessionOptions.close() // Close sessionOptions once all models are loaded with them
+        logMemoryUsage("After loading Airlight Model and closing sessionOptions") // Memory log
+
+        Log.d(TAG, "Running Airlight Model")
+        // Running Airlight Model
+        val airlightOutput = airlightInput.use { input ->
+            ortSessionAirlight.run(mapOf("input.1" to input)).use { results ->
+                (results.get(0) as OnnxTensor).floatBuffer.array()
+            }
+        }
+        logMemoryUsage("After running Airlight Model (airlightOutput array created)") // Memory log
+
+        // Close the session
+        ortSessionAirlight.close()
+        Log.d("dehaze", "Airlight output computed successfully")
+        logMemoryUsage("After closing Airlight session") // Memory log
+
+        val airlightRed = airlightOutput[0]
+        val airlightGreen = airlightOutput[1]
+        val airlightBlue = airlightOutput[2]
+
+        Log.d(TAG, "Normalizing Image")
+        // Normalizing Image
+        val hazyImgNorm = Mat()
+        Core.normalize(origImg, hazyImgNorm, 0.0, 1.0, Core.NORM_MINMAX, CvType.CV_32FC3)
+        origImg.release() // Release as soon as it's no longer needed
+        hazyImg.release() // Release as soon as it's no longer needed
+        logMemoryUsage("After normalizing original image (hazyImgNorm Mat created)") // Memory log
+
+        Log.d(TAG, "Clearing Image")
+        // Clearing Image
+        val clearImg = Mat(hazyImgNorm.rows(), hazyImgNorm.cols(), CvType.CV_32FC3)
+        logMemoryUsage("After initializing clearImg (zeros Mat)") // Memory log
+
+        Log.d(TAG, "Processing Image")
+        // Processing Image
+        val tValMax = Mat()
+        Core.max(TResized, Scalar(0.001), tValMax)
+
+        // Create a matrix of ones with the same size and type as TResized, then compute (1 - TResized).
+        val onesMat = Mat.ones(TResized.size(), TResized.type())
+        val oneMinusT = Mat()
+        Core.subtract(onesMat, TResized, oneMinusT)
+
+        // Split the normalized hazy image into its color channels.
+        val hazyChannels = mutableListOf<Mat>()
+        Core.split(hazyImgNorm, hazyChannels)
+
+        // Airlight values for each channel.
+        val airlight = listOf(airlightRed, airlightGreen, airlightBlue)
+        val clearChannels = mutableListOf<Mat>()
+
+        // Process each channel individually.
+        for (k in 0..2) {
+            val term = Mat()
+            // Multiply (1 - t) by the corresponding airlight value.
+            Core.multiply(oneMinusT, Scalar(airlight[k].toDouble()), term)
+            // Subtract the airlight term from the hazy channel.
+            Core.subtract(hazyChannels[k], term, term)
+            // Divide by the clamped transmission matrix.
+            Core.divide(term, tValMax, term)
+            // Clamp values to the [0.0, 1.0] range.
+            Core.max(term, Scalar(0.0), term)
+            Core.min(term, Scalar(1.0), term)
+            // Convert the normalized result to 8-bit (scale by 255).
+            term.convertTo(term, CvType.CV_8UC1, 255.0)
+            clearChannels.add(term)
+        }
+
+        // Merge the processed channels back into the output image.
+        Core.merge(clearChannels, clearImg)
+
+        // Release intermediate Mats for channel processing
+        TResized.release()
+        hazyImgNorm.release()
+        tValMax.release()
+        onesMat.release()
+        oneMinusT.release()
+        hazyChannels.forEach { it.release() }
+        clearChannels.forEach { it.release() }
+
+        logMemoryUsage("After final image processing (clearImg updated)") // Memory log
+
+        Log.d(TAG, "Converting Image")
+        // Converting Image
+        clearImg.convertTo(clearImg, CvType.CV_8U)
+        Core.rotate(clearImg, clearImg, Core.ROTATE_90_COUNTERCLOCKWISE)
+        logMemoryUsage("After final conversions and rotation (clearImg ready for Bitmap)") // Memory log
+
+        // convert clearImg to bitmap
+        val clearBitmap = Bitmap.createBitmap(clearImg.cols(), clearImg.rows(), Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(clearImg, clearBitmap)
+        clearImg.release() // Release final clearImg after conversion to Bitmap
+        logMemoryUsage("After converting to final Bitmap") // Memory log
+
+        env.close()
+
+        Log.d(TAG, "End of dehazeImage function") // Memory log
+        logMemoryUsage("End of dehazeImage function (before return)") // Memory log
+        return clearBitmap
+    }
+
+    // The logMemoryUsage function (without Context) remains the same
+    private fun logMemoryUsage(stage: String) {
+        Log.d(TAG, "Memory Usage - $stage:")
+
+        val nativeHeapAllocated = Debug.getNativeHeapAllocatedSize()
+        val nativeHeapSize = Debug.getNativeHeapSize()
+        val nativeHeapFree = nativeHeapSize - nativeHeapAllocated
+
+        Log.d(TAG, "  Native Heap: Allocated = ${nativeHeapAllocated / (1024 * 1024)} MB, Free = ${nativeHeapFree / (1024 * 1024)} MB, Total = ${nativeHeapSize / (1024 * 1024)} MB")
+
+        val totalMemory = Runtime.getRuntime().totalMemory()
+        val freeMemory = Runtime.getRuntime().freeMemory()
+        val usedJavaMemory = totalMemory - freeMemory
+
+        Log.d(TAG, "  Java Memory: Used = ${usedJavaMemory / (1024 * 1024)} MB, Total = ${totalMemory / (1024 * 1024)} MB")
+        Log.d(TAG, "----------------------------------------------------")
     }
 }
