@@ -71,6 +71,13 @@ class CameraController(private val context: Context, private val viewModel: Came
     }
 
     fun captureImage() {
+        try {
+            cameraCaptureSession.stopRepeating()
+            cameraCaptureSession.abortCaptures()
+        } catch (e: Exception) {
+            Log.e("CameraController", "Failed to stop repeating: ${e.message}")
+        }
+
         val totalCaptures = if (ParameterConfig.isSuperResolutionEnabled()) MAX_BURST_IMAGES else 1
 
         // Choose capture template based on ZSL support
@@ -344,13 +351,25 @@ class CameraController(private val context: Context, private val viewModel: Came
     fun closeCamera() {
         try {
             Log.d("CameraController", "Closing camera")
-            cameraCaptureSession.close()
-            cameraDevice.close()
-            handlerThread.quitSafely()
+            if (::cameraCaptureSession.isInitialized) {
+                cameraCaptureSession.close()
+            }
+            if (::cameraDevice.isInitialized) {
+                cameraDevice.close()
+            }
         } catch (e: Exception) {
             Log.e("CameraController", "Error closing camera: ", e)
         }
     }
+
+    fun shutdownBackgroundThread() {
+        try {
+            if (::handlerThread.isInitialized) handlerThread.quitSafely()
+        } catch(e: Exception) {
+            Log.e("CameraController", "Error shutting down background thread", e)
+        }
+    }
+
     private fun chooseOptimalSize(choices: Array<Size>, width: Int, height: Int): Size {
         val targetRatio = width.toFloat() / height
         Log.d("ChooseOptimalSize", "Target width: $width, height: $height, aspectRatio: $targetRatio")

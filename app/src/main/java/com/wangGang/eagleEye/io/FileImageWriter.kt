@@ -21,6 +21,7 @@
     import java.util.Date
     import android.view.Gravity
     import android.webkit.MimeTypeMap
+    import com.wangGang.gallery.getContentUri
     import java.util.Locale
 
     class FileImageWriter private constructor(private val context: Context) {
@@ -103,7 +104,7 @@
             }
         }
 
-        fun saveBitmapImageToDCIM(
+        /*fun saveBitmapImageToDCIM(
             context: Context,
             bitmap: Bitmap,
             fileType: ImageFileAttribute.FileType,
@@ -141,8 +142,56 @@
             } catch (e: IOException) {
                 Log.e(TAG, "Error writing image to DCIM/Camera", e)
             }
-        }
+        }*/
 
+        fun saveBitmapImageToDCIM(
+            context: Context,
+            bitmap: Bitmap,
+            fileType: ImageFileAttribute.FileType,
+            resultType: ResultType = ResultType.BEFORE
+        ) {
+            val dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val cameraDir = File(dcimDir, "Camera")
+            if (!cameraDir.exists()) cameraDir.mkdirs()
+
+            // 2) Rotate if needed
+            val rotatedBitmap = ImageUtils.rotateBitmap(bitmap, 90f)
+
+            // 3) Build generic filename
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val suffix = when (resultType) {
+                ResultType.BEFORE -> "before"
+                ResultType.AFTER  -> "after"
+            }
+            val genericName = "IMG_${timeStamp}_$suffix"
+
+            try {
+                // 4) Save file
+                val processedImageFile = File(
+                    cameraDir,
+                    "$genericName${ImageFileAttribute.getFileExtension(fileType)}"
+                )
+                FileOutputStream(processedImageFile).use { out ->
+                    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                }
+                Log.d(TAG, "File saved: ${processedImageFile.absolutePath}")
+                Log.d(TAG, "File last modified: ${Date(processedImageFile.lastModified())}")
+
+                // IMPORTANT: Call refreshMediaStore here
+                refreshMediaStore(context, processedImageFile)
+
+                // After refreshing, try to get its content URI
+                val contentUriForSavedFile = getContentUri(context, processedImageFile)
+                Log.d(TAG, "Content URI for saved file: $contentUriForSavedFile")
+                Log.d(TAG, "Notifying thumbnail update with this URI...")
+                // This is where you would ideally notify your ViewModel
+                // if this URI is the one you want to show immediately.
+                // viewModel.updateThumbnailUri(contentUriForSavedFile) // <--- THIS IS THE KEY PART
+
+            } catch (e: IOException) {
+                Log.e(TAG, "Error writing image to DCIM/Camera", e)
+            }
+        }
 
 
         fun saveBitmapImage(bitmap: Bitmap, fileName: String, fileType: ImageFileAttribute.FileType) {
@@ -373,6 +422,21 @@
             return imageFile.absolutePath
         }
 
+        @Synchronized
+        fun getDCIMPath(fileType: ImageFileAttribute.FileType) : String {
+            val dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val cameraDir = File(dcimDir, "Camera")
+            if (!cameraDir.exists()) cameraDir.mkdirs()
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val suffix = "after"
+            val genericName = "IMG_${timeStamp}_$suffix"
+            val processedImageFile = File(
+                cameraDir,
+                "$genericName${ImageFileAttribute.getFileExtension(fileType)}"
+            )
+            return processedImageFile.absolutePath
+        }
+
         // getSharedResultPath
         @Synchronized
         fun getSharedResultPath(fileType: ImageFileAttribute.FileType): String {
@@ -444,6 +508,11 @@
                     arrayOf(mime)
                 ) { scannedPath, uri ->
                     Log.i(TAG, "Scanned $scannedPath -> uri=$uri")
+                    if (uri != null) {
+                        onImageSavedListener?.onImageSaved(uri)
+                    } else {
+                        Log.e(TAG, "MediaScanner returned null URI for path: $scannedPath")
+                    }
                 }
             } else {
                 // Fallback for older Android versions
@@ -452,6 +521,7 @@
                     Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, uri)
                 )
                 Log.i(TAG, "Broadcasted scan for $uri")
+                onImageSavedListener?.onImageSaved(uri)
             }
         }
 
