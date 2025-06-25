@@ -88,7 +88,7 @@ data object ShadowRemoval : ProcessingCommand(
 )
 
 data object Denoising : ProcessingCommand(
-    displayName= "Denoising",
+    displayName= "Denoise",
     tasks = listOf(
         "Loading Image",
         "Loading Model",
