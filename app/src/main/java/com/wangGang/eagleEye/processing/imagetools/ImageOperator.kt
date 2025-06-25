@@ -468,7 +468,7 @@ object ImageOperator {
             fileList[i] = FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
                 resizedQuadrant,
                 filenames[i],
-                ImageFileAttribute.FileType.PNG
+                ImageFileAttribute.FileType.JPEG
             ).toString()
             quadrant.release()
             resizedQuadrant.release()
