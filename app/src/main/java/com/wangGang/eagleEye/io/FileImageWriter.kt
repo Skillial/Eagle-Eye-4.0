@@ -311,7 +311,7 @@
 
             try {
                 FileOutputStream(imageFile).use { out ->
-                    rotatedBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
                 }
                 Log.d(TAG, "Saved: ${imageFile.absolutePath}")
             } catch (e: IOException) {

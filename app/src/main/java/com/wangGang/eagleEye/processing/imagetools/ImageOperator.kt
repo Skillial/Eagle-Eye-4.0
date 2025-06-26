@@ -468,14 +468,14 @@ object ImageOperator {
             fileList[i] = FileImageWriter.getInstance()?.saveMatrixToImageReturnPath(
                 resizedQuadrant,
                 filenames[i],
-                ImageFileAttribute.FileType.PNG
+                ImageFileAttribute.FileType.JPEG
             ).toString()
             quadrant.release()
             resizedQuadrant.release()
         }
-        val outputFile = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.PNG)
+        val outputFile = FileImageWriter.getInstance()?.getSharedAfterPath(ImageFileAttribute.FileType.JPEG)
             ?: throw IllegalStateException("Failed to get output file path 1")
-        val outputFile1 = FileImageWriter.getInstance()?.getDCIMPath(ImageFileAttribute.FileType.PNG)
+        val outputFile1 = FileImageWriter.getInstance()?.getDCIMPath(ImageFileAttribute.FileType.JPEG)
             ?: throw IllegalStateException("Failed to get output file path 2")
         mergeQuadrantsWithFileSave(fileList.toTypedArray(), divisionFactor, scaling.toInt(), quadrantWidth, quadrantHeight, outputFile, outputFile1)
     }
