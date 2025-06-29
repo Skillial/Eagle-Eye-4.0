@@ -158,7 +158,7 @@ class SynthShadowRemoval(
         val convertedMat = Mat()
 
         mat.convertTo(convertedMat, CvType.CV_8UC3, 255.0)
-        Imgproc.cvtColor(convertedMat, convertedMat, Imgproc.COLOR_RGB2BGRA)
+        Imgproc.cvtColor(convertedMat, convertedMat, Imgproc.COLOR_RGB2RGBA)
         val bitmap = Bitmap.createBitmap(convertedMat.cols(), convertedMat.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(convertedMat, bitmap)
         convertedMat.release()
