@@ -84,9 +84,8 @@ class ImageReaderManager(
         if (imageList.size == totalCaptures) {
             ProgressManager.getInstance().showFirstTask()
             processImage()
+            clearSrImages()
         }
-
-        clearSrImages()
     }
 
     private fun clearSrImages() {
