@@ -25,7 +25,6 @@ import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -86,6 +85,16 @@ class ImageReaderManager(
             ProgressManager.getInstance().showFirstTask()
             processImage()
         }
+
+        clearSrImages()
+    }
+
+    private fun clearSrImages() {
+        val rootPath = DirectoryStorage.getSharedInstance().proposedPath!!
+        FileImageWriter.getInstance()?.deleteFilesByPrefixes(
+            rootPath,
+            listOf("quadrant", "sharpen")
+        )
     }
 
 

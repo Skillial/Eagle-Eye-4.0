@@ -639,4 +639,23 @@
                 return Bitmap.createBitmap(image, 0, 0, image.width, image.height, matrix, true)
             }
         }
+
+        fun deleteFilesByPrefixes(rootPath: String, prefixes: List<String>) {
+            val rootDir = File(rootPath)
+            if (!rootDir.exists() || !rootDir.isDirectory) {
+                Log.w(TAG, "deleteFilesByPrefixes: root path doesn’t exist or isn’t a directory: $rootPath")
+                return
+            }
+
+            rootDir.walkTopDown().forEach { file ->
+                if (file.isFile && prefixes.any { file.name.startsWith(it, ignoreCase = true) }) {
+                    val deleted = file.delete()
+                    if (deleted) {
+                        Log.i(TAG, "Deleted file: ${file.absolutePath}")
+                    } else {
+                        Log.e(TAG, "Failed to delete: ${file.absolutePath}")
+                    }
+                }
+            }
+        }
     }
