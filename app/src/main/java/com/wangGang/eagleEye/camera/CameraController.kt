@@ -115,9 +115,11 @@ class CameraController(private val context: Context, private val viewModel: Came
         if (ParameterConfig.isHdrEnabled() && supportsHdr) {
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+            Log.d("CameraController", "HDR enabled for capture.")
         } else {
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+            Log.d("CameraController", "HDR disabled for capture.")
         }
 
         // Build the burst capture list using the same builder if settings don't change
@@ -366,6 +368,10 @@ class CameraController(private val context: Context, private val viewModel: Came
 
     fun getCameraCaptureSession(): CameraCaptureSession {
         return cameraCaptureSession
+    }
+
+    fun supportsHdr(): Boolean {
+        return supportsHdr
     }
 
     fun getImageReader(): ImageReader {

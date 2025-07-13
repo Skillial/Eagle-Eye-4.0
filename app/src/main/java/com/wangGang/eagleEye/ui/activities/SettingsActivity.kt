@@ -6,15 +6,19 @@ import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
+import android.view.View
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.TooltipCompat
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
@@ -41,6 +45,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var gridOverlaySwitch: SwitchCompat
     private lateinit var flashSwitch: SwitchCompat
     private lateinit var hdrSwitch: SwitchCompat
+    private lateinit var infoHdr: ImageView
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
@@ -83,6 +88,7 @@ class SettingsActivity : AppCompatActivity() {
         gridOverlaySwitch = binding.switchGridOverlay
         flashSwitch = binding.switchFlash
         hdrSwitch = binding.switchHdr
+        infoHdr = binding.infoHdr
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
         timerSeekBar = binding.timerSeekbar
@@ -112,10 +118,24 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupHdrSwitch() {
-        hdrSwitch.isChecked = ParameterConfig.isHdrEnabled()
+        val cameraController = CameraController.getInstance()
+        val hdrNotSupportedMessage = "HDR not supported on this device"
 
-        hdrSwitch.setOnCheckedChangeListener { _, isChecked ->
-            ParameterConfig.setHdrEnabled(isChecked)
+        if (!cameraController.supportsHdr()) {
+            hdrSwitch.isEnabled = false
+            hdrSwitch.isChecked = false
+            ParameterConfig.setHdrEnabled(false)
+            infoHdr.visibility = View.VISIBLE
+            TooltipCompat.setTooltipText(infoHdr, hdrNotSupportedMessage)
+            infoHdr.setOnClickListener {
+                Toast.makeText(this, hdrNotSupportedMessage, Toast.LENGTH_LONG).show()
+            }
+        } else {
+            hdrSwitch.isChecked = ParameterConfig.isHdrEnabled()
+
+            hdrSwitch.setOnCheckedChangeListener { _, isChecked ->
+                ParameterConfig.setHdrEnabled(isChecked)
+            }
         }
     }
 
