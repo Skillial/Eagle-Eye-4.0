@@ -26,6 +26,7 @@ class ParameterConfig private constructor(appContext: Context) {
         private const val FLASH_ENABLED_KEY = "flash_enabled"
         private const val HDR_ENABLED_KEY = "hdr_enabled"
         private const val WHITE_BALANCE_MODE_KEY = "white_balance_mode"
+        private const val EXPOSURE_COMPENSATION_KEY = "exposure_compensation"
 
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
@@ -201,6 +202,17 @@ class ParameterConfig private constructor(appContext: Context) {
         @JvmStatic
         fun getWhiteBalanceMode(): Int {
             return sharedInstance?.sharedPrefs?.getInt(WHITE_BALANCE_MODE_KEY, CaptureRequest.CONTROL_AWB_MODE_AUTO) ?: CaptureRequest.CONTROL_AWB_MODE_AUTO
+        }
+
+        @JvmStatic
+        fun setExposureCompensation(value: Float) {
+            sharedInstance?.editorPrefs?.putFloat(EXPOSURE_COMPENSATION_KEY, value)?.apply()
+            Log.d(TAG, "Exposure compensation set to: $value")
+        }
+
+        @JvmStatic
+        fun getExposureCompensation(): Float {
+            return sharedInstance?.sharedPrefs?.getFloat(EXPOSURE_COMPENSATION_KEY, 0f) ?: 0f
         }
     }
 

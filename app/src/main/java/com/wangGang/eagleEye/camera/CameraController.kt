@@ -102,10 +102,8 @@ class CameraController(private val context: Context, private val viewModel: Came
             captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, it)
         }
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
 
-        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
-
+        // flash
         if (ParameterConfig.isFlashEnabled() && hasFlash) {
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
@@ -114,6 +112,7 @@ class CameraController(private val context: Context, private val viewModel: Came
             captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
         }
 
+        // hdr
         if (ParameterConfig.isHdrEnabled() && supportsHdr) {
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
@@ -124,7 +123,12 @@ class CameraController(private val context: Context, private val viewModel: Came
             Log.d("CameraController", "HDR disabled for capture.")
         }
 
+        // white-balance
         captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
+
+        // exposure
+        val exposureCompensation = ParameterConfig.getExposureCompensation()
+        captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
 
         // Build the burst capture list using the same builder if settings don't change
         val captureList = MutableList(totalCaptures) { captureBuilder.build() }
@@ -207,6 +211,9 @@ class CameraController(private val context: Context, private val viewModel: Came
                 }
 
                 captureRequest.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
+
+                val exposureCompensation = ParameterConfig.getExposureCompensation()
+                captureRequest.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
 
                 val surfaces = listOf(surface, imageReader.surface)
 

@@ -3,6 +3,7 @@ package com.wangGang.eagleEye.ui.activities
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
@@ -59,6 +60,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var timerLabel: TextView
     private lateinit var whiteBalanceSpinner: Spinner
     private lateinit var whiteBalanceLabel: TextView
+    private lateinit var exposureSeekBar: SeekBar
+    private lateinit var exposureLabel: TextView
 
     /* === RecyclerViews === */
     private lateinit var commandListRecyclerView: RecyclerView
@@ -86,6 +89,7 @@ class SettingsActivity : AppCompatActivity() {
         setupScaleSeekBar()
         setupTimerSeekBar()
         setupWhiteBalanceSpinner()
+        setupExposureSeekBar()
         setupBackButton()
         setupCommandListRecyclerView()
         setupProcessingOrderListView()
@@ -104,6 +108,8 @@ class SettingsActivity : AppCompatActivity() {
         timerLabel = binding.timerLabel
         whiteBalanceSpinner = binding.whiteBalanceSpinner
         whiteBalanceLabel = binding.whiteBalanceLabel
+        exposureSeekBar = binding.exposureSeekbar
+        exposureLabel = binding.exposureLabel
         commandListRecyclerView = binding.sourceListView
         processingOrderDragListView = binding.targetListView
     }
@@ -240,6 +246,42 @@ class SettingsActivity : AppCompatActivity() {
                 // Do nothing
             }
         }
+    }
+
+    private fun setupExposureSeekBar() {
+        val cameraController = CameraController.getInstance()
+        val characteristics = cameraController.getCameraCharacteristics()
+        val exposureRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE)
+        val exposureStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP)
+
+        if (exposureRange == null || exposureStep == null) {
+            exposureSeekBar.isEnabled = false
+            exposureLabel.text = "Exposure: Not Supported"
+            return
+        }
+
+        val minExposure = exposureRange.lower
+        val maxExposure = exposureRange.upper
+        val stepValue = exposureStep.toFloat()
+
+        val maxProgress = ((maxExposure - minExposure) / stepValue).toInt()
+        exposureSeekBar.max = maxProgress
+
+        val currentExposure = ParameterConfig.getExposureCompensation()
+        val initialProgress = ((currentExposure - minExposure) / stepValue).toInt()
+        exposureSeekBar.progress = initialProgress
+        exposureLabel.text = "Exposure: %.1f EV".format(currentExposure)
+
+        exposureSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                val selectedExposure = minExposure + (progress * stepValue)
+                ParameterConfig.setExposureCompensation(selectedExposure)
+                exposureLabel.text = "Exposure: %.1f EV".format(selectedExposure)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+        })
     }
 
     private fun setupProcessingOrderListView() {
