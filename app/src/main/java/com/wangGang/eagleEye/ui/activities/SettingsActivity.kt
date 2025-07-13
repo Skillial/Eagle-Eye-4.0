@@ -40,6 +40,7 @@ class SettingsActivity : AppCompatActivity() {
     /* === Switches === */
     private lateinit var gridOverlaySwitch: SwitchCompat
     private lateinit var flashSwitch: SwitchCompat
+    private lateinit var hdrSwitch: SwitchCompat
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
@@ -69,6 +70,7 @@ class SettingsActivity : AppCompatActivity() {
         assignViews()
         setupSwitchButtons()
         setupFlashSwitch()
+        setupHdrSwitch()
         setupScaleSeekBar()
         setupTimerSeekBar()
         setupBackButton()
@@ -80,6 +82,7 @@ class SettingsActivity : AppCompatActivity() {
         backButton = binding.btnBack
         gridOverlaySwitch = binding.switchGridOverlay
         flashSwitch = binding.switchFlash
+        hdrSwitch = binding.switchHdr
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
         timerSeekBar = binding.timerSeekbar
@@ -105,6 +108,14 @@ class SettingsActivity : AppCompatActivity() {
 
         flashSwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setFlashEnabled(isChecked)
+        }
+    }
+
+    private fun setupHdrSwitch() {
+        hdrSwitch.isChecked = ParameterConfig.isHdrEnabled()
+
+        hdrSwitch.setOnCheckedChangeListener { _, isChecked ->
+            ParameterConfig.setHdrEnabled(isChecked)
         }
     }
 

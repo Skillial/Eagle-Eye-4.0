@@ -23,6 +23,7 @@ class ParameterConfig private constructor(appContext: Context) {
         private const val SCALE_KEY = "scale"
         private const val TIMER_DURATION_KEY = "timer_duration"
         private const val FLASH_ENABLED_KEY = "flash_enabled"
+        private const val HDR_ENABLED_KEY = "hdr_enabled"
 
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
@@ -177,6 +178,16 @@ class ParameterConfig private constructor(appContext: Context) {
         @JvmStatic
         fun isFlashEnabled(): Boolean {
             return getPrefsBoolean(FLASH_ENABLED_KEY, false)
+        }
+
+        @JvmStatic
+        fun setHdrEnabled(enabled: Boolean) {
+            setPrefs(HDR_ENABLED_KEY, enabled)
+        }
+
+        @JvmStatic
+        fun isHdrEnabled(): Boolean {
+            return getPrefsBoolean(HDR_ENABLED_KEY, false)
         }
     }
 

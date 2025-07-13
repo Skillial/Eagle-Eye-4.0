@@ -47,6 +47,15 @@
             android:layout_marginBottom="4dp"
             android:paddingEnd="16dp" />
 
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchHdr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable HDR"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:paddingEnd="16dp" />
+
         <!-- Container for the slider -->
         <LinearLayout
             android:id="@+id/scalingContainer"

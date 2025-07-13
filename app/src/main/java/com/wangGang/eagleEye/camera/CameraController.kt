@@ -67,6 +67,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private var zoomLevel = 1f
     private var maxZoom = 1f
     private var hasFlash: Boolean = false
+    private var supportsHdr: Boolean = false
     fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -109,6 +110,14 @@ class CameraController(private val context: Context, private val viewModel: Came
         } else {
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+        }
+
+        if (ParameterConfig.isHdrEnabled() && supportsHdr) {
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+            captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+        } else {
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+            captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
         }
 
         // Build the burst capture list using the same builder if settings don't change
@@ -179,6 +188,16 @@ class CameraController(private val context: Context, private val viewModel: Came
                 } else {
                     captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                     captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                }
+
+                if (ParameterConfig.isHdrEnabled() && supportsHdr) {
+                    captureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                    captureRequest.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+                    Log.d("CameraController", "HDR enabled for preview.")
+                } else {
+                    captureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+                    captureRequest.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+                    Log.d("CameraController", "HDR disabled for preview.")
                 }
 
                 val surfaces = listOf(surface, imageReader.surface)
@@ -381,6 +400,9 @@ class CameraController(private val context: Context, private val viewModel: Came
 
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        supportsHdr = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE) == true &&
+                characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)?.contains(CaptureRequest.CONTROL_SCENE_MODE_HDR) == true
 
         initializeHandlerThread()
     }
