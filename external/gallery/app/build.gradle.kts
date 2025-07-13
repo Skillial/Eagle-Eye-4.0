@@ -1,16 +1,16 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.kapt")
+//    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
     namespace = "com.wangGang.gallery"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         minSdk = 21
-        targetSdk = 33
+        targetSdk = 34
     }
 
     buildTypes {
@@ -30,10 +30,18 @@ android {
         jvmTarget = "17"
     }
 
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+        }
+    }
+
     buildFeatures {
         viewBinding = true
     }
 }
+
+
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
@@ -47,7 +55,7 @@ dependencies {
 
     // Images
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    kapt("com.github.bumptech.glide:compiler:4.16.0")
+//    kapt("com.github.bumptech.glide:compiler:4.16.0")
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
 
     // Utils

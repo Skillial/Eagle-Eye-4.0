@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
@@ -63,6 +64,8 @@ class CameraController(private val context: Context, private val viewModel: Came
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private lateinit var preview: TextureView
     private var cameraId: String = ""
+    private var zoomLevel = 1f
+    private var maxZoom = 1f
     fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -143,6 +146,7 @@ class CameraController(private val context: Context, private val viewModel: Came
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 
                 val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                maxZoom = characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
                 val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                 val availableSizes = map?.getOutputSizes(SurfaceTexture::class.java)
 
@@ -274,6 +278,23 @@ class CameraController(private val context: Context, private val viewModel: Came
         val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         val sizes = map?.getOutputSizes(ImageFormat.JPEG)
         return sizes?.sortedWith(compareBy { it.width * it.height })?.last()
+    }
+
+    fun setZoom(scaleFactor: Float) {
+        val newZoom = zoomLevel * scaleFactor
+        zoomLevel = newZoom.coerceIn(1f, maxZoom)
+
+        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        val sensorRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        if (sensorRect != null) {
+            val newWidth = (sensorRect.width() / zoomLevel).toInt()
+            val newHeight = (sensorRect.height() / zoomLevel).toInt()
+            val newLeft = (sensorRect.width() - newWidth) / 2
+            val newTop = (sensorRect.height() - newHeight) / 2
+            val cropRect = Rect(newLeft, newTop, newLeft + newWidth, newTop + newHeight)
+            captureRequest.set(CaptureRequest.SCALER_CROP_REGION, cropRect)
+            cameraCaptureSession.setRepeatingRequest(captureRequest.build(), null, handler)
+        }
     }
 
     private fun playShutterSound() {

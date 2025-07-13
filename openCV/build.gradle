@@ -119,6 +119,16 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
+
     buildTypes {
         debug {
             packagingOptions {
@@ -163,6 +173,7 @@ android {
     externalNativeBuild {
         cmake {
             path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
+            version = "3.22.1"
         }
     }
 }

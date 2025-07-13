@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.core.graphics.ColorUtils
 import android.util.Log
+import android.view.MotionEvent
 import android.view.TextureView
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -40,6 +41,8 @@ import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.gallery.getLatestImageUri
+import android.view.ScaleGestureDetector
+
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -75,6 +78,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private var thumbnailUri: Uri? = null
     private val viewModel: CameraViewModel by viewModels()
 
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
+
     private var doneSetup: Boolean = false
     private var idleAnimator: ObjectAnimator? = null
     private val idleDelayMillis = 3000L
@@ -90,6 +95,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         initializeCamera()
         addEventListeners()
         setupObservers()
+
+        scaleGestureDetector = ScaleGestureDetector(this, ScaleListener())
 
         doneSetup = true
     }
@@ -442,5 +449,17 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         uriArrayList .addAll(uriList)
         intent.putParcelableArrayListExtra("uriListKey", uriArrayList)
         startActivity(intent)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleGestureDetector.onTouchEvent(event)
+        return super.onTouchEvent(event)
+    }
+
+    private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            CameraController.getInstance().setZoom(detector.scaleFactor)
+            return true
+        }
     }
 }
