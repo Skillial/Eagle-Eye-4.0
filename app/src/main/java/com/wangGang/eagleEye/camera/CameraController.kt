@@ -26,6 +26,7 @@ import android.view.TextureView
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
+import kotlin.math.abs
 
 class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
 
@@ -68,6 +69,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private var maxZoom = 1f
     private var hasFlash: Boolean = false
     private var supportsHdr: Boolean = false
+    private lateinit var supportedAwbModes: IntArray
     fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -121,6 +123,8 @@ class CameraController(private val context: Context, private val viewModel: Came
             captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
             Log.d("CameraController", "HDR disabled for capture.")
         }
+
+        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
 
         // Build the burst capture list using the same builder if settings don't change
         val captureList = MutableList(totalCaptures) { captureBuilder.build() }
@@ -201,6 +205,8 @@ class CameraController(private val context: Context, private val viewModel: Came
                     captureRequest.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
                     Log.d("CameraController", "HDR disabled for preview.")
                 }
+
+                captureRequest.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
 
                 val surfaces = listOf(surface, imageReader.surface)
 
@@ -374,6 +380,10 @@ class CameraController(private val context: Context, private val viewModel: Came
         return supportsHdr
     }
 
+    fun getSupportedAwbModes(): IntArray {
+        return supportedAwbModes
+    }
+
     fun getImageReader(): ImageReader {
         return imageReader
     }
@@ -409,6 +419,7 @@ class CameraController(private val context: Context, private val viewModel: Came
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
         supportsHdr = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE) == true &&
                 characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)?.contains(CaptureRequest.CONTROL_SCENE_MODE_HDR) == true
+        supportedAwbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES) ?: intArrayOf(CaptureRequest.CONTROL_AWB_MODE_AUTO)
 
         initializeHandlerThread()
     }
@@ -454,7 +465,7 @@ class CameraController(private val context: Context, private val viewModel: Came
 
         val optimal = choices.minByOrNull {
             val ratio = it.width.toFloat() / it.height
-            kotlin.math.abs(ratio - targetRatio)
+            abs(ratio - targetRatio)
         } ?: choices[0]
 
         Log.d("ChooseOptimalSize", "Chosen optimal size: ${optimal.width}x${optimal.height}")

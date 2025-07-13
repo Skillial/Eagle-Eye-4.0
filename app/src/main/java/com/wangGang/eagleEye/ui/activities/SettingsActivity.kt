@@ -13,6 +13,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.TooltipCompat
 import android.widget.ImageView
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
+import android.widget.Spinner
+import android.hardware.camera2.CaptureRequest
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -53,6 +57,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var scalingLabel: TextView
     private lateinit var timerSeekBar: SeekBar
     private lateinit var timerLabel: TextView
+    private lateinit var whiteBalanceSpinner: Spinner
+    private lateinit var whiteBalanceLabel: TextView
 
     /* === RecyclerViews === */
     private lateinit var commandListRecyclerView: RecyclerView
@@ -79,6 +85,7 @@ class SettingsActivity : AppCompatActivity() {
         setupHdrSwitch()
         setupScaleSeekBar()
         setupTimerSeekBar()
+        setupWhiteBalanceSpinner()
         setupBackButton()
         setupCommandListRecyclerView()
         setupProcessingOrderListView()
@@ -95,6 +102,8 @@ class SettingsActivity : AppCompatActivity() {
         scalingLabel = binding.scalingLabel
         timerSeekBar = binding.timerSeekbar
         timerLabel = binding.timerLabel
+        whiteBalanceSpinner = binding.whiteBalanceSpinner
+        whiteBalanceLabel = binding.whiteBalanceLabel
         commandListRecyclerView = binding.sourceListView
         processingOrderDragListView = binding.targetListView
     }
@@ -183,6 +192,54 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
             override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
         })
+    }
+
+    private fun setupWhiteBalanceSpinner() {
+        val cameraController = CameraController.getInstance()
+        val supportedModes = cameraController.getSupportedAwbModes()
+        Log.d(TAG, "Supported AWB Modes (raw): ${supportedModes.joinToString()}")
+
+        val modeNames = supportedModes.map { mode ->
+            when (mode) {
+                CaptureRequest.CONTROL_AWB_MODE_AUTO -> "Auto"
+                CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> "Cloudy Daylight"
+                CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT -> "Daylight"
+                CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT -> "Fluorescent"
+                CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT -> "Incandescent"
+                CaptureRequest.CONTROL_AWB_MODE_SHADE -> "Shade"
+                CaptureRequest.CONTROL_AWB_MODE_TWILIGHT -> "Twilight"
+                CaptureRequest.CONTROL_AWB_MODE_WARM_FLUORESCENT -> "Warm Fluorescent"
+                CaptureRequest.CONTROL_AWB_MODE_OFF -> "Off"
+                else -> "Unknown"
+            }
+        }
+
+        Log.d(TAG, "$supportedModes")
+        Log.d(TAG, "$modeNames")
+
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modeNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        whiteBalanceSpinner.adapter = adapter
+
+        val currentMode = ParameterConfig.getWhiteBalanceMode()
+        Log.d(TAG, "Current white balance mode from ParameterConfig: $currentMode")
+        val currentModeIndex = supportedModes.indexOf(currentMode)
+        Log.d(TAG, "Index of current white balance mode: $currentModeIndex")
+        if (currentModeIndex != -1) {
+            whiteBalanceSpinner.setSelection(currentModeIndex)
+        }
+
+        whiteBalanceSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedMode = supportedModes[position]
+                ParameterConfig.setWhiteBalanceMode(selectedMode)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // Do nothing
+            }
+        }
     }
 
     private fun setupProcessingOrderListView() {

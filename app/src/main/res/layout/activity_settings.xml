@@ -130,6 +130,54 @@
                 android:max="3"
                 android:progress="0" />
         </LinearLayout>
+
+        <!-- White Balance Setting -->
+        <LinearLayout
+            android:id="@+id/whiteBalanceContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/whiteBalanceLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="White Balance:"
+                android:layout_marginEnd="16dp"
+                android:textColor="@color/black" />
+
+            <Spinner
+                android:id="@+id/whiteBalanceSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Exposure Setting -->
+        <LinearLayout
+            android:id="@+id/exposureContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/exposureLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Exposure:"
+                android:layout_marginEnd="16dp"
+                android:textColor="@color/black" />
+
+            <SeekBar
+                android:id="@+id/exposureSeekbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:progress="50" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Horizontal container for side-by-side lists -->

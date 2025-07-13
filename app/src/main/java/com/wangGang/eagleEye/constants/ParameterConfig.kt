@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.util.Log
+import android.hardware.camera2.CaptureRequest
 import com.wangGang.eagleEye.processing.commands.Dehaze
 import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ProcessingCommand
@@ -24,6 +25,7 @@ class ParameterConfig private constructor(appContext: Context) {
         private const val TIMER_DURATION_KEY = "timer_duration"
         private const val FLASH_ENABLED_KEY = "flash_enabled"
         private const val HDR_ENABLED_KEY = "hdr_enabled"
+        private const val WHITE_BALANCE_MODE_KEY = "white_balance_mode"
 
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
@@ -188,6 +190,17 @@ class ParameterConfig private constructor(appContext: Context) {
         @JvmStatic
         fun isHdrEnabled(): Boolean {
             return getPrefsBoolean(HDR_ENABLED_KEY, false)
+        }
+
+        @JvmStatic
+        fun setWhiteBalanceMode(mode: Int) {
+            sharedInstance?.editorPrefs?.putInt(WHITE_BALANCE_MODE_KEY, mode)?.apply()
+            Log.d(TAG, "White balance mode set to: $mode")
+        }
+
+        @JvmStatic
+        fun getWhiteBalanceMode(): Int {
+            return sharedInstance?.sharedPrefs?.getInt(WHITE_BALANCE_MODE_KEY, CaptureRequest.CONTROL_AWB_MODE_AUTO) ?: CaptureRequest.CONTROL_AWB_MODE_AUTO
         }
     }
 
