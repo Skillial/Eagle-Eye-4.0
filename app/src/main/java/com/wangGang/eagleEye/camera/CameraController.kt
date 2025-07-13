@@ -93,6 +93,10 @@ class CameraController(private val context: Context, private val viewModel: Came
         // Create and configure the capture request builder once
         val captureBuilder = cameraDevice.createCaptureRequest(captureTemplate)
         captureBuilder.addTarget(imageReader.surface)
+        // Apply the current zoom level to the capture request
+        captureRequest.get(CaptureRequest.SCALER_CROP_REGION)?.let {
+            captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, it)
+        }
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
         captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
         captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
