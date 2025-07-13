@@ -46,6 +46,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var flashSwitch: SwitchCompat
     private lateinit var hdrSwitch: SwitchCompat
     private lateinit var infoHdr: ImageView
+    private lateinit var hdrLabel: TextView
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
@@ -89,6 +90,7 @@ class SettingsActivity : AppCompatActivity() {
         flashSwitch = binding.switchFlash
         hdrSwitch = binding.switchHdr
         infoHdr = binding.infoHdr
+        hdrLabel = binding.hdrLabel
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
         timerSeekBar = binding.timerSeekbar

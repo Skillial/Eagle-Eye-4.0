@@ -35,8 +35,7 @@
             android:layout_height="wrap_content"
             android:text="Enable Grid Overlay"
             android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
-            android:paddingEnd="16dp" />
+            android:layout_marginBottom="4dp" />
 
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchFlash"
@@ -44,24 +43,22 @@
             android:layout_height="wrap_content"
             android:text="Enable Flash"
             android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
-            android:paddingEnd="16dp" />
+            android:layout_marginBottom="4dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp">
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchHdr"
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/hdrLabel"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="Enable HDR"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="4dp"
-                android:paddingEnd="16dp" />
+                android:textColor="@color/black" />
 
             <ImageView
                 android:id="@+id/infoHdr"
@@ -69,7 +66,19 @@
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_info"
                 android:visibility="gone"
-                android:contentDescription="HDR not supported on this device" />
+                android:contentDescription="HDR not supported on this device"
+                android:layout_marginStart="8dp" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchHdr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="" />
         </LinearLayout>
 
         <!-- Container for the slider -->
