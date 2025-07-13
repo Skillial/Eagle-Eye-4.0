@@ -102,33 +102,7 @@ class CameraController(private val context: Context, private val viewModel: Came
             captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, it)
         }
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-
-        // flash
-        if (ParameterConfig.isFlashEnabled() && hasFlash) {
-            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
-        } else {
-            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
-        }
-
-        // hdr
-        if (ParameterConfig.isHdrEnabled() && supportsHdr) {
-            captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
-            captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
-            Log.d("CameraController", "HDR enabled for capture.")
-        } else {
-            captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-            captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
-            Log.d("CameraController", "HDR disabled for capture.")
-        }
-
-        // white-balance
-        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
-
-        // exposure
-        val exposureCompensation = ParameterConfig.getExposureCompensation()
-        captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
+        applyCommonCaptureSettings(captureBuilder)
 
         // Build the burst capture list using the same builder if settings don't change
         val captureList = MutableList(totalCaptures) { captureBuilder.build() }
@@ -151,6 +125,31 @@ class CameraController(private val context: Context, private val viewModel: Came
             },
             null
         )
+    }
+
+    private fun applyCommonCaptureSettings(builder: CaptureRequest.Builder) {
+        if (ParameterConfig.isFlashEnabled() && hasFlash) {
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
+        } else {
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+        }
+
+        if (ParameterConfig.isHdrEnabled() && supportsHdr) {
+            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+            Log.d("CameraController", "HDR enabled for capture.")
+        } else {
+            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+            Log.d("CameraController", "HDR disabled for capture.")
+        }
+
+        builder.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
+
+        val exposureCompensation = ParameterConfig.getExposureCompensation()
+        builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
     }
 
 
@@ -193,24 +192,7 @@ class CameraController(private val context: Context, private val viewModel: Came
                 val surface = Surface(preview.surfaceTexture)
                 captureRequest.addTarget(surface)
 
-                if (ParameterConfig.isFlashEnabled() && hasFlash) {
-                    captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
-                } else {
-                    captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                    captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
-                }
-
-                if (ParameterConfig.isHdrEnabled() && supportsHdr) {
-                    captureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
-                    captureRequest.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
-                    Log.d("CameraController", "HDR enabled for preview.")
-                } else {
-                    captureRequest.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                    captureRequest.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
-                    Log.d("CameraController", "HDR disabled for preview.")
-                }
-
-                captureRequest.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
+                applyCommonCaptureSettings(captureRequest)
 
                 val exposureCompensation = ParameterConfig.getExposureCompensation()
                 captureRequest.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
