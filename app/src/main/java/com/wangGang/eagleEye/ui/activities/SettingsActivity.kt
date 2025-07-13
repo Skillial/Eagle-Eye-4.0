@@ -39,10 +39,13 @@ class SettingsActivity : AppCompatActivity() {
 
     /* === Switches === */
     private lateinit var gridOverlaySwitch: SwitchCompat
+    private lateinit var flashSwitch: SwitchCompat
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
     private lateinit var scalingLabel: TextView
+    private lateinit var timerSeekBar: SeekBar
+    private lateinit var timerLabel: TextView
 
     /* === RecyclerViews === */
     private lateinit var commandListRecyclerView: RecyclerView
@@ -65,7 +68,9 @@ class SettingsActivity : AppCompatActivity() {
 
         assignViews()
         setupSwitchButtons()
+        setupFlashSwitch()
         setupScaleSeekBar()
+        setupTimerSeekBar()
         setupBackButton()
         setupCommandListRecyclerView()
         setupProcessingOrderListView()
@@ -74,8 +79,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun assignViews() {
         backButton = binding.btnBack
         gridOverlaySwitch = binding.switchGridOverlay
+        flashSwitch = binding.switchFlash
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
+        timerSeekBar = binding.timerSeekbar
+        timerLabel = binding.timerLabel
         commandListRecyclerView = binding.sourceListView
         processingOrderDragListView = binding.targetListView
     }
@@ -89,6 +97,14 @@ class SettingsActivity : AppCompatActivity() {
 
         gridOverlaySwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setGridOverlayEnabled(isChecked)
+        }
+    }
+
+    private fun setupFlashSwitch() {
+        flashSwitch.isChecked = ParameterConfig.isFlashEnabled()
+
+        flashSwitch.setOnCheckedChangeListener { _, isChecked ->
+            ParameterConfig.setFlashEnabled(isChecked)
         }
     }
 
@@ -115,6 +131,25 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
         })
 
+    }
+
+    private fun setupTimerSeekBar() {
+        val timerValues = listOf(0, 3, 5, 10) // 0s, 3s, 5s, 10s
+        val currentTimer = ParameterConfig.getTimerDuration()
+        val currentIndex = timerValues.indexOf(currentTimer).coerceAtLeast(0)
+        timerSeekBar.progress = currentIndex
+        timerLabel.text = "Timer: ${currentTimer}s"
+
+        timerSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                val chosenDuration = timerValues[progress]
+                ParameterConfig.setTimerDuration(chosenDuration)
+                timerLabel.text = "Timer: ${chosenDuration}s"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+        })
     }
 
     private fun setupProcessingOrderListView() {

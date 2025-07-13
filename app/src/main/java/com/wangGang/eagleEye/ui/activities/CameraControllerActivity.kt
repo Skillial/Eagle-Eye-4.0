@@ -42,6 +42,7 @@ import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.gallery.getLatestImageUri
 import android.view.ScaleGestureDetector
+import android.os.CountDownTimer
 
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
@@ -74,6 +75,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var switchCameraButton: ImageButton
     private lateinit var progressManager: ProgressManager
     private lateinit var progressBar: ProgressBar
+    private lateinit var countdownText: TextView
 
     private var thumbnailUri: Uri? = null
     private val viewModel: CameraViewModel by viewModels()
@@ -217,9 +219,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
     private fun addEventListeners() {
         captureButton.setOnClickListener {
-            ProgressManager.getInstance().resetProgress()
-            CameraController.getInstance().captureImage()
-            Log.d("CameraControllerActivity", "Capture button clicked")
+            val timerDuration = ParameterConfig.getTimerDuration()
+            if (timerDuration > 0) {
+                startTimer(timerDuration)
+            } else {
+                ProgressManager.getInstance().resetProgress()
+                CameraController.getInstance().captureImage()
+                Log.d("CameraControllerActivity", "Capture button clicked")
+            }
         }
 
         switchCameraButton.setOnClickListener {
@@ -267,6 +274,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         switchCameraButton = activityCameraControllerBinding.switchCamera
         progressBar = activityCameraControllerBinding.progressBar
         gridOverLayView = activityCameraControllerBinding.gridOverlayView
+        countdownText = activityCameraControllerBinding.countdownText
     }
 
     private fun setBackground() {
@@ -461,5 +469,32 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             CameraController.getInstance().setZoom(detector.scaleFactor)
             return true
         }
+    }
+
+    private fun startTimer(duration: Int) {
+        var timeLeft = duration
+        countdownText.text = timeLeft.toString() // Display initial duration
+        countdownText.visibility = View.VISIBLE
+        disableUIInteractivity()
+
+        val timer = object : CountDownTimer(((duration + 1) * 1000).toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                timeLeft = (millisUntilFinished / 1000).toInt()
+                if (timeLeft > 0) {
+                    countdownText.text = timeLeft.toString()
+                } else {
+                    // This handles the case where timeLeft becomes 0 just before onFinish
+                    countdownText.text = ""
+                }
+            }
+
+            override fun onFinish() {
+                countdownText.visibility = View.GONE
+                enableUIInteractivity()
+                ProgressManager.getInstance().resetProgress()
+                CameraController.getInstance().captureImage()
+            }
+        }
+        timer.start()
     }
 }

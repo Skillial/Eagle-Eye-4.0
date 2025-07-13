@@ -21,6 +21,8 @@ class ParameterConfig private constructor(appContext: Context) {
         private var sharedInstance: ParameterConfig? = null
         private const val PARAMETER_PREFS = "parameter_config"
         private const val SCALE_KEY = "scale"
+        private const val TIMER_DURATION_KEY = "timer_duration"
+        private const val FLASH_ENABLED_KEY = "flash_enabled"
 
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
@@ -154,6 +156,27 @@ class ParameterConfig private constructor(appContext: Context) {
         // Helper methods
         fun isScalingFactorGreaterThanOrEqual8(): Boolean {
             return getScalingFactor() >= 8
+        }
+
+        @JvmStatic
+        fun setTimerDuration(duration: Int) {
+            sharedInstance?.editorPrefs?.putInt(TIMER_DURATION_KEY, duration)?.apply()
+            Log.d(TAG, "Timer duration set to: ${getTimerDuration()}s")
+        }
+
+        @JvmStatic
+        fun getTimerDuration(): Int {
+            return sharedInstance?.sharedPrefs?.getInt(TIMER_DURATION_KEY, 0) ?: 0
+        }
+
+        @JvmStatic
+        fun setFlashEnabled(enabled: Boolean) {
+            setPrefs(FLASH_ENABLED_KEY, enabled)
+        }
+
+        @JvmStatic
+        fun isFlashEnabled(): Boolean {
+            return getPrefsBoolean(FLASH_ENABLED_KEY, false)
         }
     }
 

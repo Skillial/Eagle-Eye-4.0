@@ -66,6 +66,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private var cameraId: String = ""
     private var zoomLevel = 1f
     private var maxZoom = 1f
+    private var hasFlash: Boolean = false
     fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -98,8 +99,17 @@ class CameraController(private val context: Context, private val viewModel: Came
             captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, it)
         }
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
         captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+
+        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+
+        if (ParameterConfig.isFlashEnabled() && hasFlash) {
+            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
+        } else {
+            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+        }
 
         // Build the burst capture list using the same builder if settings don't change
         val captureList = MutableList(totalCaptures) { captureBuilder.build() }
@@ -163,6 +173,13 @@ class CameraController(private val context: Context, private val viewModel: Came
                 preview.surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
                 val surface = Surface(preview.surfaceTexture)
                 captureRequest.addTarget(surface)
+
+                if (ParameterConfig.isFlashEnabled() && hasFlash) {
+                    captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                } else {
+                    captureRequest.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                    captureRequest.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                }
 
                 val surfaces = listOf(surface, imageReader.surface)
 
@@ -361,6 +378,9 @@ class CameraController(private val context: Context, private val viewModel: Came
     fun initializeCamera() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK)
+
+        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
 
         initializeHandlerThread()
     }

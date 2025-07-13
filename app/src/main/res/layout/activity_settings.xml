@@ -38,6 +38,15 @@
             android:layout_marginBottom="4dp"
             android:paddingEnd="16dp" />
 
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchFlash"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Flash"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:paddingEnd="16dp" />
+
         <!-- Container for the slider -->
         <LinearLayout
             android:id="@+id/scalingContainer"
@@ -61,6 +70,31 @@
                 android:layout_height="wrap_content"
                 android:max="4"
                 android:progress="1" />
+        </LinearLayout>
+
+        <!-- Timer Setting -->
+        <LinearLayout
+            android:id="@+id/timerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/timerLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Timer:"
+                android:layout_marginEnd="16dp"
+                android:textColor="@color/black" />
+
+            <SeekBar
+                android:id="@+id/timerSeekbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="3"
+                android:progress="0" />
         </LinearLayout>
     </LinearLayout>
 
