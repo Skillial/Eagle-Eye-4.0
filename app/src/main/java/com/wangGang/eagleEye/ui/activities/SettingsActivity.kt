@@ -44,7 +44,6 @@ class SettingsActivity : AppCompatActivity() {
 
     // Views
     private lateinit var binding: ActivitySettingsBinding
-    private lateinit var backButton: ImageButton
 
     /* === Switches === */
     private lateinit var gridOverlaySwitch: SwitchCompat
@@ -76,6 +75,13 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.navigationIcon?.setTint(Color.BLACK)
+        binding.toolbar.setNavigationOnClickListener {
+            finish()
+        }
+
         commandItems = ArrayList(
             ProcessingCommand.entries.mapIndexed { index, algorithm ->
                 index.toLong() to algorithm.displayName
@@ -90,7 +96,6 @@ class SettingsActivity : AppCompatActivity() {
         setupTimerSeekBar()
         setupWhiteBalanceSpinner()
         setupExposureSeekBar()
-        setupBackButton()
         setupCommandListRecyclerView()
         setupProcessingOrderListView()
 
@@ -100,7 +105,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun assignViews() {
-        backButton = binding.btnBack
         gridOverlaySwitch = binding.switchGridOverlay
         flashSwitch = binding.switchFlash
         hdrSwitch = binding.switchHdr
@@ -119,7 +123,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBackButton() {
-        backButton.setOnClickListener { finish() }
+        // Handled by toolbar
     }
 
     private fun setupSwitchButtons() {
