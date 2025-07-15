@@ -214,6 +214,11 @@ class ParameterConfig private constructor(appContext: Context) {
         fun getExposureCompensation(): Float {
             return sharedInstance?.sharedPrefs?.getFloat(EXPOSURE_COMPENSATION_KEY, 0f) ?: 0f
         }
+
+        @JvmStatic
+        fun revertToDefault() {
+            sharedInstance?.editorPrefs?.clear()?.apply()
+        }
     }
 
     private val sharedPrefs: SharedPreferences = appContext.getSharedPreferences(PARAMETER_PREFS, Context.MODE_PRIVATE)

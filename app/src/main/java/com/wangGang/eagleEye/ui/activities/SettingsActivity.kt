@@ -93,6 +93,10 @@ class SettingsActivity : AppCompatActivity() {
         setupBackButton()
         setupCommandListRecyclerView()
         setupProcessingOrderListView()
+
+        binding.btnRevertToDefault.setOnClickListener {
+            revertToDefault()
+        }
     }
 
     private fun assignViews() {
@@ -499,6 +503,20 @@ class SettingsActivity : AppCompatActivity() {
             currentList.removeAll { it.second.equals("Upscale", ignoreCase = true) }
             currentList.add(upscaleItem)
         }
+    }
+
+    private fun revertToDefault() {
+        ParameterConfig.revertToDefault()
+
+        // Reload the settings to reflect the default values
+        setupSwitchButtons()
+        setupFlashSwitch()
+        setupHdrSwitch()
+        setupScaleSeekBar()
+        setupTimerSeekBar()
+        setupWhiteBalanceSpinner()
+        setupExposureSeekBar()
+        setupProcessingOrderListView()
     }
 
 }
