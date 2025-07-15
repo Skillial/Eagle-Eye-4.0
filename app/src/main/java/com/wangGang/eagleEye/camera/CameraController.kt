@@ -65,7 +65,7 @@ class CameraController(private val context: Context, private val viewModel: Came
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private lateinit var preview: TextureView
     private var cameraId: String = ""
-    private var zoomLevel = 1f
+    var zoomLevel = 1f
     private var maxZoom = 1f
     private var hasFlash: Boolean = false
     private var supportsHdr: Boolean = false

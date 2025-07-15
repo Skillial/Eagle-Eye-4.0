@@ -76,6 +76,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var progressManager: ProgressManager
     private lateinit var progressBar: ProgressBar
     private lateinit var countdownText: TextView
+    private lateinit var zoomLevelText: TextView
 
     private var thumbnailUri: Uri? = null
     private val viewModel: CameraViewModel by viewModels()
@@ -275,6 +276,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         progressBar = activityCameraControllerBinding.progressBar
         gridOverLayView = activityCameraControllerBinding.gridOverlayView
         countdownText = activityCameraControllerBinding.countdownText
+        zoomLevelText = activityCameraControllerBinding.zoomLevelText
     }
 
     private fun setBackground() {
@@ -467,6 +469,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             CameraController.getInstance().setZoom(detector.scaleFactor)
+            zoomLevelText.text = String.format("%.1fx", CameraController.getInstance().zoomLevel)
             return true
         }
     }
