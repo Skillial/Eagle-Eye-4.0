@@ -18,8 +18,8 @@ import android.widget.ArrayAdapter
 import android.widget.AdapterView
 import android.widget.Spinner
 import android.hardware.camera2.CaptureRequest
+import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -46,9 +46,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
 
     /* === Switches === */
-    private lateinit var gridOverlaySwitch: SwitchCompat
-    private lateinit var flashSwitch: SwitchCompat
-    private lateinit var hdrSwitch: SwitchCompat
+    private lateinit var gridOverlaySwitch: SwitchMaterial
+    private lateinit var flashSwitch: SwitchMaterial
+    private lateinit var hdrSwitch: SwitchMaterial
     private lateinit var infoHdr: ImageView
     private lateinit var hdrLabel: TextView
 

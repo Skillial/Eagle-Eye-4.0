@@ -41,7 +41,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
 
-            <androidx.appcompat.widget.SwitchCompat
+            <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchGridOverlay"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -49,7 +49,7 @@
                 android:layout_marginTop="4dp"
                 android:layout_marginBottom="4dp" />
 
-            <androidx.appcompat.widget.SwitchCompat
+            <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchFlash"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Enable HDR"
-                    android:textColor="@color/black" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
                     android:id="@+id/infoHdr"
@@ -86,7 +86,7 @@
                     android:layout_height="0dp"
                     android:layout_weight="1" />
 
-                <androidx.appcompat.widget.SwitchCompat
+                <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/switchHdr"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -117,7 +117,7 @@
                     android:layout_height="wrap_content"
                     android:text="Scale Factor:"
                     android:layout_marginEnd="16dp"
-                    android:textColor="@color/black" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <SeekBar
                     android:id="@+id/scaleSeekbar"
@@ -141,7 +141,7 @@
                     android:layout_height="wrap_content"
                     android:text="Timer:"
                     android:layout_marginEnd="16dp"
-                    android:textColor="@color/black" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <SeekBar
                     android:id="@+id/timerSeekbar"
@@ -165,7 +165,7 @@
                     android:layout_height="wrap_content"
                     android:text="White Balance:"
                     android:layout_marginEnd="16dp"
-                    android:textColor="@color/black" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <Spinner
                     android:id="@+id/whiteBalanceSpinner"
@@ -187,7 +187,7 @@
                     android:layout_height="wrap_content"
                     android:text="Exposure:"
                     android:layout_marginEnd="16dp"
-                    android:textColor="@color/black" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <SeekBar
                     android:id="@+id/exposureSeekbar"
@@ -226,12 +226,13 @@
                         android:text="Commands"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="@color/black"/>
+                        android:textColor="?attr/colorOnSurface"/>
 
                     <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/source_list_view"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
+                                android:id="@+id/source_list_view"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:nestedScrollingEnabled="false" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -247,16 +248,17 @@
                         android:text="Processing Order"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="@color/black" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent">
+                        android:layout_height="wrap_content">
 
                         <com.woxthebox.draglistview.DragListView
                             android:id="@+id/target_list_view"
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent" />
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false" />
                     </FrameLayout>
                 </LinearLayout>
             </LinearLayout>
