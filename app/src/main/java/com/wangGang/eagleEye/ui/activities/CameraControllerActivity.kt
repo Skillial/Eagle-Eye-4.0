@@ -71,7 +71,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var loadingBox: LinearLayout
     private lateinit var thumbnailPreview: ImageView
     private lateinit var captureButton: ImageButton
-    private lateinit var settingsButton: Button
+    private lateinit var settingsButton: ImageButton
     private lateinit var switchCameraButton: ImageButton
     private lateinit var progressManager: ProgressManager
     private lateinit var progressBar: ProgressBar
