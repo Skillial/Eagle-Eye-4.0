@@ -41,7 +41,8 @@
 
         <activity
             android:name=".ui.activities.CameraControllerActivity"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+            android:label="Camera"
+            android:theme="@style/Theme.Camera2Api" />
 
         <activity
             android:name=".ui.activities.SettingsActivity"
