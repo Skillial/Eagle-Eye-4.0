@@ -13,6 +13,7 @@ import android.os.Bundle
 import androidx.core.graphics.ColorUtils
 import android.util.Log
 import android.view.MotionEvent
+import androidx.appcompat.widget.Toolbar
 import android.view.TextureView
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -43,6 +44,7 @@ import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.gallery.getLatestImageUri
 import android.view.ScaleGestureDetector
 import android.os.CountDownTimer
+import androidx.core.view.isGone
 
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
@@ -77,6 +79,15 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var progressBar: ProgressBar
     private lateinit var countdownText: TextView
     private lateinit var zoomLevelText: TextView
+    private lateinit var topToolbar: Toolbar
+    private lateinit var btnFlash: ImageButton
+    private lateinit var btnTimer: ImageButton
+    private lateinit var defaultToolbarContent: LinearLayout
+    private lateinit var timerOptionsContainer: FrameLayout
+    private lateinit var btnTimerOff: ImageButton
+    private lateinit var btnTimer3s: ImageButton
+    private lateinit var btnTimer5s: ImageButton
+    private lateinit var btnTimer10s: ImageButton
 
     private var thumbnailUri: Uri? = null
     private val viewModel: CameraViewModel by viewModels()
@@ -95,6 +106,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         setContentView(activityCameraControllerBinding.root)
 
         assignViews()
+        setSupportActionBar(topToolbar)
         initializeCamera()
         addEventListeners()
         setupObservers()
@@ -121,6 +133,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         setBackground()
         setupThumbnail()
         updateScreenBorder()
+        updateFlashButtonIcon()
+        updateTimerButtonIcon()
 
         if (textureView.isAvailable) {
             CameraController.getInstance().setPreview(textureView)
@@ -218,6 +232,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         return (this * resources.displayMetrics.density).toInt()
     }
 
+    private fun updateFlashButtonIcon() {
+        if (ParameterConfig.isFlashEnabled()) {
+            btnFlash.setImageResource(R.drawable.ic_flash_on)
+        } else {
+            btnFlash.setImageResource(R.drawable.ic_flash_off)
+        }
+    }
+
     private fun addEventListeners() {
         captureButton.setOnClickListener {
             val timerDuration = ParameterConfig.getTimerDuration()
@@ -234,7 +256,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             CameraController.getInstance().switchCamera(textureView)
         }
 
-        // TODO: fix thumbnail functionality
         thumbnailPreview.setOnClickListener {
             // if normal image showPhotoActivity
             if (ParameterConfig.isDehazeEnabled() || ParameterConfig.isSuperResolutionEnabled()) {
@@ -261,7 +282,60 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             startActivity(intent)
         }
 
+        btnFlash.setOnClickListener {
+            val isFlashEnabled = ParameterConfig.isFlashEnabled()
+            ParameterConfig.setFlashEnabled(!isFlashEnabled)
+            updateFlashButtonIcon()
+        }
+
+        btnTimer.setOnClickListener {
+            if (timerOptionsContainer.isGone) {
+                defaultToolbarContent.visibility = View.GONE
+                timerOptionsContainer.visibility = View.VISIBLE
+            } else {
+                defaultToolbarContent.visibility = View.VISIBLE
+                timerOptionsContainer.visibility = View.GONE
+            }
+        }
+
         FileImageWriter.setOnImageSavedListener(this)
+
+        btnTimerOff.setOnClickListener {
+            ParameterConfig.setTimerDuration(0)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+        }
+
+        btnTimer3s.setOnClickListener {
+            ParameterConfig.setTimerDuration(3)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+        }
+
+        btnTimer5s.setOnClickListener {
+            ParameterConfig.setTimerDuration(5)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+        }
+
+        btnTimer10s.setOnClickListener {
+            ParameterConfig.setTimerDuration(10)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+        }
+    }
+
+    private fun updateTimerButtonIcon() {
+        when (ParameterConfig.getTimerDuration()) {
+            0 -> btnTimer.setImageResource(R.drawable.ic_timer_off)
+            3 -> btnTimer.setImageResource(R.drawable.ic_timer_3s)
+            5 -> btnTimer.setImageResource(R.drawable.ic_timer_5s)
+            10 -> btnTimer.setImageResource(R.drawable.ic_timer_10s)
+        }
     }
 
     private fun assignViews() {
@@ -277,6 +351,16 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         gridOverLayView = activityCameraControllerBinding.gridOverlayView
         countdownText = activityCameraControllerBinding.countdownText
         zoomLevelText = activityCameraControllerBinding.zoomLevelText
+        topToolbar = activityCameraControllerBinding.topBarLayout
+        btnFlash = activityCameraControllerBinding.btnFlash
+        btnTimer = activityCameraControllerBinding.btnTimer
+        defaultToolbarContent = activityCameraControllerBinding.defaultToolbarContent
+        timerOptionsContainer = activityCameraControllerBinding.timerOptionsContainer
+
+        btnTimerOff = findViewById(R.id.btn_timer_off)
+        btnTimer3s = findViewById(R.id.btn_timer_3s)
+        btnTimer5s = findViewById(R.id.btn_timer_5s)
+        btnTimer10s = findViewById(R.id.btn_timer_10s)
     }
 
     private fun setBackground() {
