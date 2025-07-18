@@ -286,6 +286,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             val isFlashEnabled = ParameterConfig.isFlashEnabled()
             ParameterConfig.setFlashEnabled(!isFlashEnabled)
             updateFlashButtonIcon()
+            CameraController.getInstance().updateFlashMode()
         }
 
         btnTimer.setOnClickListener {

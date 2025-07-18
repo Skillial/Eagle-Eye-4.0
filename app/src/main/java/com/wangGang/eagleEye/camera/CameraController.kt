@@ -399,6 +399,15 @@ class CameraController(private val context: Context, private val viewModel: Came
         this.captureRequest = captureRequest
     }
 
+    fun updateFlashMode() {
+        applyCommonCaptureSettings(captureRequest)
+        try {
+            cameraCaptureSession.setRepeatingRequest(captureRequest.build(), null, handler)
+        } catch (e: Exception) {
+            Log.e("CameraController", "Failed to update flash mode: ${e.message}")
+        }
+    }
+
     // Lifecycle
     fun initializeCamera() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
