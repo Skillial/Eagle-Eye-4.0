@@ -311,7 +311,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
 
         btnTimer.setOnClickListener {
-            btnTimer.setOnClickListener {
             if (timerOptionsContainer.isGone) {
                 defaultToolbarContent.visibility = View.GONE
                 timerOptionsContainer.visibility = View.VISIBLE
@@ -328,7 +327,6 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             setGridOverlay()
             val gridStatus = if (ParameterConfig.isGridOverlayEnabled()) "On" else "Off"
             Toast.makeText(this, "Grid: $gridStatus", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
-        }
         }
 
         FileImageWriter.setOnImageSavedListener(this)
