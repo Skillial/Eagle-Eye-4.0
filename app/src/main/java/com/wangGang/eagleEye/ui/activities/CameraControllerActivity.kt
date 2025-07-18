@@ -44,6 +44,8 @@ import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.gallery.getLatestImageUri
 import android.view.ScaleGestureDetector
 import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
 import androidx.core.view.isGone
 
 
@@ -79,6 +81,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var progressBar: ProgressBar
     private lateinit var countdownText: TextView
     private lateinit var zoomLevelText: TextView
+    private val zoomTextHandler = Handler(Looper.getMainLooper())
+    private val hideZoomTextRunnable = Runnable { zoomLevelText.visibility = View.GONE }
     private lateinit var topToolbar: Toolbar
     private lateinit var btnFlash: ImageButton
     private lateinit var btnTimer: ImageButton
@@ -561,6 +565,9 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             CameraController.getInstance().setZoom(detector.scaleFactor)
             zoomLevelText.text = String.format("%.1fx", CameraController.getInstance().zoomLevel)
+            zoomLevelText.visibility = View.VISIBLE
+            zoomTextHandler.removeCallbacks(hideZoomTextRunnable)
+            zoomTextHandler.postDelayed(hideZoomTextRunnable, 1000)
             return true
         }
     }
