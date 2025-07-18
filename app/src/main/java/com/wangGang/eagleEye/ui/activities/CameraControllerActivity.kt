@@ -287,6 +287,8 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             ParameterConfig.setFlashEnabled(!isFlashEnabled)
             updateFlashButtonIcon()
             CameraController.getInstance().updateFlashMode()
+            val flashStatus = if (ParameterConfig.isFlashEnabled()) "On" else "Off"
+            Toast.makeText(this, "Flash: $flashStatus", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer.setOnClickListener {
@@ -306,6 +308,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
+            Toast.makeText(this, "Timer: Off", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer3s.setOnClickListener {
@@ -313,6 +316,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
+            Toast.makeText(this, "Timer: 3s", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer5s.setOnClickListener {
@@ -320,6 +324,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
+            Toast.makeText(this, "Timer: 5s", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer10s.setOnClickListener {
@@ -327,6 +332,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
+            Toast.makeText(this, "Timer: 10s", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
     }
 
