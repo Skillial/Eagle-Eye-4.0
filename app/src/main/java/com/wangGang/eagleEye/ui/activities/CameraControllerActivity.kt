@@ -48,6 +48,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import androidx.core.view.isGone
+import com.wangGang.eagleEye.ui.utils.CustomToast
 
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
@@ -307,7 +308,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateFlashButtonIcon()
             CameraController.getInstance().updateFlashMode()
             val flashStatus = if (ParameterConfig.isFlashEnabled()) "On" else "Off"
-            Toast.makeText(this, "Flash: $flashStatus", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            CustomToast.show(this, "Flash: $flashStatus", yOffset = 56.dpToPx())
         }
 
         btnTimer.setOnClickListener {
@@ -326,7 +327,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateGridButtonIcon()
             setGridOverlay()
             val gridStatus = if (ParameterConfig.isGridOverlayEnabled()) "On" else "Off"
-            Toast.makeText(this, "Grid: $gridStatus", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            CustomToast.show(this, "Grid: $gridStatus", yOffset = 56.dpToPx())
         }
 
         FileImageWriter.setOnImageSavedListener(this)
@@ -336,7 +337,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: Off", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            CustomToast.show(this, "Timer: Off", yOffset = 56.dpToPx())
         }
 
         btnTimer3s.setOnClickListener {
@@ -344,7 +345,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: 3s", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            CustomToast.show(this, "Timer: 3s", yOffset = 56.dpToPx())
         }
 
         btnTimer5s.setOnClickListener {
@@ -352,7 +353,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: 5s", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            CustomToast.show(this, "Timer: 5s", yOffset = 56.dpToPx())
         }
 
         btnTimer10s.setOnClickListener {
@@ -360,7 +361,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: 10s", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            CustomToast.show(this, "Timer: 10s", yOffset = 56.dpToPx())
         }
     }
 
