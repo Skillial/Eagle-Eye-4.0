@@ -45,6 +45,16 @@
                 android:contentDescription="Timer Options"
                 android:layout_marginStart="8dp" />
 
+            <!-- Grid Button -->
+            <ImageButton
+                android:id="@+id/btn_grid"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_grid_off"
+                android:contentDescription="Grid Overlay Toggle"
+                android:layout_marginStart="8dp" />
+
             <Space
                 android:layout_width="0dp"
                 android:layout_height="0dp"

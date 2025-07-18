@@ -46,6 +46,7 @@ import android.view.ScaleGestureDetector
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import androidx.core.view.isGone
 
 
@@ -86,6 +87,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var topToolbar: Toolbar
     private lateinit var btnFlash: ImageButton
     private lateinit var btnTimer: ImageButton
+    private lateinit var btnGrid: ImageButton
     private lateinit var defaultToolbarContent: LinearLayout
     private lateinit var timerOptionsContainer: FrameLayout
     private lateinit var btnTimerOff: ImageButton
@@ -126,7 +128,11 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     }
 
     private fun setGridOverlay() {
-        gridOverLayView.visibility = if (ParameterConfig.isGridOverlayEnabled()) View.VISIBLE else View.GONE
+        val isGridEnabled = ParameterConfig.isGridOverlayEnabled()
+        Log.d("CameraControllerActivity", "setGridOverlay: isGridEnabled = $isGridEnabled")
+        gridOverLayView.visibility = if (isGridEnabled) View.VISIBLE else View.GONE
+        gridOverLayView.invalidate()
+        gridOverLayView.requestLayout()
     }
 
     override fun onResume() {
@@ -139,6 +145,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         updateScreenBorder()
         updateFlashButtonIcon()
         updateTimerButtonIcon()
+        updateGridButtonIcon()
 
         if (textureView.isAvailable) {
             CameraController.getInstance().setPreview(textureView)
@@ -244,6 +251,14 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         }
     }
 
+    private fun updateGridButtonIcon() {
+        if (ParameterConfig.isGridOverlayEnabled()) {
+            btnGrid.setImageResource(R.drawable.ic_grid_on)
+        } else {
+            btnGrid.setImageResource(R.drawable.ic_grid_off)
+        }
+    }
+
     private fun addEventListeners() {
         captureButton.setOnClickListener {
             val timerDuration = ParameterConfig.getTimerDuration()
@@ -292,10 +307,11 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateFlashButtonIcon()
             CameraController.getInstance().updateFlashMode()
             val flashStatus = if (ParameterConfig.isFlashEnabled()) "On" else "Off"
-            Toast.makeText(this, "Flash: $flashStatus", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            Toast.makeText(this, "Flash: $flashStatus", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer.setOnClickListener {
+            btnTimer.setOnClickListener {
             if (timerOptionsContainer.isGone) {
                 defaultToolbarContent.visibility = View.GONE
                 timerOptionsContainer.visibility = View.VISIBLE
@@ -305,6 +321,16 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             }
         }
 
+        btnGrid.setOnClickListener {
+            val isGridEnabled = ParameterConfig.isGridOverlayEnabled()
+            ParameterConfig.setGridOverlayEnabled(!isGridEnabled)
+            updateGridButtonIcon()
+            setGridOverlay()
+            val gridStatus = if (ParameterConfig.isGridOverlayEnabled()) "On" else "Off"
+            Toast.makeText(this, "Grid: $gridStatus", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+        }
+        }
+
         FileImageWriter.setOnImageSavedListener(this)
 
         btnTimerOff.setOnClickListener {
@@ -312,7 +338,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: Off", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            Toast.makeText(this, "Timer: Off", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer3s.setOnClickListener {
@@ -320,7 +346,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: 3s", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            Toast.makeText(this, "Timer: 3s", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer5s.setOnClickListener {
@@ -328,7 +354,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: 5s", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            Toast.makeText(this, "Timer: 5s", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
 
         btnTimer10s.setOnClickListener {
@@ -336,7 +362,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             updateTimerButtonIcon()
             defaultToolbarContent.visibility = View.VISIBLE
             timerOptionsContainer.visibility = View.GONE
-            Toast.makeText(this, "Timer: 10s", Toast.LENGTH_SHORT).apply { setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
+            Toast.makeText(this, "Timer: 10s", Toast.LENGTH_SHORT).apply { setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 56.dpToPx()) }.show()
         }
     }
 
@@ -365,6 +391,7 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         topToolbar = activityCameraControllerBinding.topBarLayout
         btnFlash = activityCameraControllerBinding.btnFlash
         btnTimer = activityCameraControllerBinding.btnTimer
+        btnGrid = activityCameraControllerBinding.btnGrid
         defaultToolbarContent = activityCameraControllerBinding.defaultToolbarContent
         timerOptionsContainer = activityCameraControllerBinding.timerOptionsContainer
 
