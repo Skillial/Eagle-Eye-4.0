@@ -8,57 +8,37 @@
     <link rel="icon" type="image/png" href="logo.png">
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
     <style>
-        /* Custom font import for Inter - Tailwind's default is Inter, but explicit import ensures consistency */
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
 
-        /* Apply Inter font family to the entire body */
         body {
             font-family: 'Inter', sans-serif;
-            /* Added styles to make all content non-highlightable and non-draggable */
             -webkit-user-select: none;
-            /* Safari */
             -moz-user-select: none;
-            /* Firefox */
             -ms-user-select: none;
-            /* IE10+/Edge */
             user-select: none;
-            /* Standard */
             -webkit-user-drag: none;
-            /* Safari */
             user-drag: none;
-            /* Standard */
         }
-
-        /* Basic styling for the body and container for centering */
 
         .video-container {
             position: relative;
-            /* Essential for positioning the button inside */
             width: 100%;
-            /* Or a fixed width */
             max-width: 6xl;
-            /* Matches your tailwind class */
             margin-left: auto;
             margin-right: auto;
             border-radius: 0.5rem;
-            /* Matches your tailwind class */
             overflow: hidden;
-            /* Ensures rounded corners apply to the video */
         }
 
         .video-container video {
             display: block;
-            /* Removes extra space below video */
         }
 
         .mute-button {
             position: absolute;
             bottom: 10px;
-            /* Adjust position as needed */
             right: 10px;
-            /* Adjust position as needed */
             background-color: rgba(0, 0, 0, 0.5);
-            /* Semi-transparent background */
             color: white;
             border: none;
             padding: 10px 15px;
@@ -86,34 +66,26 @@
         .results-table td {
             padding: 0.75rem;
             border: 1px solid #e2e8f0;
-            /* Tailwind's gray-200 */
         }
 
         .results-table th {
             background-color: #f8fafc;
-            /* Tailwind's gray-50 */
             font-weight: 600;
-            /* Tailwind's font-semibold */
             color: #4a5568;
-            /* Tailwind's gray-700 */
         }
 
         .results-table tbody tr:nth-child(odd) {
             background-color: #ffffff;
-            /* White */
         }
 
         .results-table tbody tr:nth-child(even) {
             background-color: #f7fafc;
-            /* Tailwind's gray-100 */
         }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const video = document.getElementById('myVideo');
             const muteToggle = document.getElementById('muteToggle');
-
-            // Set initial state for the button based on video's muted property
             updateMuteButtonIcon();
 
             muteToggle.addEventListener('click', () => {
@@ -125,15 +97,14 @@
                 updateMuteButtonIcon();
             });
 
-            // Also update the button if the video's muted state changes from other sources (e.g., dev tools)
             video.addEventListener('volumechange', updateMuteButtonIcon);
 
             function updateMuteButtonIcon() {
                 if (video.muted) {
-                    muteToggle.innerHTML = '🔇'; // Muted icon
+                    muteToggle.innerHTML = '🔇';
                     muteToggle.setAttribute('aria-label', 'Unmute video');
                 } else {
-                    muteToggle.innerHTML = '🔊'; // Unmuted icon
+                    muteToggle.innerHTML = '🔊'; 
                     muteToggle.setAttribute('aria-label', 'Mute video');
                 }
             }
@@ -176,9 +147,7 @@
         </div>
     </header>
 
-    <!-- Main Content Section -->
     <main class="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
-        <!-- Navigation Links -->
 
         <section class="mb-12">
             <nav class="flex justify-center space-x-6 mb-4 text-lg md:text-xl">
@@ -200,7 +169,6 @@
             </div>
         </section>
 
-        <!-- Abstract Section - Restored -->
         <section class="mb-6">
             <h2 class="text-2xl md:text-3xl font-bold text-green-600 mb-4">
                 Abstract
