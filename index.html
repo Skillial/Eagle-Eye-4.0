@@ -84,6 +84,11 @@
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const yearSpan = document.getElementById('current-year');
+            if (yearSpan) {
+                yearSpan.textContent = new Date().getFullYear();
+            }
+            
             const video = document.getElementById('myVideo');
             const muteToggle = document.getElementById('muteToggle');
             updateMuteButtonIcon();
@@ -303,19 +308,19 @@
 
     </main>
 
-    <footer class="bg-gray-900 text-white text-center py-8 px-4 sm:px-6 lg:px-8 mt-12 rounded-t-xl">
-        <div class="max-w-4xl mx-auto">
-            <p class="text-sm sm:text-base mb-2">
-                <span class="font-bold">Eagle Eye 4.0</span> by DLSU GAME Lab.
-            </p>
-            <p class="text-xs sm:text-sm opacity-75">
-                Developed as part of a research project under the guidance of Dr. Neil Del Gallego.
-            </p>
-            <p class="text-xs sm:text-sm opacity-60 mt-4">
-                &copy; 2025 All rights reserved.
-            </p>
-        </div>
-    </footer>
+<footer class="bg-gray-900 text-white text-center py-8 px-4 sm:px-6 lg:px-8 mt-12 rounded-t-xl">
+    <div class="max-w-4xl mx-auto">
+        <p class="text-sm sm:text-base mb-2">
+            <span class="font-bold">Eagle Eye 4.0</span> by DLSU GAME Lab.
+        </p>
+        <p class="text-xs sm:text-sm opacity-75">
+            Developed as part of a research project under the guidance of Dr. Neil Del Gallego.
+        </p>
+        <p class="text-xs sm:text-sm opacity-60 mt-4">
+            &copy; <span id="current-year"></span> All rights reserved.
+        </p>
+    </div>
+</footer>
 
 </body>
 
