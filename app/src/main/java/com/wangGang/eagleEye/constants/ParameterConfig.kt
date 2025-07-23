@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.util.Log
+import android.hardware.camera2.CaptureRequest
 import com.wangGang.eagleEye.processing.commands.Dehaze
 import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ProcessingCommand
@@ -21,6 +22,11 @@ class ParameterConfig private constructor(appContext: Context) {
         private var sharedInstance: ParameterConfig? = null
         private const val PARAMETER_PREFS = "parameter_config"
         private const val SCALE_KEY = "scale"
+        private const val TIMER_DURATION_KEY = "timer_duration"
+        private const val FLASH_ENABLED_KEY = "flash_enabled"
+        private const val HDR_ENABLED_KEY = "hdr_enabled"
+        private const val WHITE_BALANCE_MODE_KEY = "white_balance_mode"
+        private const val EXPOSURE_COMPENSATION_KEY = "exposure_compensation"
 
         const val FEATURE_MINIMUM_DISTANCE_KEY = "FEATURE_MINIMUM_DISTANCE_KEY"
         const val WARP_CHOICE_KEY = "WARP_CHOICE_KEY"
@@ -154,6 +160,64 @@ class ParameterConfig private constructor(appContext: Context) {
         // Helper methods
         fun isScalingFactorGreaterThanOrEqual8(): Boolean {
             return getScalingFactor() >= 8
+        }
+
+        @JvmStatic
+        fun setTimerDuration(duration: Int) {
+            sharedInstance?.editorPrefs?.putInt(TIMER_DURATION_KEY, duration)?.apply()
+            Log.d(TAG, "Timer duration set to: ${getTimerDuration()}s")
+        }
+
+        @JvmStatic
+        fun getTimerDuration(): Int {
+            return sharedInstance?.sharedPrefs?.getInt(TIMER_DURATION_KEY, 0) ?: 0
+        }
+
+        @JvmStatic
+        fun setFlashEnabled(enabled: Boolean) {
+            setPrefs(FLASH_ENABLED_KEY, enabled)
+        }
+
+        @JvmStatic
+        fun isFlashEnabled(): Boolean {
+            return getPrefsBoolean(FLASH_ENABLED_KEY, false)
+        }
+
+        @JvmStatic
+        fun setHdrEnabled(enabled: Boolean) {
+            setPrefs(HDR_ENABLED_KEY, enabled)
+        }
+
+        @JvmStatic
+        fun isHdrEnabled(): Boolean {
+            return getPrefsBoolean(HDR_ENABLED_KEY, false)
+        }
+
+        @JvmStatic
+        fun setWhiteBalanceMode(mode: Int) {
+            sharedInstance?.editorPrefs?.putInt(WHITE_BALANCE_MODE_KEY, mode)?.apply()
+            Log.d(TAG, "White balance mode set to: $mode")
+        }
+
+        @JvmStatic
+        fun getWhiteBalanceMode(): Int {
+            return sharedInstance?.sharedPrefs?.getInt(WHITE_BALANCE_MODE_KEY, CaptureRequest.CONTROL_AWB_MODE_AUTO) ?: CaptureRequest.CONTROL_AWB_MODE_AUTO
+        }
+
+        @JvmStatic
+        fun setExposureCompensation(value: Float) {
+            sharedInstance?.editorPrefs?.putFloat(EXPOSURE_COMPENSATION_KEY, value)?.apply()
+            Log.d(TAG, "Exposure compensation set to: $value")
+        }
+
+        @JvmStatic
+        fun getExposureCompensation(): Float {
+            return sharedInstance?.sharedPrefs?.getFloat(EXPOSURE_COMPENSATION_KEY, 0f) ?: 0f
+        }
+
+        @JvmStatic
+        fun revertToDefault() {
+            sharedInstance?.editorPrefs?.clear()?.apply()
         }
     }
 

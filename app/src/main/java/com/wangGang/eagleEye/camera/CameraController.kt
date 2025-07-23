@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
@@ -25,6 +26,7 @@ import android.view.TextureView
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.ui.utils.ProgressManager
 import com.wangGang.eagleEye.ui.viewmodels.CameraViewModel
+import kotlin.math.abs
 
 class CameraController(private val context: Context, private val viewModel: CameraViewModel) {
 
@@ -63,6 +65,11 @@ class CameraController(private val context: Context, private val viewModel: Came
     private lateinit var cameraCaptureSession: CameraCaptureSession
     private lateinit var preview: TextureView
     private var cameraId: String = ""
+    var zoomLevel = 1f
+    private var maxZoom = 1f
+    private var hasFlash: Boolean = false
+    private var supportsHdr: Boolean = false
+    private lateinit var supportedAwbModes: IntArray
     fun deviceSupportsZSL(cameraManager: CameraManager, cameraId: String): Boolean {
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
@@ -90,9 +97,12 @@ class CameraController(private val context: Context, private val viewModel: Came
         // Create and configure the capture request builder once
         val captureBuilder = cameraDevice.createCaptureRequest(captureTemplate)
         captureBuilder.addTarget(imageReader.surface)
+        // Apply the current zoom level to the capture request
+        captureRequest.get(CaptureRequest.SCALER_CROP_REGION)?.let {
+            captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, it)
+        }
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-        captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-        captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+        applyCommonCaptureSettings(captureBuilder)
 
         // Build the burst capture list using the same builder if settings don't change
         val captureList = MutableList(totalCaptures) { captureBuilder.build() }
@@ -115,6 +125,31 @@ class CameraController(private val context: Context, private val viewModel: Came
             },
             null
         )
+    }
+
+    private fun applyCommonCaptureSettings(builder: CaptureRequest.Builder) {
+        if (ParameterConfig.isFlashEnabled() && hasFlash) {
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
+        } else {
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+        }
+
+        if (ParameterConfig.isHdrEnabled() && supportsHdr) {
+            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR)
+            Log.d("CameraController", "HDR enabled for capture.")
+        } else {
+            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+            builder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_DISABLED)
+            Log.d("CameraController", "HDR disabled for capture.")
+        }
+
+        builder.set(CaptureRequest.CONTROL_AWB_MODE, ParameterConfig.getWhiteBalanceMode())
+
+        val exposureCompensation = ParameterConfig.getExposureCompensation()
+        builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
     }
 
 
@@ -143,6 +178,7 @@ class CameraController(private val context: Context, private val viewModel: Came
                 captureRequest = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
 
                 val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                maxZoom = characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
                 val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                 val availableSizes = map?.getOutputSizes(SurfaceTexture::class.java)
 
@@ -155,6 +191,11 @@ class CameraController(private val context: Context, private val viewModel: Came
                 preview.surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
                 val surface = Surface(preview.surfaceTexture)
                 captureRequest.addTarget(surface)
+
+                applyCommonCaptureSettings(captureRequest)
+
+                val exposureCompensation = ParameterConfig.getExposureCompensation()
+                captureRequest.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureCompensation.toInt())
 
                 val surfaces = listOf(surface, imageReader.surface)
 
@@ -200,6 +241,7 @@ class CameraController(private val context: Context, private val viewModel: Came
                         handler
                     )
                 }
+                applyCommonCaptureSettings(captureRequest) // Apply flash setting here
             }
 
             override fun onDisconnected(p0: CameraDevice) {
@@ -276,6 +318,23 @@ class CameraController(private val context: Context, private val viewModel: Came
         return sizes?.sortedWith(compareBy { it.width * it.height })?.last()
     }
 
+    fun setZoom(scaleFactor: Float) {
+        val newZoom = zoomLevel * scaleFactor
+        zoomLevel = newZoom.coerceIn(1f, maxZoom)
+
+        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        val sensorRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        if (sensorRect != null) {
+            val newWidth = (sensorRect.width() / zoomLevel).toInt()
+            val newHeight = (sensorRect.height() / zoomLevel).toInt()
+            val newLeft = (sensorRect.width() - newWidth) / 2
+            val newTop = (sensorRect.height() - newHeight) / 2
+            val cropRect = Rect(newLeft, newTop, newLeft + newWidth, newTop + newHeight)
+            captureRequest.set(CaptureRequest.SCALER_CROP_REGION, cropRect)
+            cameraCaptureSession.setRepeatingRequest(captureRequest.build(), null, handler)
+        }
+    }
+
     private fun playShutterSound() {
         val sound = MediaActionSound()
         sound.play(MediaActionSound.SHUTTER_CLICK)
@@ -307,6 +366,14 @@ class CameraController(private val context: Context, private val viewModel: Came
         return cameraCaptureSession
     }
 
+    fun supportsHdr(): Boolean {
+        return supportsHdr
+    }
+
+    fun getSupportedAwbModes(): IntArray {
+        return supportedAwbModes
+    }
+
     fun getImageReader(): ImageReader {
         return imageReader
     }
@@ -332,10 +399,26 @@ class CameraController(private val context: Context, private val viewModel: Came
         this.captureRequest = captureRequest
     }
 
+    fun updateFlashMode() {
+        applyCommonCaptureSettings(captureRequest)
+        try {
+            cameraCaptureSession.setRepeatingRequest(captureRequest.build(), null, handler)
+        } catch (e: Exception) {
+            Log.e("CameraController", "Failed to update flash mode: ${e.message}")
+        }
+    }
+
     // Lifecycle
     fun initializeCamera() {
         cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = getCameraId(CameraCharacteristics.LENS_FACING_BACK)
+
+        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+        hasFlash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        val capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        supportsHdr = capabilities?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE) == true &&
+                characteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES)?.contains(CaptureRequest.CONTROL_SCENE_MODE_HDR) == true
+        supportedAwbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES) ?: intArrayOf(CaptureRequest.CONTROL_AWB_MODE_AUTO)
 
         initializeHandlerThread()
     }
@@ -381,7 +464,7 @@ class CameraController(private val context: Context, private val viewModel: Came
 
         val optimal = choices.minByOrNull {
             val ratio = it.width.toFloat() / it.height
-            kotlin.math.abs(ratio - targetRatio)
+            abs(ratio - targetRatio)
         } ?: choices[0]
 
         Log.d("ChooseOptimalSize", "Chosen optimal size: ${optimal.width}x${optimal.height}")

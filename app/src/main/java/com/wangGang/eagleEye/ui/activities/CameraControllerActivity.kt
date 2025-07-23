@@ -12,6 +12,8 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.core.graphics.ColorUtils
 import android.util.Log
+import android.view.MotionEvent
+import androidx.appcompat.widget.Toolbar
 import android.view.TextureView
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -40,6 +42,14 @@ import com.wangGang.eagleEye.processing.commands.Denoising
 import com.wangGang.eagleEye.processing.commands.ShadowRemoval
 import com.wangGang.eagleEye.processing.commands.SuperResolution
 import com.wangGang.gallery.getLatestImageUri
+import android.view.ScaleGestureDetector
+import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
+import android.view.Gravity
+import androidx.core.view.isGone
+import com.wangGang.eagleEye.ui.utils.CustomToast
+
 
 class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
 
@@ -67,13 +77,29 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     private lateinit var loadingBox: LinearLayout
     private lateinit var thumbnailPreview: ImageView
     private lateinit var captureButton: ImageButton
-    private lateinit var settingsButton: Button
+    private lateinit var settingsButton: ImageButton
     private lateinit var switchCameraButton: ImageButton
     private lateinit var progressManager: ProgressManager
     private lateinit var progressBar: ProgressBar
+    private lateinit var countdownText: TextView
+    private lateinit var zoomLevelText: TextView
+    private val zoomTextHandler = Handler(Looper.getMainLooper())
+    private val hideZoomTextRunnable = Runnable { zoomLevelText.visibility = View.GONE }
+    private lateinit var topToolbar: Toolbar
+    private lateinit var btnFlash: ImageButton
+    private lateinit var btnTimer: ImageButton
+    private lateinit var btnGrid: ImageButton
+    private lateinit var defaultToolbarContent: LinearLayout
+    private lateinit var timerOptionsContainer: FrameLayout
+    private lateinit var btnTimerOff: ImageButton
+    private lateinit var btnTimer3s: ImageButton
+    private lateinit var btnTimer5s: ImageButton
+    private lateinit var btnTimer10s: ImageButton
 
     private var thumbnailUri: Uri? = null
     private val viewModel: CameraViewModel by viewModels()
+
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
 
     private var doneSetup: Boolean = false
     private var idleAnimator: ObjectAnimator? = null
@@ -87,9 +113,12 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         setContentView(activityCameraControllerBinding.root)
 
         assignViews()
+        setSupportActionBar(topToolbar)
         initializeCamera()
         addEventListeners()
         setupObservers()
+
+        scaleGestureDetector = ScaleGestureDetector(this, ScaleListener())
 
         doneSetup = true
     }
@@ -100,7 +129,11 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
     }
 
     private fun setGridOverlay() {
-        gridOverLayView.visibility = if (ParameterConfig.isGridOverlayEnabled()) View.VISIBLE else View.GONE
+        val isGridEnabled = ParameterConfig.isGridOverlayEnabled()
+        Log.d("CameraControllerActivity", "setGridOverlay: isGridEnabled = $isGridEnabled")
+        gridOverLayView.visibility = if (isGridEnabled) View.VISIBLE else View.GONE
+        gridOverLayView.invalidate()
+        gridOverLayView.requestLayout()
     }
 
     override fun onResume() {
@@ -111,6 +144,9 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         setBackground()
         setupThumbnail()
         updateScreenBorder()
+        updateFlashButtonIcon()
+        updateTimerButtonIcon()
+        updateGridButtonIcon()
 
         if (textureView.isAvailable) {
             CameraController.getInstance().setPreview(textureView)
@@ -208,18 +244,38 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         return (this * resources.displayMetrics.density).toInt()
     }
 
+    private fun updateFlashButtonIcon() {
+        if (ParameterConfig.isFlashEnabled()) {
+            btnFlash.setImageResource(R.drawable.ic_flash_on)
+        } else {
+            btnFlash.setImageResource(R.drawable.ic_flash_off)
+        }
+    }
+
+    private fun updateGridButtonIcon() {
+        if (ParameterConfig.isGridOverlayEnabled()) {
+            btnGrid.setImageResource(R.drawable.ic_grid_on)
+        } else {
+            btnGrid.setImageResource(R.drawable.ic_grid_off)
+        }
+    }
+
     private fun addEventListeners() {
         captureButton.setOnClickListener {
-            ProgressManager.getInstance().resetProgress()
-            CameraController.getInstance().captureImage()
-            Log.d("CameraControllerActivity", "Capture button clicked")
+            val timerDuration = ParameterConfig.getTimerDuration()
+            if (timerDuration > 0) {
+                startTimer(timerDuration)
+            } else {
+                ProgressManager.getInstance().resetProgress()
+                CameraController.getInstance().captureImage()
+                Log.d("CameraControllerActivity", "Capture button clicked")
+            }
         }
 
         switchCameraButton.setOnClickListener {
             CameraController.getInstance().switchCamera(textureView)
         }
 
-        // TODO: fix thumbnail functionality
         thumbnailPreview.setOnClickListener {
             // if normal image showPhotoActivity
             if (ParameterConfig.isDehazeEnabled() || ParameterConfig.isSuperResolutionEnabled()) {
@@ -246,7 +302,76 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
             startActivity(intent)
         }
 
+        btnFlash.setOnClickListener {
+            val isFlashEnabled = ParameterConfig.isFlashEnabled()
+            ParameterConfig.setFlashEnabled(!isFlashEnabled)
+            updateFlashButtonIcon()
+            CameraController.getInstance().updateFlashMode()
+            val flashStatus = if (ParameterConfig.isFlashEnabled()) "On" else "Off"
+            CustomToast.show(this, "Flash: $flashStatus", yOffset = 56.dpToPx())
+        }
+
+        btnTimer.setOnClickListener {
+            if (timerOptionsContainer.isGone) {
+                defaultToolbarContent.visibility = View.GONE
+                timerOptionsContainer.visibility = View.VISIBLE
+            } else {
+                defaultToolbarContent.visibility = View.VISIBLE
+                timerOptionsContainer.visibility = View.GONE
+            }
+        }
+
+        btnGrid.setOnClickListener {
+            val isGridEnabled = ParameterConfig.isGridOverlayEnabled()
+            ParameterConfig.setGridOverlayEnabled(!isGridEnabled)
+            updateGridButtonIcon()
+            setGridOverlay()
+            val gridStatus = if (ParameterConfig.isGridOverlayEnabled()) "On" else "Off"
+            CustomToast.show(this, "Grid: $gridStatus", yOffset = 56.dpToPx())
+        }
+
         FileImageWriter.setOnImageSavedListener(this)
+
+        btnTimerOff.setOnClickListener {
+            ParameterConfig.setTimerDuration(0)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+            CustomToast.show(this, "Timer: Off", yOffset = 56.dpToPx())
+        }
+
+        btnTimer3s.setOnClickListener {
+            ParameterConfig.setTimerDuration(3)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+            CustomToast.show(this, "Timer: 3s", yOffset = 56.dpToPx())
+        }
+
+        btnTimer5s.setOnClickListener {
+            ParameterConfig.setTimerDuration(5)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+            CustomToast.show(this, "Timer: 5s", yOffset = 56.dpToPx())
+        }
+
+        btnTimer10s.setOnClickListener {
+            ParameterConfig.setTimerDuration(10)
+            updateTimerButtonIcon()
+            defaultToolbarContent.visibility = View.VISIBLE
+            timerOptionsContainer.visibility = View.GONE
+            CustomToast.show(this, "Timer: 10s", yOffset = 56.dpToPx())
+        }
+    }
+
+    private fun updateTimerButtonIcon() {
+        when (ParameterConfig.getTimerDuration()) {
+            0 -> btnTimer.setImageResource(R.drawable.ic_timer_off)
+            3 -> btnTimer.setImageResource(R.drawable.ic_timer_3s)
+            5 -> btnTimer.setImageResource(R.drawable.ic_timer_5s)
+            10 -> btnTimer.setImageResource(R.drawable.ic_timer_10s)
+        }
     }
 
     private fun assignViews() {
@@ -260,6 +385,19 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         switchCameraButton = activityCameraControllerBinding.switchCamera
         progressBar = activityCameraControllerBinding.progressBar
         gridOverLayView = activityCameraControllerBinding.gridOverlayView
+        countdownText = activityCameraControllerBinding.countdownText
+        zoomLevelText = activityCameraControllerBinding.zoomLevelText
+        topToolbar = activityCameraControllerBinding.topBarLayout
+        btnFlash = activityCameraControllerBinding.btnFlash
+        btnTimer = activityCameraControllerBinding.btnTimer
+        btnGrid = activityCameraControllerBinding.btnGrid
+        defaultToolbarContent = activityCameraControllerBinding.defaultToolbarContent
+        timerOptionsContainer = activityCameraControllerBinding.timerOptionsContainer
+
+        btnTimerOff = findViewById(R.id.btn_timer_off)
+        btnTimer3s = findViewById(R.id.btn_timer_3s)
+        btnTimer5s = findViewById(R.id.btn_timer_5s)
+        btnTimer10s = findViewById(R.id.btn_timer_10s)
     }
 
     private fun setBackground() {
@@ -442,5 +580,48 @@ class CameraControllerActivity : AppCompatActivity(), OnImageSavedListener {
         uriArrayList .addAll(uriList)
         intent.putParcelableArrayListExtra("uriListKey", uriArrayList)
         startActivity(intent)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleGestureDetector.onTouchEvent(event)
+        return super.onTouchEvent(event)
+    }
+
+    private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            CameraController.getInstance().setZoom(detector.scaleFactor)
+            zoomLevelText.text = String.format("%.1fx", CameraController.getInstance().zoomLevel)
+            zoomLevelText.visibility = View.VISIBLE
+            zoomTextHandler.removeCallbacks(hideZoomTextRunnable)
+            zoomTextHandler.postDelayed(hideZoomTextRunnable, 1000)
+            return true
+        }
+    }
+
+    private fun startTimer(duration: Int) {
+        var timeLeft = duration
+        countdownText.text = timeLeft.toString() // Display initial duration
+        countdownText.visibility = View.VISIBLE
+        disableUIInteractivity()
+
+        val timer = object : CountDownTimer(((duration + 1) * 1000).toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                timeLeft = (millisUntilFinished / 1000).toInt()
+                if (timeLeft > 0) {
+                    countdownText.text = timeLeft.toString()
+                } else {
+                    // This handles the case where timeLeft becomes 0 just before onFinish
+                    countdownText.text = ""
+                }
+            }
+
+            override fun onFinish() {
+                countdownText.visibility = View.GONE
+                enableUIInteractivity()
+                ProgressManager.getInstance().resetProgress()
+                CameraController.getInstance().captureImage()
+            }
+        }
+        timer.start()
     }
 }

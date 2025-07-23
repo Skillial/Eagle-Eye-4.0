@@ -3,18 +3,27 @@ package com.wangGang.eagleEye.ui.activities
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Bundle
 import android.util.Log
 import android.view.DragEvent
+import android.view.View
 import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.TooltipCompat
+import android.widget.ImageView
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
+import android.widget.Spinner
+import android.hardware.camera2.CaptureRequest
+import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.wangGang.eagleEye.camera.CameraController
 import com.wangGang.eagleEye.R
 import com.wangGang.eagleEye.constants.ParameterConfig
 import com.wangGang.eagleEye.databinding.ActivitySettingsBinding
@@ -35,14 +44,23 @@ class SettingsActivity : AppCompatActivity() {
 
     // Views
     private lateinit var binding: ActivitySettingsBinding
-    private lateinit var backButton: ImageButton
 
     /* === Switches === */
-    private lateinit var gridOverlaySwitch: SwitchCompat
+    private lateinit var gridOverlaySwitch: SwitchMaterial
+    private lateinit var flashSwitch: SwitchMaterial
+    private lateinit var hdrSwitch: SwitchMaterial
+    private lateinit var infoHdr: ImageView
+    private lateinit var hdrLabel: TextView
 
     /* === SeekBar === */
     private lateinit var scaleSeekBar: SeekBar
     private lateinit var scalingLabel: TextView
+    private lateinit var timerSeekBar: SeekBar
+    private lateinit var timerLabel: TextView
+    private lateinit var whiteBalanceSpinner: Spinner
+    private lateinit var whiteBalanceLabel: TextView
+    private lateinit var exposureSeekBar: SeekBar
+    private lateinit var exposureLabel: TextView
 
     /* === RecyclerViews === */
     private lateinit var commandListRecyclerView: RecyclerView
@@ -57,6 +75,13 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.navigationIcon?.setTint(Color.BLACK)
+        binding.toolbar.setNavigationOnClickListener {
+            finish()
+        }
+
         commandItems = ArrayList(
             ProcessingCommand.entries.mapIndexed { index, algorithm ->
                 index.toLong() to algorithm.displayName
@@ -65,23 +90,40 @@ class SettingsActivity : AppCompatActivity() {
 
         assignViews()
         setupSwitchButtons()
+        setupFlashSwitch()
+        setupHdrSwitch()
         setupScaleSeekBar()
-        setupBackButton()
+        setupTimerSeekBar()
+        setupWhiteBalanceSpinner()
+        setupExposureSeekBar()
         setupCommandListRecyclerView()
         setupProcessingOrderListView()
+
+        binding.btnRevertToDefault.setOnClickListener {
+            revertToDefault()
+        }
     }
 
     private fun assignViews() {
-        backButton = binding.btnBack
         gridOverlaySwitch = binding.switchGridOverlay
+        flashSwitch = binding.switchFlash
+        hdrSwitch = binding.switchHdr
+        infoHdr = binding.infoHdr
+        hdrLabel = binding.hdrLabel
         scaleSeekBar = binding.scaleSeekbar
         scalingLabel = binding.scalingLabel
+        timerSeekBar = binding.timerSeekbar
+        timerLabel = binding.timerLabel
+        whiteBalanceSpinner = binding.whiteBalanceSpinner
+        whiteBalanceLabel = binding.whiteBalanceLabel
+        exposureSeekBar = binding.exposureSeekbar
+        exposureLabel = binding.exposureLabel
         commandListRecyclerView = binding.sourceListView
         processingOrderDragListView = binding.targetListView
     }
 
     private fun setupBackButton() {
-        backButton.setOnClickListener { finish() }
+        // Handled by toolbar
     }
 
     private fun setupSwitchButtons() {
@@ -89,6 +131,36 @@ class SettingsActivity : AppCompatActivity() {
 
         gridOverlaySwitch.setOnCheckedChangeListener { _, isChecked ->
             ParameterConfig.setGridOverlayEnabled(isChecked)
+        }
+    }
+
+    private fun setupFlashSwitch() {
+        flashSwitch.isChecked = ParameterConfig.isFlashEnabled()
+
+        flashSwitch.setOnCheckedChangeListener { _, isChecked ->
+            ParameterConfig.setFlashEnabled(isChecked)
+        }
+    }
+
+    private fun setupHdrSwitch() {
+        val cameraController = CameraController.getInstance()
+        val hdrNotSupportedMessage = "HDR not supported on this device"
+
+        if (!cameraController.supportsHdr()) {
+            hdrSwitch.isEnabled = false
+            hdrSwitch.isChecked = false
+            ParameterConfig.setHdrEnabled(false)
+            infoHdr.visibility = View.VISIBLE
+            TooltipCompat.setTooltipText(infoHdr, hdrNotSupportedMessage)
+            infoHdr.setOnClickListener {
+                Toast.makeText(this, hdrNotSupportedMessage, Toast.LENGTH_LONG).show()
+            }
+        } else {
+            hdrSwitch.isChecked = ParameterConfig.isHdrEnabled()
+
+            hdrSwitch.setOnCheckedChangeListener { _, isChecked ->
+                ParameterConfig.setHdrEnabled(isChecked)
+            }
         }
     }
 
@@ -115,6 +187,109 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
         })
 
+    }
+
+    private fun setupTimerSeekBar() {
+        val timerValues = listOf(0, 3, 5, 10) // 0s, 3s, 5s, 10s
+        val currentTimer = ParameterConfig.getTimerDuration()
+        val currentIndex = timerValues.indexOf(currentTimer).coerceAtLeast(0)
+        timerSeekBar.progress = currentIndex
+        timerLabel.text = "Timer: ${currentTimer}s"
+
+        timerSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                val chosenDuration = timerValues[progress]
+                ParameterConfig.setTimerDuration(chosenDuration)
+                timerLabel.text = "Timer: ${chosenDuration}s"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+        })
+    }
+
+    private fun setupWhiteBalanceSpinner() {
+        val cameraController = CameraController.getInstance()
+        val supportedModes = cameraController.getSupportedAwbModes()
+        Log.d(TAG, "Supported AWB Modes (raw): ${supportedModes.joinToString()}")
+
+        val modeNames = supportedModes.map { mode ->
+            when (mode) {
+                CaptureRequest.CONTROL_AWB_MODE_AUTO -> "Auto"
+                CaptureRequest.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT -> "Cloudy Daylight"
+                CaptureRequest.CONTROL_AWB_MODE_DAYLIGHT -> "Daylight"
+                CaptureRequest.CONTROL_AWB_MODE_FLUORESCENT -> "Fluorescent"
+                CaptureRequest.CONTROL_AWB_MODE_INCANDESCENT -> "Incandescent"
+                CaptureRequest.CONTROL_AWB_MODE_SHADE -> "Shade"
+                CaptureRequest.CONTROL_AWB_MODE_TWILIGHT -> "Twilight"
+                CaptureRequest.CONTROL_AWB_MODE_WARM_FLUORESCENT -> "Warm Fluorescent"
+                CaptureRequest.CONTROL_AWB_MODE_OFF -> "Off"
+                else -> "Unknown"
+            }
+        }
+
+        Log.d(TAG, "$supportedModes")
+        Log.d(TAG, "$modeNames")
+
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, modeNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        whiteBalanceSpinner.adapter = adapter
+
+        val currentMode = ParameterConfig.getWhiteBalanceMode()
+        Log.d(TAG, "Current white balance mode from ParameterConfig: $currentMode")
+        val currentModeIndex = supportedModes.indexOf(currentMode)
+        Log.d(TAG, "Index of current white balance mode: $currentModeIndex")
+        if (currentModeIndex != -1) {
+            whiteBalanceSpinner.setSelection(currentModeIndex)
+        }
+
+        whiteBalanceSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedMode = supportedModes[position]
+                ParameterConfig.setWhiteBalanceMode(selectedMode)
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // Do nothing
+            }
+        }
+    }
+
+    private fun setupExposureSeekBar() {
+        val cameraController = CameraController.getInstance()
+        val characteristics = cameraController.getCameraCharacteristics()
+        val exposureRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE)
+        val exposureStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP)
+
+        if (exposureRange == null || exposureStep == null) {
+            exposureSeekBar.isEnabled = false
+            exposureLabel.text = "Exposure: Not Supported"
+            return
+        }
+
+        val minExposure = exposureRange.lower
+        val maxExposure = exposureRange.upper
+        val stepValue = exposureStep.toFloat()
+
+        val maxProgress = ((maxExposure - minExposure) / stepValue).toInt()
+        exposureSeekBar.max = maxProgress
+
+        val currentExposure = ParameterConfig.getExposureCompensation()
+        val initialProgress = ((currentExposure - minExposure) / stepValue).toInt()
+        exposureSeekBar.progress = initialProgress
+        exposureLabel.text = "Exposure: %.1f EV".format(currentExposure)
+
+        exposureSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                val selectedExposure = minExposure + (progress * stepValue)
+                ParameterConfig.setExposureCompensation(selectedExposure)
+                exposureLabel.text = "Exposure: %.1f EV".format(selectedExposure)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+        })
     }
 
     private fun setupProcessingOrderListView() {
@@ -332,6 +507,20 @@ class SettingsActivity : AppCompatActivity() {
             currentList.removeAll { it.second.equals("Upscale", ignoreCase = true) }
             currentList.add(upscaleItem)
         }
+    }
+
+    private fun revertToDefault() {
+        ParameterConfig.revertToDefault()
+
+        // Reload the settings to reflect the default values
+        setupSwitchButtons()
+        setupFlashSwitch()
+        setupHdrSwitch()
+        setupScaleSeekBar()
+        setupTimerSeekBar()
+        setupWhiteBalanceSpinner()
+        setupExposureSeekBar()
+        setupProcessingOrderListView()
     }
 
 }
