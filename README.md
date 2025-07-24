@@ -1,4 +1,4 @@
-# Eagle Eye 4.0: Mobile Sandbox for Image Enhancement
+# Eagle Eye 4.0: A Mobile Sandbox Application for Demonstrating Image Enhancement Method
 
 **Jean Louis Lance Cabrera, Kenshin Fetalvero, Brian Gabini, Jeremy Cerwin Wang**  
 **Adviser:** Dr. Neil Patrick Del Gallego  
