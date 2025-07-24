@@ -12,6 +12,7 @@
 
         body {
             font-family: 'Inter', sans-serif;
+            /* Disable text selection and dragging for better UX */
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
@@ -88,17 +89,14 @@
             if (yearSpan) {
                 yearSpan.textContent = new Date().getFullYear();
             }
-            
+
             const video = document.getElementById('myVideo');
             const muteToggle = document.getElementById('muteToggle');
+
             updateMuteButtonIcon();
 
             muteToggle.addEventListener('click', () => {
-                if (video.muted) {
-                    video.muted = false;
-                } else {
-                    video.muted = true;
-                }
+                video.muted = !video.muted; 
                 updateMuteButtonIcon();
             });
 
@@ -106,10 +104,10 @@
 
             function updateMuteButtonIcon() {
                 if (video.muted) {
-                    muteToggle.innerHTML = '🔇';
+                    muteToggle.innerHTML = '🔇'; 
                     muteToggle.setAttribute('aria-label', 'Unmute video');
                 } else {
-                    muteToggle.innerHTML = '🔊'; 
+                    muteToggle.innerHTML = '🔊';
                     muteToggle.setAttribute('aria-label', 'Mute video');
                 }
             }
@@ -120,10 +118,10 @@
 <body class="bg-gray-50 text-gray-800 antialiased">
 
     <header class="bg-gradient-to-br from-cyan-700 to-green-600 text-white text-center py-12 px-4 sm:px-6 lg:px-8
-                    shadow-lg rounded-b-xl">
+                   shadow-lg rounded-b-xl">
         <div class="max-w-6xl mx-auto">
             <div class="mb-8">
-                <img src="dlsu.png" class="mx-auto max-w-xs h-auto rounded-lg" draggable="false">
+                <img src="dlsu.png" class="mx-auto max-w-xs h-auto rounded-lg" draggable="false" alt="DLSU Logo">
             </div>
             <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 tracking-tight">
                 Eagle Eye 4.0: A Mobile Sandbox Application for Demonstrating Image Enhancement Method
@@ -140,15 +138,6 @@
                     Adviser
                 </p>
             </div>
-
-            <!-- GitHub button remains at the bottom of the header -->
-            <!-- <div class="mt-8">
-                <a href="https://github.com/DLSU-GAME-Lab/EagleEye-4.0" class="inline-block bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-3 px-8
-                            rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-md
-                            border border-white border-opacity-30">
-                    View Project on GitHub
-                </a>
-            </div> -->
         </div>
     </header>
 
@@ -169,8 +158,9 @@
                     Your browser does not support the video tag.
                 </video>
 
-                <button id="muteToggle" class="mute-button">
-                    🔊 </button>
+                <button id="muteToggle" class="mute-button" aria-label="Toggle video mute">
+                    🔊
+                </button>
             </div>
         </section>
 
@@ -199,7 +189,7 @@
                 Application
             </h2>
             <div class="flex justify-center max-w-6xl mx-auto mb-4">
-                <img src="application.png" alt="Eagle Eye 4.0" class="w-full h-auto rounded-lg " draggable="false">
+                <img src="application.png" alt="Eagle Eye 4.0 Application Interface" class="w-full h-auto rounded-lg" draggable="false">
             </div>
             <p class="text-gray-700 leading-relaxed text-base md:text-lg text-justify">
                 Eagle Eye 4.0 is an Android-based mobile camera app developed in Kotlin with C++ components for image
@@ -207,7 +197,6 @@
                 mobile use. The app features a familiar camera interface for immediate photo capture and customizable
                 enhancement application. Its UI is designed for simplicity, offering a live preview, a settings page for
                 technique management and camera controls, and an image gallery for viewing and managing enhanced photos.
-
             </p>
         </section>
 
@@ -216,7 +205,7 @@
                 Pipeline
             </h2>
             <div class="flex justify-center max-w-6xl mx-auto mb-4">
-                <img src="pipeline.png" alt="Eagle Eye 4.0" class="w-full h-auto rounded-lg " draggable="false">
+                <img src="pipeline.png" alt="Eagle Eye 4.0 Pipeline Diagram" class="w-full h-auto rounded-lg" draggable="false">
             </div>
             <p class="text-gray-700 leading-relaxed text-base md:text-lg text-justify">
                 Eagle Eye 4.0 incorporates four image enhancement techniques: super-resolution, dehazing, shadow
@@ -229,54 +218,55 @@
                 and reducing artifacts, and <strong>Save</strong> store output images in widely supported formats.
             </p>
         </section>
+
         <section class="mb-6">
             <h2 class="text-2xl md:text-3xl font-bold text-green-600 mb-4">
                 Results
             </h2>
-            <div class="flex justify-center max-w-6xl mx-auto mb-4">
-                <table class="results-table">
+            <div class="overflow-x-auto max-w-6xl mx-auto mb-4 rounded-lg ">
+                <table class="results-table min-w-full divide-y divide-gray-200">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>SSIM (GT)</th>
-                            <th>PSNR (GT)</th>
-                            <th>LPIPS (GT)</th>
-                            <th>DISTS (GT)</th>
-                            <th>SSIM (Unported)</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">Name</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SSIM (GT)</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PSNR (GT)</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LPIPS (GT)</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DISTS (GT)</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">SSIM (Unported)</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-gray-200">
                         <tr>
-                            <td>Super Resolution</td>
-                            <td>0.3945</td>
-                            <td>11.79</td>
-                            <td>0.4470</td>
-                            <td>0.2185</td>
-                            <td>1.00</td>
+                            <td class="px-6 py-4 whitespace-nowrap">Super Resolution</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.3945</td>
+                            <td class="px-6 py-4 whitespace-nowrap">11.79</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.4470</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.2185</td>
+                            <td class="px-6 py-4 whitespace-nowrap">1.00</td>
                         </tr>
                         <tr>
-                            <td>Dehaze</td>
-                            <td>0.7384</td>
-                            <td>16.23</td>
-                            <td>0.4528</td>
-                            <td>0.2593</td>
-                            <td>0.9625</td>
+                            <td class="px-6 py-4 whitespace-nowrap">Dehaze</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.7384</td>
+                            <td class="px-6 py-4 whitespace-nowrap">16.23</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.4528</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.2593</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.9625</td>
                         </tr>
                         <tr>
-                            <td>Shadow Removal</td>
-                            <td>0.9216</td>
-                            <td>29.48</td>
-                            <td>0.0692</td>
-                            <td>0.0696</td>
-                            <td>0.9927</td>
+                            <td class="px-6 py-4 whitespace-nowrap">Shadow Removal</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.9216</td>
+                            <td class="px-6 py-4 whitespace-nowrap">29.48</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.0692</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.0696</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.9927</td>
                         </tr>
                         <tr>
-                            <td>Denoising</td>
-                            <td>0.9041</td>
-                            <td>34.79</td>
-                            <td>0.2277</td>
-                            <td>0.1431</td>
-                            <td>0.9872</td>
+                            <td class="px-6 py-4 whitespace-nowrap">Denoising</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.9041</td>
+                            <td class="px-6 py-4 whitespace-nowrap">34.79</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.2277</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.1431</td>
+                            <td class="px-6 py-4 whitespace-nowrap">0.9872</td>
                         </tr>
                     </tbody>
                 </table>
@@ -292,7 +282,7 @@
                 their relevance to different image enhancement tasks.
             </p>
             <div class="flex justify-center max-w-6xl mx-auto mb-4">
-                <img src="results.png" alt="Eagle Eye 4.0 Results" class="w-full h-auto rounded-lg " draggable="false">
+                <img src="results.png" alt="Eagle Eye 4.0 Results Visualizations" class="w-full h-auto rounded-lg" draggable="false">
             </div>
         </section>
 
@@ -308,19 +298,19 @@
 
     </main>
 
-<footer class="bg-gray-900 text-white text-center py-8 px-4 sm:px-6 lg:px-8 mt-12 rounded-t-xl">
-    <div class="max-w-4xl mx-auto">
-        <p class="text-sm sm:text-base mb-2">
-            <span class="font-bold">Eagle Eye 4.0</span> by DLSU GAME Lab.
-        </p>
-        <p class="text-xs sm:text-sm opacity-75">
-            Developed as part of a research project under the guidance of Dr. Neil Del Gallego.
-        </p>
-        <p class="text-xs sm:text-sm opacity-60 mt-4">
-            &copy; <span id="current-year"></span> All rights reserved.
-        </p>
-    </div>
-</footer>
+    <footer class="bg-gray-900 text-white text-center py-8 px-4 sm:px-6 lg:px-8 mt-12 rounded-t-xl">
+        <div class="max-w-4xl mx-auto">
+            <p class="text-sm sm:text-base mb-2">
+                <span class="font-bold">Eagle Eye 4.0</span> by DLSU GAME Lab.
+            </p>
+            <p class="text-xs sm:text-sm opacity-75">
+                Developed as part of a research project under the guidance of Dr. Neil Del Gallego.
+            </p>
+            <p class="text-xs sm:text-sm opacity-60 mt-4">
+                &copy; <span id="current-year"></span> All rights reserved.
+            </p>
+        </div>
+    </footer>
 
 </body>
 
