@@ -56,4 +56,4 @@ View this page for more info: https://skillial.github.io/Eagle-Eye-4.0
 
 ## 🙏 Acknowledgements
 
-We would like to acknowledge **De La Salle University (DLSU)**, the **Department of Science and Technology (DOST)**, and the **Google Cloud Research Program** for funding and supporting this research.
+We would like to acknowledge **De La Salle University (DLSU)** and the **DLSU Science Foundation** for funding and supporting this research.
