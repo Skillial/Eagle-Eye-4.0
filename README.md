@@ -46,7 +46,7 @@ To run the project locally on your Android device:
 
 ## 📂 Project Structure
 
-- [`app/src/main/java/com/wanggang/eagleeye`](app/src/main/java/com/wanggang/eagleeye) — Main Kotlin source code  
+- [`app/src/main/java/com/wangGang/eagleEye`](app/src/main/java/com/wangGang/eagleEye) — Main Kotlin source code  
 - [`app/src/main/assets/model/`](app/src/main/assets/model) — ONNX model files  
 - [`app/src/main/res/`](app/src/main/res) — Layouts, drawables, and other UI resources  
 - [`app/src/main/AndroidManifest.xml`](app/src/main/AndroidManifest.xml) — Permissions and app configuration
